@@ -114,6 +114,11 @@ impl KageroApp {
         }
     }
 
+    /// Opens a `.kgr` or `.png` given on the command line.
+    pub fn open_on_start(&mut self, path: PathBuf) {
+        self.open_path(&path);
+    }
+
     // ------------------------------------------------------------ messages
 
     fn info(&mut self, text: impl Into<String>) {

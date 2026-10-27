@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/logo.png" width="128" height="128" alt="Kagero flame logo">
+
 # Kagero 陽炎
 
 **An independent pixel-art and sprite-animation editor by Onibi Lab.**
@@ -18,6 +20,15 @@ Kagero ("heat haze") is a small, fast desktop editor for pixel art and frame-by-
 animation. It is inspired by the general workflow of dedicated sprite editors, but its
 design, code and pixel icons are its own. The interface uses the warm, dark
 **Kagero Ember** style: a quiet workshop lit by amber light.
+
+![Kagero with an 8-frame animation open: onion skin shows the neighbor frames in warm and cool tints, the timeline shows frame thumbnails](docs/images/screenshot-onion-skin.png)
+
+<p align="center"><sub>Editing frame 4 of an animation with onion skin on: the previous frame
+glows warm, the next one cool.</sub></p>
+
+![Kagero playing the animation preview](docs/images/screenshot-preview.png)
+
+<p align="center"><sub>Animation preview playing in real time (Enter to start and stop).</sub></p>
 
 ## Features
 

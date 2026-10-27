@@ -28,7 +28,14 @@ fn main() {
     if let Err(e) = eframe::run_native(
         "Kagero",
         options,
-        Box::new(|cc| Ok(Box::new(KageroApp::new(cc)))),
+        Box::new(|cc| {
+            let mut app = KageroApp::new(cc);
+            // `kagero.exe path\to\file.kgr` (e.g. "Open with" in Explorer) opens it.
+            if let Some(path) = std::env::args_os().nth(1) {
+                app.open_on_start(std::path::PathBuf::from(path));
+            }
+            Ok(Box::new(app))
+        }),
     ) {
         tracing::error!("Kagero could not start: {e}");
         let _ = rfd::MessageDialog::new()

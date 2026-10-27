@@ -4,6 +4,14 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `kagero.exe <file>` opens a `.kgr` or `.png` on start (e.g. Explorer "Open with").
+- README screenshots and logo; `examples/readme_assets.rs` regenerates the logo and
+  the demo animation used for them.
+
 ## [0.2.0] Beta — 2026-10-27
 
 The animation update.
