@@ -1,12 +1,12 @@
 //! Undoable changes and the undo/redo history.
 //!
 //! Every change stores only what it needs to be reversed: pixel edits keep per-pixel
-//! before/after values, layer deletions keep the removed layer, and so on. The history
-//! never stores whole-document snapshots.
+//! before/after values, layer and frame deletions keep the removed data, and so on. The
+//! history never stores whole-document snapshots.
 
 use std::collections::VecDeque;
 
-use crate::core::{CoreError, Document, Layer, LayerId, Rgba};
+use crate::core::{CoreError, Document, Frame, FrameId, LayerData, LayerId, Rgba};
 
 /// Default number of undo steps kept.
 pub const DEFAULT_MAX_ENTRIES: usize = 256;
@@ -47,24 +47,25 @@ impl Dirty {
 
 /// A reversible document change.
 ///
-/// Layer insertions and removals move the layer between the document and the change,
-/// so a layer's pixels exist in exactly one place at a time.
+/// Layer and frame insertions/removals move the data between the document and the
+/// change, so pixels exist in exactly one place at a time.
 #[derive(Debug, Clone)]
 pub enum Change {
     Pixels {
+        frame: FrameId,
         layer: LayerId,
         changes: Vec<PixelChange>,
     },
     AddLayer {
         index: usize,
         /// `Some` while the layer is *not* in the document (i.e. after an undo).
-        layer: Option<Layer>,
+        layer: Option<LayerData>,
         prev_active: usize,
     },
     RemoveLayer {
         index: usize,
         /// `Some` while the layer is *not* in the document (i.e. after it was removed).
-        layer: Option<Layer>,
+        layer: Option<LayerData>,
         prev_active: usize,
     },
     MoveLayer {
@@ -80,6 +81,28 @@ pub enum Change {
         layer: LayerId,
         visible: bool,
     },
+    AddFrame {
+        index: usize,
+        /// `Some` while the frame is *not* in the document.
+        frame: Option<Frame>,
+        prev_active: usize,
+        duplicate: bool,
+    },
+    RemoveFrame {
+        index: usize,
+        /// `Some` while the frame is *not* in the document.
+        frame: Option<Frame>,
+        prev_active: usize,
+    },
+    MoveFrame {
+        from: usize,
+        to: usize,
+    },
+    SetFrameDuration {
+        frame: FrameId,
+        before: u32,
+        after: u32,
+    },
 }
 
 impl Change {
@@ -92,6 +115,13 @@ impl Change {
             Change::MoveLayer { .. } => "Move Layer",
             Change::RenameLayer { .. } => "Rename Layer",
             Change::SetVisible { .. } => "Layer Visibility",
+            Change::AddFrame {
+                duplicate: true, ..
+            } => "Duplicate Frame",
+            Change::AddFrame { .. } => "New Frame",
+            Change::RemoveFrame { .. } => "Delete Frame",
+            Change::MoveFrame { .. } => "Move Frame",
+            Change::SetFrameDuration { .. } => "Frame Duration",
         }
     }
 
@@ -100,26 +130,35 @@ impl Change {
         let base = std::mem::size_of::<Change>();
         base + match self {
             Change::Pixels { changes, .. } => changes.len() * std::mem::size_of::<PixelChange>(),
-            Change::AddLayer { layer, .. } | Change::RemoveLayer { layer, .. } => layer
-                .as_ref()
-                .map(|l| l.pixels.as_bytes().len() + l.name.len())
-                .unwrap_or(0),
+            Change::AddLayer { layer, .. } | Change::RemoveLayer { layer, .. } => {
+                layer.as_ref().map_or(0, LayerData::byte_size)
+            }
+            Change::AddFrame { frame, .. } | Change::RemoveFrame { frame, .. } => {
+                frame.as_ref().map_or(0, Frame::byte_size)
+            }
             Change::RenameLayer { before, after, .. } => before.len() + after.len(),
-            Change::MoveLayer { .. } | Change::SetVisible { .. } => 0,
+            Change::MoveLayer { .. }
+            | Change::SetVisible { .. }
+            | Change::MoveFrame { .. }
+            | Change::SetFrameDuration { .. } => 0,
         }
     }
 
-    /// Region affected by this change.
+    /// Region of the *active frame* to redraw, computed before applying/reverting.
     pub fn dirty(&self, doc: &Document) -> Option<Dirty> {
         match self {
-            Change::Pixels { changes, .. } => {
+            Change::Pixels { frame, changes, .. } => {
+                if doc.active_frame().id != *frame {
+                    // Undo/redo switches to that frame, so everything is redrawn.
+                    return Some(Dirty::Full);
+                }
                 let w = doc.width();
                 changes.iter().fold(None, |acc: Option<Dirty>, c| {
                     let d = Dirty::pixel(c.index % w, c.index / w);
                     Some(acc.map_or(d, |a| a.union(d)))
                 })
             }
-            Change::RenameLayer { .. } => None,
+            Change::RenameLayer { .. } | Change::SetFrameDuration { .. } => None,
             _ => Some(Dirty::Full),
         }
     }
@@ -127,12 +166,17 @@ impl Change {
     /// Applies (or re-applies) the change to the document.
     pub fn apply(&mut self, doc: &mut Document) -> Result<(), CoreError> {
         match self {
-            Change::Pixels { layer, changes } => {
-                let layer = doc
-                    .layer_mut(*layer)
-                    .ok_or(CoreError::LayerIndex(usize::MAX))?;
+            Change::Pixels {
+                frame,
+                layer,
+                changes,
+            } => {
+                focus_frame(doc, *frame);
+                let cel = doc
+                    .cel_by_id_mut(*frame, *layer)
+                    .ok_or(CoreError::FrameMissing)?;
                 for c in changes.iter() {
-                    layer.pixels.set_index(c.index, c.after);
+                    cel.set_index(c.index, c.after);
                 }
                 Ok(())
             }
@@ -156,18 +200,34 @@ impl Change {
                 l.visible = *visible;
                 Ok(())
             }
+            Change::AddFrame { index, frame, .. } => restore_frame(doc, *index, frame),
+            Change::RemoveFrame { index, frame, .. } => {
+                *frame = Some(doc.remove_frame(*index)?);
+                Ok(())
+            }
+            Change::MoveFrame { from, to } => doc.move_frame(*from, *to),
+            Change::SetFrameDuration { frame, after, .. } => {
+                let f = doc.frame_mut(*frame).ok_or(CoreError::FrameMissing)?;
+                f.set_duration_ms(*after);
+                Ok(())
+            }
         }
     }
 
     /// Reverses the change.
     pub fn revert(&mut self, doc: &mut Document) -> Result<(), CoreError> {
         match self {
-            Change::Pixels { layer, changes } => {
-                let layer = doc
-                    .layer_mut(*layer)
-                    .ok_or(CoreError::LayerIndex(usize::MAX))?;
+            Change::Pixels {
+                frame,
+                layer,
+                changes,
+            } => {
+                focus_frame(doc, *frame);
+                let cel = doc
+                    .cel_by_id_mut(*frame, *layer)
+                    .ok_or(CoreError::FrameMissing)?;
                 for c in changes.iter().rev() {
-                    layer.pixels.set_index(c.index, c.before);
+                    cel.set_index(c.index, c.before);
                 }
                 Ok(())
             }
@@ -204,7 +264,39 @@ impl Change {
                 l.visible = !*visible;
                 Ok(())
             }
+            Change::AddFrame {
+                index,
+                frame,
+                prev_active,
+                ..
+            } => {
+                *frame = Some(doc.remove_frame(*index)?);
+                doc.set_active_frame(*prev_active);
+                Ok(())
+            }
+            Change::RemoveFrame {
+                index,
+                frame,
+                prev_active,
+            } => {
+                restore_frame(doc, *index, frame)?;
+                doc.set_active_frame(*prev_active);
+                Ok(())
+            }
+            Change::MoveFrame { from, to } => doc.move_frame(*to, *from),
+            Change::SetFrameDuration { frame, before, .. } => {
+                let f = doc.frame_mut(*frame).ok_or(CoreError::FrameMissing)?;
+                f.set_duration_ms(*before);
+                Ok(())
+            }
         }
+    }
+}
+
+/// Shows the frame a pixel change belongs to, so undo/redo is always visible.
+fn focus_frame(doc: &mut Document, frame: FrameId) {
+    if let Some(index) = doc.frame_index_of(frame) {
+        doc.set_active_frame(index);
     }
 }
 
@@ -213,13 +305,27 @@ impl Change {
 fn restore_layer(
     doc: &mut Document,
     index: usize,
-    slot: &mut Option<Layer>,
+    slot: &mut Option<LayerData>,
 ) -> Result<(), CoreError> {
     let stored = slot.as_ref().ok_or(CoreError::LayerIndex(index))?;
     doc.check_insert(index, stored)?;
     match slot.take() {
         Some(layer) => doc.insert_layer(index, layer),
         None => Err(CoreError::LayerIndex(index)),
+    }
+}
+
+/// Moves a stored frame back into the document, validating first.
+fn restore_frame(
+    doc: &mut Document,
+    index: usize,
+    slot: &mut Option<Frame>,
+) -> Result<(), CoreError> {
+    let stored = slot.as_ref().ok_or(CoreError::FrameIndex(index))?;
+    doc.check_insert_frame(index, stored)?;
+    match slot.take() {
+        Some(frame) => doc.insert_frame(index, frame),
+        None => Err(CoreError::FrameIndex(index)),
     }
 }
 
@@ -342,13 +448,15 @@ impl History {
         let Some(mut entry) = self.redo.pop() else {
             return Ok(None);
         };
+        // Computed before applying: a pixel change on another frame switches frames.
+        let dirty = entry.change.dirty(doc);
         if let Err(e) = entry.change.apply(doc) {
             self.redo.push(entry);
             return Err(e);
         }
         let applied = Applied {
             label: entry.change.label(),
-            dirty: entry.change.dirty(doc),
+            dirty,
         };
         self.undo.push_back(entry);
         Ok(Some(applied))

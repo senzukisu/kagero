@@ -1,6 +1,6 @@
 [package]
 name = "kagero"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.85"
 authors = ["Onibi Lab"]
@@ -29,6 +29,14 @@ thiserror = "2.0"
 anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "std"] }
+# Updater: HTTPS via the OS TLS stack (SChannel on Windows), version ordering,
+# SHA-256 hashes and minisign (Ed25519) signature verification.
+ureq = { version = "3", default-features = false, features = ["native-tls-no-default"] }
+semver = "1"
+sha2 = "0.10"
+minisign-verify = "0.3"
+# Discord Rich Presence over the local desktop-client IPC pipe.
+discord-rich-presence = "1"
 
 [profile.dev.package."*"]
 # Keep the canvas responsive in debug builds.

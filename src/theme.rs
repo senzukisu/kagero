@@ -12,6 +12,8 @@ pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF0, 0xEE, 0xE8);
 pub const ACCENT: Color32 = Color32::from_rgb(0xFF, 0x9D, 0x42);
 pub const ACCENT_PRESSED: Color32 = Color32::from_rgb(0xF0, 0x6B, 0x35);
 pub const SUCCESS: Color32 = Color32::from_rgb(0x75, 0xC7, 0xB5);
+/// Deep ember used behind light text for pressed and selected states (readable contrast).
+pub const EMBER_DEEP: Color32 = Color32::from_rgb(0x6B, 0x36, 0x1C);
 pub const ERROR: Color32 = Color32::from_rgb(0xE8, 0x5D, 0x5D);
 /// Text drawn on top of the accent color.
 pub const ON_ACCENT: Color32 = Color32::from_rgb(0x1A, 0x14, 0x10);
@@ -36,7 +38,7 @@ pub fn apply(ctx: &egui::Context) {
     visuals.window_corner_radius = CornerRadius::same(6);
     visuals.menu_corner_radius = CornerRadius::same(RADIUS);
     visuals.hyperlink_color = ACCENT;
-    visuals.selection.bg_fill = ACCENT.linear_multiply(0.35);
+    visuals.selection.bg_fill = EMBER_DEEP;
     visuals.selection.stroke = Stroke::new(1.0_f32, ACCENT);
     visuals.error_fg_color = ERROR;
     visuals.warn_fg_color = ACCENT;
@@ -61,8 +63,8 @@ pub fn apply(ctx: &egui::Context) {
     w.hovered.fg_stroke = Stroke::new(1.5_f32, TEXT_PRIMARY);
     w.hovered.corner_radius = radius;
 
-    w.active.bg_fill = ACCENT_PRESSED;
-    w.active.weak_bg_fill = ACCENT_PRESSED;
+    w.active.bg_fill = EMBER_DEEP;
+    w.active.weak_bg_fill = EMBER_DEEP;
     w.active.bg_stroke = Stroke::new(1.0_f32, ACCENT);
     // egui also uses this color for `strong()` text, so it must stay light.
     w.active.fg_stroke = Stroke::new(1.5_f32, TEXT_PRIMARY);

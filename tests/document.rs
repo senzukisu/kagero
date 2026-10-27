@@ -12,8 +12,8 @@ fn creates_documents_of_allowed_sizes() {
         assert_eq!((doc.width(), doc.height()), (w, h));
         assert_eq!(doc.layer_count(), 1);
         assert_eq!(doc.active_index(), 0);
-        let layer = doc.active_layer();
-        assert_eq!(layer.pixels.as_bytes().len(), (w * h * 4) as usize);
+        assert_eq!(doc.frame_count(), 1);
+        assert_eq!(doc.active_cel().as_bytes().len(), (w * h * 4) as usize);
     }
 }
 
@@ -37,7 +37,7 @@ fn background_color_fills_layer() {
     let doc = Document::new(3, 2, Rgba::WHITE).expect("valid");
     for y in 0..2 {
         for x in 0..3 {
-            assert_eq!(doc.active_layer().pixels.get(x, y), Some(Rgba::WHITE));
+            assert_eq!(doc.active_cel().get(x, y), Some(Rgba::WHITE));
         }
     }
 }

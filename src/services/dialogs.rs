@@ -41,6 +41,15 @@ pub fn pick_export_png(start_dir: Option<&Path>, name: &str) -> Option<PathBuf> 
     dialog.save_file().map(|p| with_extension(p, "png"))
 }
 
+/// Asks for a folder (e.g. for exporting all frames).
+pub fn pick_folder(start_dir: Option<&Path>, title: &str) -> Option<PathBuf> {
+    let mut dialog = rfd::FileDialog::new().set_title(title);
+    if let Some(dir) = start_dir {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog.pick_folder()
+}
+
 /// Appends `ext` unless the path already has it (case-insensitive).
 pub fn with_extension(path: PathBuf, ext: &str) -> PathBuf {
     let has = path

@@ -49,9 +49,10 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
         ui.add_space(14.0);
         ui.label(
             RichText::new(format!(
-                "{} · Kagero {} Alpha · MIT License",
+                "{} · Kagero {} {} · MIT License",
                 crate::STUDIO_NAME,
-                crate::APP_VERSION
+                crate::APP_VERSION,
+                crate::APP_CHANNEL
             ))
             .small()
             .color(theme::TEXT_SECONDARY),

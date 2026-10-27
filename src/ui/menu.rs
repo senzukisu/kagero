@@ -4,24 +4,32 @@ use std::path::PathBuf;
 
 use egui::Button;
 
+use super::settings::SettingsTab;
 use super::Command;
 use crate::editor::{Editor, ToolKind};
 
-pub fn show(
-    ui: &mut egui::Ui,
-    editor: Option<&Editor>,
-    recent: &[PathBuf],
-    show_grid: bool,
-    commands: &mut Vec<Command>,
-) {
+/// View state the menu shows as checkmarks and labels.
+pub struct MenuState<'a> {
+    pub editor: Option<&'a Editor>,
+    pub recent: &'a [PathBuf],
+    pub show_grid: bool,
+    pub playing: bool,
+    pub onion: bool,
+    pub timeline_visible: bool,
+    pub side_panel_visible: bool,
+}
+
+pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command>) {
+    let editor = state.editor;
     let has_doc = editor.is_some();
+    let editable = has_doc && !state.playing;
     egui::menu::bar(ui, |ui| {
         ui.menu_button("File", |ui| {
             item(ui, commands, "New…", "Ctrl+N", true, Command::NewDocument);
             item(ui, commands, "Open…", "Ctrl+O", true, Command::Open);
-            ui.add_enabled_ui(!recent.is_empty(), |ui| {
+            ui.add_enabled_ui(!state.recent.is_empty(), |ui| {
                 ui.menu_button("Open Recent", |ui| {
-                    for path in recent {
+                    for path in state.recent {
                         let label = path.display().to_string();
                         if ui.button(label).clicked() {
                             commands.push(Command::OpenPath(path.clone()));
@@ -43,10 +51,27 @@ pub fn show(
             item(
                 ui,
                 commands,
-                "Export PNG…",
+                "Export Current Frame as PNG…",
                 "Ctrl+E",
                 has_doc,
                 Command::ExportPng,
+            );
+            item(
+                ui,
+                commands,
+                "Export All Frames as PNGs…",
+                "Ctrl+Shift+E",
+                has_doc,
+                Command::ExportAllFrames,
+            );
+            ui.separator();
+            item(
+                ui,
+                commands,
+                "Settings…",
+                "Ctrl+,",
+                true,
+                Command::OpenSettings(SettingsTab::General),
             );
             ui.separator();
             item(
@@ -108,14 +133,32 @@ pub fn show(
         });
 
         ui.menu_button("View", |ui| {
-            let grid_label = if show_grid { "Hide Grid" } else { "Show Grid" };
-            item(
+            check(
                 ui,
                 commands,
-                grid_label,
+                "Pixel Grid",
                 "Ctrl+G",
                 true,
+                state.show_grid,
                 Command::ToggleGrid,
+            );
+            check(
+                ui,
+                commands,
+                "Timeline",
+                "F7",
+                true,
+                state.timeline_visible,
+                Command::ToggleTimeline,
+            );
+            check(
+                ui,
+                commands,
+                "Colors & Layers Panel",
+                "F8",
+                true,
+                state.side_panel_visible,
+                Command::ToggleSidePanel,
             );
             ui.separator();
             item(ui, commands, "Zoom In", "+", has_doc, Command::ZoomIn);
@@ -156,7 +199,7 @@ pub fn show(
                 commands,
                 "New Layer",
                 "Ctrl+Shift+N",
-                can_add,
+                can_add && editable,
                 Command::AddLayer,
             );
             item(
@@ -164,7 +207,7 @@ pub fn show(
                 commands,
                 "Delete Layer",
                 "",
-                count > 1,
+                count > 1 && editable,
                 Command::DeleteLayer,
             );
             item(
@@ -172,7 +215,7 @@ pub fn show(
                 commands,
                 "Rename Layer…",
                 "F2",
-                has_doc,
+                editable,
                 Command::BeginRenameLayer(active),
             );
             item(
@@ -180,7 +223,7 @@ pub fn show(
                 commands,
                 "Toggle Visibility",
                 "",
-                has_doc,
+                editable,
                 Command::ToggleLayerVisibility(active),
             );
             ui.separator();
@@ -189,7 +232,7 @@ pub fn show(
                 commands,
                 "Move Up",
                 "Ctrl+]",
-                active + 1 < count,
+                editable && active + 1 < count,
                 Command::LayerUp,
             );
             item(
@@ -197,12 +240,121 @@ pub fn show(
                 commands,
                 "Move Down",
                 "Ctrl+[",
-                has_doc && active > 0,
+                editable && active > 0,
                 Command::LayerDown,
             );
         });
 
+        ui.menu_button("Frame", |ui| {
+            let (count, active, can_add) = editor.map_or((0, 0, false), |e| {
+                let d = e.document();
+                (
+                    d.frame_count(),
+                    d.active_frame_index(),
+                    d.can_add_frame().is_ok(),
+                )
+            });
+            let play_label = if state.playing {
+                "Stop Preview"
+            } else {
+                "Play Preview"
+            };
+            item(
+                ui,
+                commands,
+                play_label,
+                "Enter",
+                has_doc && (count > 1 || state.playing),
+                Command::TogglePlayback,
+            );
+            item(
+                ui,
+                commands,
+                "First Frame",
+                "Ctrl+Home",
+                has_doc,
+                Command::FirstFrame,
+            );
+            item(
+                ui,
+                commands,
+                "Previous Frame",
+                ",",
+                has_doc,
+                Command::PrevFrame,
+            );
+            item(ui, commands, "Next Frame", ".", has_doc, Command::NextFrame);
+            ui.separator();
+            item(
+                ui,
+                commands,
+                "New Frame",
+                "Alt+N",
+                editable && can_add,
+                Command::AddFrame,
+            );
+            item(
+                ui,
+                commands,
+                "Duplicate Frame",
+                "Alt+D",
+                editable && can_add,
+                Command::DuplicateFrame,
+            );
+            item(
+                ui,
+                commands,
+                "Delete Frame",
+                "",
+                editable && count > 1,
+                Command::DeleteFrame(active),
+            );
+            item(
+                ui,
+                commands,
+                "Move Frame Left",
+                "",
+                editable && active > 0,
+                Command::MoveFrameLeft(active),
+            );
+            item(
+                ui,
+                commands,
+                "Move Frame Right",
+                "",
+                editable && active + 1 < count,
+                Command::MoveFrameRight(active),
+            );
+            ui.separator();
+            check(
+                ui,
+                commands,
+                "Onion Skin",
+                "O",
+                has_doc,
+                state.onion,
+                Command::ToggleOnionSkin,
+            );
+        });
+
         ui.menu_button("Help", |ui| {
+            item(
+                ui,
+                commands,
+                "Check for Updates…",
+                "",
+                true,
+                Command::CheckForUpdates,
+            );
+            item(
+                ui,
+                commands,
+                "Discord Rich Presence…",
+                "",
+                true,
+                Command::OpenSettings(SettingsTab::Discord),
+            );
+            ui.separator();
             item(ui, commands, "About Kagero", "", true, Command::About);
         });
     });
@@ -220,6 +372,23 @@ fn item(
         .add_enabled(enabled, Button::new(text).shortcut_text(shortcut))
         .clicked()
     {
+        commands.push(command);
+        ui.close_menu();
+    }
+}
+
+/// A menu item with a check mark.
+fn check(
+    ui: &mut egui::Ui,
+    commands: &mut Vec<Command>,
+    text: &str,
+    shortcut: &str,
+    enabled: bool,
+    checked: bool,
+    command: Command,
+) {
+    let button = Button::new(text).shortcut_text(shortcut).selected(checked);
+    if ui.add_enabled(enabled, button).clicked() {
         commands.push(command);
         ui.close_menu();
     }

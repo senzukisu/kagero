@@ -8,7 +8,7 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 
 pub use kgr::{load_kgr, read_kgr, save_kgr, write_kgr, KGR_EXTENSION, KGR_FORMAT_VERSION};
-pub use png::{export_png, import_png};
+pub use png::{export_frames, export_png, frame_export_paths, import_png};
 
 /// Largest `.kgr` file Kagero will open.
 pub const MAX_KGR_FILE_BYTES: u64 = 1024 * 1024 * 1024;

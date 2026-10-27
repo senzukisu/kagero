@@ -12,7 +12,8 @@ use std::path::{Path, PathBuf};
 pub use history::{Applied, Change, Dirty, History, PixelChange};
 pub use tools::{SampleSource, ToolKind, ToolSettings, BRUSH_SIZE_RANGE};
 
-use crate::core::{raster, sanitize_layer_name, CoreError, Document, LayerId, Rgba};
+use crate::core::animation::clamp_duration;
+use crate::core::{raster, sanitize_layer_name, CoreError, Document, FrameId, LayerId, Rgba};
 
 /// Errors from editing commands, shown to the user in the status bar.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -21,6 +22,8 @@ pub enum EditError {
     HiddenLayer,
     #[error("layer name cannot be empty")]
     EmptyName,
+    #[error("stop the animation preview to edit")]
+    ReadOnly,
     #[error(transparent)]
     Core(#[from] CoreError),
 }
@@ -36,6 +39,7 @@ pub enum ColorSlot {
 #[derive(Debug)]
 struct Stroke {
     tool: ToolKind,
+    frame: FrameId,
     layer: LayerId,
     color: Rgba,
     start: (i32, i32),
@@ -60,6 +64,7 @@ pub struct Editor {
     pub secondary: Rgba,
     stroke: Option<Stroke>,
     dirty: Option<Dirty>,
+    read_only: bool,
 }
 
 impl Editor {
@@ -77,6 +82,7 @@ impl Editor {
             secondary: Rgba::WHITE,
             stroke: None,
             dirty: Some(Dirty::Full),
+            read_only: false,
         }
     }
 
@@ -159,6 +165,9 @@ impl Editor {
     /// with [`Editor::update_stroke`] and finishes with [`Editor::end_stroke`].
     pub fn begin_stroke(&mut self, pos: (i32, i32), slot: ColorSlot) -> Result<(), EditError> {
         self.end_stroke();
+        if self.read_only && self.tool != ToolKind::Pan {
+            return Err(EditError::ReadOnly);
+        }
         match self.tool {
             ToolKind::Pan => Ok(()),
             ToolKind::Eyedropper => {
@@ -180,6 +189,7 @@ impl Editor {
                 };
                 self.stroke = Some(Stroke {
                     tool,
+                    frame: self.doc.active_frame().id,
                     layer: layer.id,
                     color,
                     start: pos,
@@ -250,14 +260,14 @@ impl Editor {
         let Some(stroke) = self.stroke.take() else {
             return;
         };
-        let Some(layer) = self.doc.layer(stroke.layer) else {
+        let Some(cel) = self.doc.cel_by_id(stroke.frame, stroke.layer) else {
             return;
         };
         let mut changes: Vec<PixelChange> = stroke
             .before
             .iter()
             .filter_map(|(&index, &before)| {
-                let after = layer.pixels.get_index(index)?;
+                let after = cel.get_index(index)?;
                 (after != before).then_some(PixelChange {
                     index,
                     before,
@@ -270,6 +280,7 @@ impl Editor {
         }
         changes.sort_unstable_by_key(|c| c.index);
         self.history.push(Change::Pixels {
+            frame: stroke.frame,
             layer: stroke.layer,
             changes,
         });
@@ -284,21 +295,21 @@ impl Editor {
 
     /// Paints a square brush centered at `(x, y)`, remembering original colors.
     fn stamp(&mut self, stroke: &mut Stroke, x: i32, y: i32, size: u32) {
-        let Some(layer) = self.doc.layer_mut(stroke.layer) else {
+        let Some(cel) = self.doc.cel_by_id_mut(stroke.frame, stroke.layer) else {
             return;
         };
         let mut dirty: Option<Dirty> = None;
         for (dx, dy) in raster::brush_offsets(size) {
             let (px, py) = (x.saturating_add(dx), y.saturating_add(dy));
-            let Some(index) = layer.pixels.index_of(px, py) else {
+            let Some(index) = cel.index_of(px, py) else {
                 continue;
             };
-            let Some(old) = layer.pixels.get_index(index) else {
+            let Some(old) = cel.get_index(index) else {
                 continue;
             };
             stroke.before.entry(index).or_insert(old);
             if old != stroke.color {
-                layer.pixels.set_index(index, stroke.color);
+                cel.set_index(index, stroke.color);
                 let d = Dirty::pixel(px as u32, py as u32);
                 dirty = Some(dirty.map_or(d, |a| a.union(d)));
             }
@@ -311,12 +322,12 @@ impl Editor {
     /// Puts back every pixel the stroke has touched so far.
     fn restore(&mut self, stroke: &mut Stroke) {
         let w = self.doc.width();
-        let Some(layer) = self.doc.layer_mut(stroke.layer) else {
+        let Some(cel) = self.doc.cel_by_id_mut(stroke.frame, stroke.layer) else {
             return;
         };
         let mut dirty: Option<Dirty> = None;
         for (&index, &before) in &stroke.before {
-            layer.pixels.set_index(index, before);
+            cel.set_index(index, before);
             let d = Dirty::pixel(index % w, index / w);
             dirty = Some(dirty.map_or(d, |a| a.union(d)));
         }
@@ -328,18 +339,23 @@ impl Editor {
 
     /// Flood-fills the 4-connected region of identical color at `pos` (one undo step).
     pub fn fill(&mut self, pos: (i32, i32), color: Rgba) -> Result<(), EditError> {
+        if self.read_only {
+            return Err(EditError::ReadOnly);
+        }
         let layer_ref = self.doc.active_layer();
         if !layer_ref.visible {
             return Err(EditError::HiddenLayer);
         }
         let layer_id = layer_ref.id;
-        let Some(target) = layer_ref.pixels.get(pos.0, pos.1) else {
+        let frame_id = self.doc.active_frame().id;
+        let cel = self.doc.active_cel();
+        let Some(target) = cel.get(pos.0, pos.1) else {
             return Ok(());
         };
         if target == color {
             return Ok(());
         }
-        let region = raster::flood_region(&layer_ref.pixels, pos.0, pos.1);
+        let region = raster::flood_region(cel, pos.0, pos.1);
         let changes: Vec<PixelChange> = region
             .into_iter()
             .map(|index| PixelChange {
@@ -349,6 +365,7 @@ impl Editor {
             })
             .collect();
         let mut change = Change::Pixels {
+            frame: frame_id,
             layer: layer_id,
             changes,
         };
@@ -364,7 +381,7 @@ impl Editor {
     /// Reads the color under `pos` according to the eyedropper sample source.
     pub fn sample(&self, pos: (i32, i32)) -> Option<Rgba> {
         match self.settings.sample_source {
-            SampleSource::ActiveLayer => self.doc.active_layer().pixels.get(pos.0, pos.1),
+            SampleSource::ActiveLayer => self.doc.active_cel().get(pos.0, pos.1),
             SampleSource::Merged => self.doc.composite_pixel(pos.0, pos.1),
         }
     }
@@ -498,6 +515,132 @@ impl Editor {
         let change = Change::SetVisible {
             layer: layer.id,
             visible: !layer.visible,
+        };
+        self.execute(change)
+    }
+
+    // ---------------------------------------------------------------- frames
+
+    /// Blocks pixel edits (used during animation preview).
+    pub fn set_read_only(&mut self, read_only: bool) {
+        if read_only {
+            self.end_stroke();
+        }
+        self.read_only = read_only;
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
+    }
+
+    /// Shows another frame on the canvas (not an undo step).
+    pub fn select_frame(&mut self, index: usize) {
+        if index == self.doc.active_frame_index() || index >= self.doc.frame_count() {
+            return;
+        }
+        self.end_stroke();
+        self.doc.set_active_frame(index);
+        self.add_dirty(Dirty::Full);
+    }
+
+    /// Selects the next frame, wrapping to the first.
+    pub fn next_frame(&mut self) {
+        let n = self.doc.frame_count();
+        self.select_frame((self.doc.active_frame_index() + 1) % n);
+    }
+
+    /// Selects the previous frame, wrapping to the last.
+    pub fn previous_frame(&mut self) {
+        let n = self.doc.frame_count();
+        self.select_frame((self.doc.active_frame_index() + n - 1) % n);
+    }
+
+    /// Adds an empty frame after the active one, with the same duration.
+    pub fn add_frame(&mut self) -> Result<(), EditError> {
+        self.end_stroke();
+        let duration = self.doc.active_frame().duration_ms();
+        let frame = self.doc.make_empty_frame(duration)?;
+        let prev_active = self.doc.active_frame_index();
+        self.execute(Change::AddFrame {
+            index: prev_active + 1,
+            frame: Some(frame),
+            prev_active,
+            duplicate: false,
+        })
+    }
+
+    /// Inserts an independent copy of the active frame right after it.
+    pub fn duplicate_frame(&mut self) -> Result<(), EditError> {
+        self.end_stroke();
+        let prev_active = self.doc.active_frame_index();
+        let frame = self.doc.make_duplicate_frame(prev_active)?;
+        self.execute(Change::AddFrame {
+            index: prev_active + 1,
+            frame: Some(frame),
+            prev_active,
+            duplicate: true,
+        })
+    }
+
+    pub fn delete_frame(&mut self, index: usize) -> Result<(), EditError> {
+        if self.doc.frame_count() <= 1 {
+            return Err(CoreError::LastFrame.into());
+        }
+        if index >= self.doc.frame_count() {
+            return Err(CoreError::FrameIndex(index).into());
+        }
+        let prev_active = self.doc.active_frame_index();
+        self.execute(Change::RemoveFrame {
+            index,
+            frame: None,
+            prev_active,
+        })
+    }
+
+    /// Whether a frame holds any visible content (used to confirm deletion).
+    pub fn frame_has_content(&self, index: usize) -> bool {
+        self.doc.frames().get(index).is_some_and(|f| {
+            f.cels()
+                .iter()
+                .any(|c| c.as_bytes().chunks_exact(4).any(|p| p[3] != 0))
+        })
+    }
+
+    pub fn move_frame_left(&mut self, index: usize) -> Result<(), EditError> {
+        if index == 0 || index >= self.doc.frame_count() {
+            return Ok(());
+        }
+        self.execute(Change::MoveFrame {
+            from: index,
+            to: index - 1,
+        })
+    }
+
+    pub fn move_frame_right(&mut self, index: usize) -> Result<(), EditError> {
+        if index + 1 >= self.doc.frame_count() {
+            return Ok(());
+        }
+        self.execute(Change::MoveFrame {
+            from: index,
+            to: index + 1,
+        })
+    }
+
+    /// Sets a frame's duration in milliseconds (clamped to the allowed range).
+    pub fn set_frame_duration(&mut self, index: usize, ms: u32) -> Result<(), EditError> {
+        let frame = self
+            .doc
+            .frames()
+            .get(index)
+            .ok_or(CoreError::FrameIndex(index))?;
+        let after = clamp_duration(ms);
+        if frame.duration_ms() == after {
+            return Ok(());
+        }
+        let change = Change::SetFrameDuration {
+            frame: frame.id,
+            before: frame.duration_ms(),
+            after,
         };
         self.execute(change)
     }

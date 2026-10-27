@@ -2,20 +2,25 @@
 //!
 //! Nothing in this module knows about the UI or about files.
 
+pub mod animation;
 mod buffer;
 mod color;
 mod document;
+pub mod onion_skin;
 pub mod raster;
 
+pub use animation::{Frame, FrameId};
 pub use buffer::PixelBuffer;
 pub use color::Rgba;
-pub use document::{Document, Layer, LayerId};
+pub use document::{Document, LayerData, LayerId, LayerInfo, PixelRect};
 
 /// Largest allowed image side, in pixels.
 pub const MAX_CANVAS_SIZE: u32 = 2048;
 /// Largest number of layers in one document.
 pub const MAX_LAYERS: usize = 64;
-/// Upper bound for the total size of all layer pixel data in one document.
+/// Largest number of frames in one document.
+pub const MAX_FRAMES: usize = 1000;
+/// Upper bound for the total size of all cel pixel data (layers × frames) in one document.
 pub const MAX_DOCUMENT_BYTES: u64 = 512 * 1024 * 1024;
 /// Longest layer name, in characters.
 pub const MAX_LAYER_NAME_CHARS: usize = 64;
@@ -29,12 +34,22 @@ pub enum CoreError {
     BufferSize { expected: usize, actual: usize },
     #[error("a document can have at most {max} layers", max = MAX_LAYERS)]
     TooManyLayers,
-    #[error("not enough memory budget for another layer of this size")]
+    #[error("a document can have at most {max} frames", max = MAX_FRAMES)]
+    TooManyFrames,
+    #[error("not enough memory budget (layers × frames × image size is limited to 512 MiB)")]
     MemoryBudget,
     #[error("a document must keep at least one layer")]
     LastLayer,
+    #[error("a document must keep at least one frame")]
+    LastFrame,
     #[error("layer index {0} is out of range")]
     LayerIndex(usize),
+    #[error("frame index {0} is out of range")]
+    FrameIndex(usize),
+    #[error("expected {expected} layer images in a frame, found {actual}")]
+    CelCount { expected: usize, actual: usize },
+    #[error("a layer image for one of the frames is missing")]
+    FrameMissing,
 }
 
 /// Checks that `width`×`height` is an allowed canvas size.

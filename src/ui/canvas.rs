@@ -5,7 +5,10 @@ use egui::{
     TextureHandle, TextureOptions, Vec2,
 };
 
-use crate::core::raster;
+use std::collections::HashMap;
+
+use crate::core::onion_skin::OnionSkin;
+use crate::core::{raster, Document, FrameId};
 use crate::editor::{ColorSlot, Dirty, EditError, Editor, ToolKind};
 use crate::theme;
 
@@ -94,10 +97,32 @@ fn nearest_level(zoom: f32) -> usize {
         .map_or(2, |(i, _)| i)
 }
 
+/// GPU memory budget for cached whole-frame textures (onion skin and playback).
+const FRAME_CACHE_BYTES: usize = 256 * 1024 * 1024;
+
+/// A composited frame uploaded as a texture, reused until the frame changes.
+struct FrameTexture {
+    key: (u64, u64),
+    texture: TextureHandle,
+    bytes: usize,
+    last_used: u64,
+}
+
+/// What the canvas should show besides the active frame.
+#[derive(Debug, Clone, Copy)]
+pub struct CanvasOptions {
+    pub onion: OnionSkin,
+    /// Animation preview is running: show frames, block drawing.
+    pub playing: bool,
+    pub reduce_motion: bool,
+}
+
 /// Canvas state that is not part of the document.
 pub struct CanvasView {
     texture: Option<TextureHandle>,
     checker: Option<TextureHandle>,
+    frame_cache: HashMap<FrameId, FrameTexture>,
+    frame_tick: u64,
     pub zoom: f32,
     pub pan: Vec2,
     pub show_grid: bool,
@@ -116,6 +141,8 @@ impl CanvasView {
         Self {
             texture: None,
             checker: None,
+            frame_cache: HashMap::new(),
+            frame_tick: 0,
             zoom: 1.0,
             pan: Vec2::ZERO,
             show_grid,
@@ -140,6 +167,7 @@ impl CanvasView {
     /// Forgets the texture and fits the next document on the next frame.
     pub fn reset(&mut self) {
         self.texture = None;
+        self.frame_cache.clear();
         self.needs_fit = true;
         self.pan = Vec2::ZERO;
         self.hover_pixel = None;
@@ -208,6 +236,77 @@ impl CanvasView {
         self.pan = Vec2::ZERO;
     }
 
+    /// Texture of a whole composited frame, cached until that frame or the layer
+    /// structure changes. Least-recently-used entries are evicted over the budget.
+    fn frame_texture(
+        &mut self,
+        ctx: &egui::Context,
+        doc: &Document,
+        index: usize,
+    ) -> Option<egui::TextureId> {
+        let frame = doc.frames().get(index)?;
+        let key = (frame.revision(), doc.structure_revision());
+        self.frame_tick += 1;
+        let tick = self.frame_tick;
+        if let Some(entry) = self.frame_cache.get_mut(&frame.id) {
+            if entry.key == key {
+                entry.last_used = tick;
+                return Some(entry.texture.id());
+            }
+        }
+        let (_, bytes) = doc.composite_frame_rect(index, 0, 0, doc.width(), doc.height())?;
+        let size = [doc.width() as usize, doc.height() as usize];
+        let image = ColorImage::from_rgba_unmultiplied(size, &bytes);
+        let byte_len = bytes.len();
+        let id = match self.frame_cache.get_mut(&frame.id) {
+            Some(entry) => {
+                entry.texture.set(image, TextureOptions::NEAREST);
+                entry.key = key;
+                entry.last_used = tick;
+                entry.bytes = byte_len;
+                entry.texture.id()
+            }
+            None => {
+                let texture = ctx.load_texture(
+                    format!("frame-{}", frame.id.0),
+                    image,
+                    TextureOptions::NEAREST,
+                );
+                let id = texture.id();
+                self.frame_cache.insert(
+                    frame.id,
+                    FrameTexture {
+                        key,
+                        texture,
+                        bytes: byte_len,
+                        last_used: tick,
+                    },
+                );
+                id
+            }
+        };
+        // Drop textures of deleted frames, then the least recently used over budget.
+        self.frame_cache
+            .retain(|fid, _| doc.frames().iter().any(|f| f.id == *fid));
+        while self.frame_cache.values().map(|e| e.bytes).sum::<usize>() > FRAME_CACHE_BYTES
+            && self.frame_cache.len() > 1
+        {
+            let oldest = self
+                .frame_cache
+                .iter()
+                .filter(|(fid, _)| **fid != frame.id)
+                .min_by_key(|(_, e)| e.last_used)
+                .map(|(fid, _)| *fid);
+            match oldest {
+                Some(fid) => {
+                    self.frame_cache.remove(&fid);
+                }
+                None => break,
+            }
+        }
+        Some(id)
+    }
+
     /// Uploads changed pixels to the GPU texture, only the dirty region when possible.
     fn sync_texture(&mut self, ctx: &egui::Context, editor: &mut Editor) {
         let doc = editor.document();
@@ -240,20 +339,15 @@ impl CanvasView {
                     Some(ctx.load_texture("kagero-canvas", full(doc), TextureOptions::NEAREST));
             }
         }
-        if self.checker.is_none() {
-            let (l, d) = (theme::CHECKER_LIGHT, theme::CHECKER_DARK);
-            let mut bytes = Vec::with_capacity(16);
-            for c in [l, d, d, l] {
-                bytes.extend_from_slice(&[c.r(), c.g(), c.b(), 255]);
-            }
-            let img = ColorImage::from_rgba_unmultiplied([2, 2], &bytes);
-            self.checker =
-                Some(ctx.load_texture("kagero-checker", img, TextureOptions::NEAREST_REPEAT));
-        }
     }
 
     /// Draws the canvas and handles pointer input. Returns an error to show the user, if any.
-    pub fn show(&mut self, ui: &mut egui::Ui, editor: &mut Editor) -> Option<EditError> {
+    pub fn show(
+        &mut self,
+        ui: &mut egui::Ui,
+        editor: &mut Editor,
+        options: CanvasOptions,
+    ) -> Option<EditError> {
         let ctx = ui.ctx().clone();
         let viewport = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(viewport, Sense::click_and_drag());
@@ -266,7 +360,11 @@ impl CanvasView {
             self.fit(size);
             self.needs_fit = false;
         }
-        self.sync_texture(&ctx, editor);
+        // During playback frames come from the frame cache; the editing texture is
+        // refreshed when playback stops.
+        if !options.playing {
+            self.sync_texture(&ctx, editor);
+        }
 
         let mut error = None;
         let typing = ctx.wants_keyboard_input();
@@ -327,7 +425,16 @@ impl CanvasView {
                 ],
             )
         });
+        if options.playing
+            && response.hovered()
+            && !space
+            && editor.tool != ToolKind::Pan
+            && (pressed[0] || pressed[1])
+        {
+            error = Some(EditError::ReadOnly);
+        }
         let can_start = response.hovered()
+            && !options.playing
             && !space
             && !self.panning
             && editor.tool != ToolKind::Pan
@@ -369,7 +476,10 @@ impl CanvasView {
             editor.end_stroke();
         }
         // The editor may have uploaded changes during input handling.
-        self.sync_texture(&ctx, editor);
+        if !options.playing {
+            self.sync_texture(&ctx, editor);
+        }
+        self.ensure_checker(&ctx);
 
         // ---- hover info and cursor
         self.hover_pixel = pointer_pos
@@ -400,13 +510,31 @@ impl CanvasView {
             );
             painter.image(checker.id(), image_rect, uv, Color32::WHITE);
         }
-        if let Some(tex) = &self.texture {
-            painter.image(
-                tex.id(),
-                image_rect,
-                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                Color32::WHITE,
-            );
+        let full_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+        let doc = editor.document();
+        let main = if options.playing {
+            self.frame_texture(&ctx, doc, doc.active_frame_index())
+        } else {
+            self.texture.as_ref().map(TextureHandle::id)
+        };
+        if let Some(id) = main {
+            painter.image(id, image_rect, full_uv, Color32::WHITE);
+        }
+        // Onion skin: tinted, translucent neighbors drawn over the active frame. View only.
+        let overlays = if options.playing {
+            Vec::new()
+        } else {
+            options
+                .onion
+                .overlays(doc.frame_count(), doc.active_frame_index())
+        };
+        for overlay in &overlays {
+            if let Some(id) = self.frame_texture(&ctx, doc, overlay.frame) {
+                let [r, g, b] = overlay.side.tint();
+                let alpha = (overlay.opacity * 255.0).round() as u8;
+                let tint = Color32::from_rgba_unmultiplied(r, g, b, alpha);
+                painter.image(id, image_rect, full_uv, tint);
+            }
         }
         if self.show_grid && self.zoom >= GRID_MIN_ZOOM {
             self.paint_grid(&painter, &transform, viewport, w, h);
@@ -418,7 +546,7 @@ impl CanvasView {
             StrokeKind::Outside,
         );
         if let Some((x, y)) = self.hover_pixel {
-            if editor.tool.edits_pixels() && !space && !self.panning {
+            if editor.tool.edits_pixels() && !space && !self.panning && !options.playing {
                 let size = if editor.tool.uses_brush_size() {
                     editor.settings.brush_size
                 } else {
@@ -442,7 +570,91 @@ impl CanvasView {
                 );
             }
         }
+        self.paint_badges(
+            &painter,
+            viewport,
+            editor.document(),
+            &options,
+            !overlays.is_empty(),
+        );
         error
+    }
+
+    /// Small hints in the top-left corner: preview state and onion skin legend.
+    fn paint_badges(
+        &self,
+        painter: &egui::Painter,
+        viewport: Rect,
+        doc: &Document,
+        options: &CanvasOptions,
+        onion_visible: bool,
+    ) {
+        let font = egui::FontId::proportional(12.0);
+        let origin = viewport.min + Vec2::new(12.0, 10.0);
+        let text = if options.playing {
+            format!(
+                "Previewing  ·  frame {} / {}  ·  Enter to stop",
+                doc.active_frame_index() + 1,
+                doc.frame_count()
+            )
+        } else if options.onion.enabled {
+            if onion_visible {
+                "Onion skin  ·  previous frame warm, next frame cool  ·  O to hide".to_owned()
+            } else {
+                "Onion skin on  ·  no neighbor frames to show".to_owned()
+            }
+        } else {
+            return;
+        };
+        let galley = painter.layout_no_wrap(text, font, theme::TEXT_PRIMARY);
+        let dot = 10.0;
+        let rect = Rect::from_min_size(
+            origin,
+            Vec2::new(galley.size().x + dot + 22.0, galley.size().y + 10.0),
+        );
+        painter.rect_filled(rect, 6.0, theme::PANEL.gamma_multiply(0.92));
+        painter.rect_stroke(
+            rect,
+            6.0,
+            Stroke::new(1.0_f32, theme::BORDER),
+            StrokeKind::Inside,
+        );
+        let dot_center = Pos2::new(rect.min.x + 10.0 + dot / 2.0, rect.center().y);
+        let color = if options.playing {
+            theme::ACCENT
+        } else {
+            theme::SUCCESS
+        };
+        let pulse = if options.playing && !options.reduce_motion {
+            let t = painter.ctx().input(|i| i.time);
+            0.55 + 0.45 * ((t * 4.0).sin() as f32 * 0.5 + 0.5)
+        } else {
+            1.0
+        };
+        painter.circle_filled(
+            dot_center,
+            dot / 2.0 * pulse.max(0.6),
+            color.gamma_multiply(pulse),
+        );
+        painter.galley(
+            Pos2::new(dot_center.x + dot / 2.0 + 8.0, rect.min.y + 5.0),
+            galley,
+            theme::TEXT_PRIMARY,
+        );
+    }
+
+    fn ensure_checker(&mut self, ctx: &egui::Context) {
+        if self.checker.is_some() {
+            return;
+        }
+        let (l, d) = (theme::CHECKER_LIGHT, theme::CHECKER_DARK);
+        let mut bytes = Vec::with_capacity(16);
+        for c in [l, d, d, l] {
+            bytes.extend_from_slice(&[c.r(), c.g(), c.b(), 255]);
+        }
+        let img = ColorImage::from_rgba_unmultiplied([2, 2], &bytes);
+        self.checker =
+            Some(ctx.load_texture("kagero-checker", img, TextureOptions::NEAREST_REPEAT));
     }
 
     fn paint_grid(

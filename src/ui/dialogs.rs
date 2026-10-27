@@ -172,6 +172,41 @@ pub fn unsaved_changes(ctx: &egui::Context, name: &str) -> UnsavedChoice {
     choice
 }
 
+pub enum ConfirmChoice {
+    Pending,
+    Confirm,
+    Cancel,
+}
+
+/// A yes/no question with a destructive or important confirm action.
+pub fn confirm(
+    ctx: &egui::Context,
+    title: &str,
+    message: &str,
+    confirm_label: &str,
+) -> ConfirmChoice {
+    let mut choice = ConfirmChoice::Pending;
+    let modal = Modal::new(Id::new(("confirm-dialog", title))).show(ctx, |ui| {
+        ui.set_width(400.0);
+        ui.heading(title);
+        ui.add_space(6.0);
+        ui.label(message);
+        ui.add_space(12.0);
+        ui.horizontal(|ui| {
+            if ui.add(accent_button(confirm_label)).clicked() {
+                choice = ConfirmChoice::Confirm;
+            }
+            if ui.button("Cancel").clicked() {
+                choice = ConfirmChoice::Cancel;
+            }
+        });
+    });
+    if modal.should_close() && matches!(choice, ConfirmChoice::Pending) {
+        choice = ConfirmChoice::Cancel;
+    }
+    choice
+}
+
 /// Shows an error; returns `true` when dismissed.
 pub fn error(ctx: &egui::Context, title: &str, message: &str) -> bool {
     let mut close = false;
@@ -205,8 +240,12 @@ pub fn about(ctx: &egui::Context) -> bool {
             ui.vertical(|ui| {
                 ui.label(RichText::new("Kagero").size(24.0).strong());
                 ui.label(
-                    RichText::new(format!("Version {} Alpha", crate::APP_VERSION))
-                        .color(theme::TEXT_SECONDARY),
+                    RichText::new(format!(
+                        "Version {} {}",
+                        crate::APP_VERSION,
+                        crate::APP_CHANNEL
+                    ))
+                    .color(theme::TEXT_SECONDARY),
                 );
             });
         });
@@ -235,6 +274,11 @@ pub fn about(ctx: &egui::Context) -> bool {
                     ("Home / 0 / 1", "Center / Fit / 100%"),
                     ("X", "Swap colors"),
                     ("Ctrl+Z / Ctrl+Y", "Undo / Redo"),
+                    ("Enter", "Play / stop animation preview"),
+                    (", / .", "Previous / next frame"),
+                    ("Alt+N / Alt+D", "New / duplicate frame"),
+                    ("O", "Onion skin"),
+                    ("F7 / F8", "Timeline / side panel"),
                 ] {
                     ui.label(RichText::new(k).monospace().color(theme::ACCENT));
                     ui.label(v);

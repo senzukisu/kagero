@@ -1,7 +1,7 @@
 //! PNG import and export.
 
 use std::io::{Cursor, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use image::codecs::png::{PngDecoder, PngEncoder};
 use image::{ExtendedColorType, ImageDecoder, ImageEncoder, Limits};
@@ -39,10 +39,48 @@ pub fn decode_png(bytes: &[u8]) -> Result<PixelBuffer, FileError> {
     Ok(PixelBuffer::from_raw(width, height, rgba.into_raw())?)
 }
 
-/// Exports the composited document as a PNG with transparency.
+/// Exports the composited active frame as a PNG with transparency.
 pub fn export_png(doc: &Document, path: &Path) -> Result<(), FileError> {
     let merged = doc.composite()?;
     write_atomic(path, |w| encode_png(&merged, w))
+}
+
+/// File names used by [`export_frames`]: `<base>_0001.png`, `<base>_0002.png`, …
+pub fn frame_export_paths(doc: &Document, dir: &Path, base: &str) -> Vec<PathBuf> {
+    let base = sanitize_file_stem(base);
+    (1..=doc.frame_count())
+        .map(|i| dir.join(format!("{base}_{i:04}.png")))
+        .collect()
+}
+
+/// Exports every frame as its own flattened PNG into `dir`. Returns the written paths.
+pub fn export_frames(doc: &Document, dir: &Path, base: &str) -> Result<Vec<PathBuf>, FileError> {
+    let paths = frame_export_paths(doc, dir, base);
+    for (index, path) in paths.iter().enumerate() {
+        let merged = doc.composite_frame(index)?;
+        write_atomic(path, |w| encode_png(&merged, w))?;
+    }
+    Ok(paths)
+}
+
+/// Keeps only characters that are safe in Windows file names.
+fn sanitize_file_stem(stem: &str) -> String {
+    let cleaned: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_control() || r#"<>:"/\|?*"#.contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let trimmed = cleaned.trim().trim_end_matches('.');
+    if trimmed.is_empty() {
+        "frame".to_owned()
+    } else {
+        trimmed.chars().take(100).collect()
+    }
 }
 
 /// Opens a PNG as a new single-layer document.

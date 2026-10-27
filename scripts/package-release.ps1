@@ -1,0 +1,68 @@
+<#
+.SYNOPSIS
+  Builds, packages, signs and checksums an official Kagero release for Windows x64.
+
+.DESCRIPTION
+  Produces in dist\:
+    kagero-<version>-windows-x64.zip           flat package (see docs/UPDATER.md)
+    kagero-<version>-windows-x64.zip.minisig   minisign signature of the zip
+    SHA256SUMS.txt                             checksums of both files
+
+  The secret signing key is never stored in the repository. Pass its path with
+  -SecretKey (default: %USERPROFILE%\.kagero-release\kagero.key).
+  Requires rsign2 (`cargo install rsign2`), which writes standard minisign files.
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File scripts\package-release.ps1
+#>
+param(
+    [string]$SecretKey = (Join-Path $env:USERPROFILE ".kagero-release\kagero.key"),
+    [string]$PublicKey = (Join-Path $PSScriptRoot "..\kagero.pub")
+)
+
+$ErrorActionPreference = "Stop"
+$root = Resolve-Path (Join-Path $PSScriptRoot "..")
+Set-Location $root
+
+$version = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+$name = "kagero-$version-windows-x64"
+Write-Host "Packaging Kagero $version"
+
+if (-not (Test-Path $SecretKey)) { throw "Signing key not found: $SecretKey" }
+if (-not (Test-Path $PublicKey)) { throw "Public key not found: $PublicKey" }
+$embedded = (Select-String -Path src\release.rs -Pattern 'UPDATE_PUBLIC_KEY: &str = "([^"]*)"').Matches[0].Groups[1].Value
+$pubLine = (Get-Content $PublicKey | Where-Object { $_ -and -not $_.StartsWith("untrusted comment") } | Select-Object -First 1).Trim()
+if ($embedded -ne $pubLine) { throw "src/release.rs UPDATE_PUBLIC_KEY does not match $PublicKey" }
+
+# Official build: enables installing updates.
+$env:KAGERO_OFFICIAL_BUILD = "1"
+cargo build --release --locked --bins
+if ($LASTEXITCODE -ne 0) { throw "cargo build failed" }
+Remove-Item Env:KAGERO_OFFICIAL_BUILD
+
+$dist = Join-Path $root "dist"
+$stage = Join-Path $dist $name
+if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+New-Item -ItemType Directory -Force $stage | Out-Null
+Copy-Item target\release\kagero.exe, target\release\kagero-updater.exe, README.md, LICENSE, THIRD_PARTY_LICENSES.md, CHANGELOG.md -Destination $stage
+
+$zip = Join-Path $dist "$name.zip"
+if (Test-Path $zip) { Remove-Item $zip -Force }
+Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal
+
+$sig = "$zip.minisig"
+if (Test-Path $sig) { Remove-Item $sig -Force }
+rsign sign -s $SecretKey -x $sig -t "Kagero $version official release" $zip
+if ($LASTEXITCODE -ne 0) { throw "signing failed" }
+rsign verify -p $PublicKey -x $sig $zip
+if ($LASTEXITCODE -ne 0) { throw "signature verification failed" }
+
+$sums = Join-Path $dist "SHA256SUMS.txt"
+$lines = foreach ($f in @($zip, $sig)) {
+    "{0}  {1}" -f (Get-FileHash $f -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $f -Leaf)
+}
+[IO.File]::WriteAllText($sums, ($lines -join "`n") + "`n")
+
+Write-Host ""
+Write-Host "Release files in $dist :"
+Get-ChildItem $dist -File | Select-Object Name, Length | Format-Table -AutoSize

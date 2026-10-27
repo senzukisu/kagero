@@ -1,72 +1,105 @@
 # The `.kgr` Project Format
 
-Format id `kagero-project`, version **1**.
+Format id `kagero-project`. Kagero 0.2 writes **version 2** and reads versions 1 and 2.
+The format version is independent of the application version.
 
-A `.kgr` file is a standard ZIP archive:
+A `.kgr` file is a standard ZIP archive.
+
+## Version 2 (Kagero 0.2+)
 
 ```
 project.kgr
-├── manifest.json        format id and version (Deflate)
-├── document.json        image size, layer list, active layer (Deflate)
-└── layers/
-    ├── 0000.png         bottom layer, RGBA8 PNG (Stored)
-    ├── 0001.png
+├── manifest.json            format id and version (Deflate)
+├── document.json            size, layers, frames, durations, ids (Deflate)
+└── frames/
+    ├── 0000/                first frame
+    │   ├── 0000.png         image of layer 0 (bottom) in this frame, RGBA8 (Stored)
+    │   └── 0001.png
+    ├── 0001/
     └── …
 ```
 
-## manifest.json
+### manifest.json
 
 ```json
 {
   "format": "kagero-project",
-  "format_version": 1,
-  "app_version": "0.1.0"
+  "format_version": 2,
+  "app_version": "0.2.0"
 }
 ```
 
 - `format` must be exactly `kagero-project`.
-- `format_version` is an integer. Readers refuse versions newer than they support and
-  say which version is required.
+- `format_version` is checked first. Newer versions are refused with a message saying
+  which version is supported; nothing else in the archive is read.
 - `app_version` is informational.
 
-## document.json
+### document.json
 
 ```json
 {
   "width": 32,
   "height": 32,
   "active_layer": 1,
+  "active_frame": 0,
   "layers": [
-    { "name": "Background", "visible": true, "file": "layers/0000.png" },
-    { "name": "Ink",        "visible": true, "file": "layers/0001.png" }
+    { "id": 1, "name": "Background", "visible": true },
+    { "id": 2, "name": "Ink",        "visible": false }
+  ],
+  "frames": [
+    { "id": 1, "duration_ms": 100, "cels": ["frames/0000/0000.png", "frames/0000/0001.png"] },
+    { "id": 4, "duration_ms": 250, "cels": ["frames/0001/0000.png", "frames/0001/0001.png"] }
   ]
 }
 ```
 
-- `layers` are ordered **bottom to top**.
-- `file` must be exactly `layers/NNNN.png`, where `NNNN` is the zero-padded position in
-  the list. Any other path is rejected.
-- Unknown fields are ignored, so later 1.x writers may add optional data.
+- `layers` are bottom to top and shared by all frames (name, visibility, id).
+- `frames` are in playback order. Each frame lists one PNG per layer in layer order.
+- Cel paths must be exactly `frames/FFFF/LLLL.png` (frame and layer positions,
+  zero-padded). Any other path is rejected.
+- Ids are positive and unique among layers and among frames; they survive reordering.
+- `duration_ms` is clamped to 10–60 000.
+- Unknown fields are ignored, so optional data can be added within version 2.
 
-## Layer PNGs
+### Cel PNGs
 
-Each layer is an 8-bit RGBA PNG with exactly `width × height` pixels and straight
-(non-premultiplied) alpha. Fully transparent pixels are stored as `0,0,0,0`.
+8-bit RGBA, exactly `width × height`, straight (non-premultiplied) alpha. Fully
+transparent pixels are `0,0,0,0`. Every frame stores its own images, so saving never
+merges frames.
+
+## Version 1 (Kagero 0.1)
+
+```
+project.kgr
+├── manifest.json     { "format": "kagero-project", "format_version": 1 }
+├── document.json     { "width", "height", "active_layer", "layers": [{ "name", "visible", "file" }] }
+└── layers/0000.png …
+```
+
+`file` must be exactly `layers/NNNN.png`.
+
+### Migration
+
+Opening a version 1 project creates a document with **one frame** (100 ms) holding the
+layers in their original order, names, visibility and pixels, with the same active
+layer. No user action is needed; the next save writes version 2.
 
 ## Validation when opening
 
 Checked in this order, before any large allocation:
 
-1. File size ≤ 1 GiB; ZIP has ≤ 80 entries.
-2. `manifest.json` (≤ 1 MiB) — id and version.
-3. `document.json` (≤ 1 MiB) — `1 ≤ width, height ≤ 2048`, `1 ≤ layers ≤ 64`,
-   `width × height × 4 × layers ≤ 512 MiB`, `active_layer < layers`.
-4. For each layer: canonical file name, entry ≤ 20 MiB, PNG header dimensions checked
-   before decoding, decoder allocation limits, decoded size must equal the document size.
+1. File size ≤ 1 GiB; ZIP has ≤ 64 016 entries.
+2. `manifest.json` (≤ 8 MiB): id, then version.
+3. `document.json` (≤ 8 MiB): `1 ≤ width, height ≤ 2048`, `1 ≤ layers ≤ 64`,
+   `1 ≤ frames ≤ 1000`, `width × height × 4 × layers × frames ≤ 512 MiB`, active indices
+   in range, ids valid, no more archive entries than cels + 16.
+4. For each cel: canonical name, entry ≤ 20 MiB (declared size and actual bytes), PNG
+   header dimensions checked before decoding, decoder allocation limits, decoded size
+   must equal the document size.
 5. Layer names are trimmed, control characters removed, limited to 64 characters.
 
-Entries are read into memory by exact name. Nothing is ever extracted to disk, so paths
-inside the archive cannot reach the file system.
+Entries are read into memory by exact name. Nothing is ever extracted to disk, so
+paths inside the archive cannot reach the file system.
 
 ## Saving
 
@@ -76,6 +109,6 @@ error during saving leaves the previous file intact.
 
 ## Versioning policy
 
-- Additive, optional changes keep version 1.
-- Any change that older readers would misinterpret bumps `format_version`. New Kagero
-  versions must keep reading all older versions.
+- Additive, optional changes keep the current version.
+- Any change older readers would misinterpret bumps `format_version`. New Kagero
+  versions keep reading all older versions.

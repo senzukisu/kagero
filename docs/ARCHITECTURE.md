@@ -1,106 +1,117 @@
 # Kagero Architecture
 
-Kagero is a single Rust crate (library + binary) split into four layers. Each layer only
-depends on the layers below it.
+Kagero is one Rust crate with a library and two binaries (`kagero`, `kagero-updater`).
+The code is split into layers; each depends only on the layers below it.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ UI          app.rs, ui/*            egui panels, canvas, input │
-├──────────────────────────────────────────────────────────────┤
-│ Application editor/*                Editor, tools, History    │
-├──────────────────────────────────────────────────────────────┤
-│ Pixel Engine core/*                 Rgba, PixelBuffer, Layer, │
-│                                     Document, raster algos    │
-├──────────────────────────────────────────────────────────────┤
-│ File I/O    file_io/*               KGR, PNG, atomic writes   │
-└──────────────────────────────────────────────────────────────┘
-   support: config.rs (settings), theme.rs (visual system),
-            services/ (native dialogs, logging)
+┌──────────────────────────────────────────────────────────────────┐
+│ UI           app.rs, ui/*          panels, canvas, timeline,      │
+│                                     settings, dialogs, shortcuts  │
+├──────────────────────────────────────────────────────────────────┤
+│ Application  editor/*              Editor, tools, History         │
+├──────────────────────────────────────────────────────────────────┤
+│ Pixel Engine core/*                Rgba, PixelBuffer, Document,   │
+│                                     frames, onion skin, raster    │
+├──────────────────────────────────────────────────────────────────┤
+│ File I/O     file_io/*             KGR v1/v2, PNG, atomic writes  │
+└──────────────────────────────────────────────────────────────────┘
+  services/      native dialogs, logging, updater, update installer
+  integrations/  Discord Rich Presence
+  config.rs      persisted settings     theme.rs   Kagero Ember style
+  release.rs     update source, signing key, Discord application ID
 ```
 
 ## Pixel engine (`src/core`)
 
-- `Rgba` is a straight-alpha 8-bit color. `Rgba::over` is "source over" compositing
-  done in integer math so results are identical on every machine.
-- `PixelBuffer` owns `width × height × 4` bytes. Every accessor checks bounds and returns
-  `None`/`false` for coordinates outside the image. Sizes are validated
-  (`1..=2048` per side) **before** allocating.
-- `Document` holds layers bottom-to-top plus the active layer index. Layers have a stable
-  `LayerId` so history entries keep pointing at the right layer after reordering.
-- `raster` contains Bresenham lines, rectangle outlines/fills, square brush stamps and a
-  4-connected flood fill (explicit stack, no recursion).
-- Limits: 2048×2048 pixels, 64 layers, 512 MiB of layer pixel data per document.
+- `Rgba` — straight-alpha 8-bit color; integer "source over" compositing.
+- `PixelBuffer` — `width × height × 4` bytes, bounds-checked accessors, size validated
+  (`1..=2048` per side) before allocating.
+- `Document` — layers (`LayerInfo`: id, name, visibility; bottom to top) shared by all
+  frames, and `Frame`s (`animation.rs`: id, duration, one cel per layer, revision
+  counter). Invariants: ≥ 1 layer and frame, each frame has exactly one cel per layer.
+  The active layer and frame are indices kept in range by every mutator.
+- `LayerId` / `FrameId` are stable across reordering; history entries use them.
+- `structure_revision` and per-frame `revision` change when pixels or layer
+  order/visibility change; caches (thumbnails, frame textures) key on them.
+- `onion_skin.rs` — which neighbor frames to overlay and how (pure, view-only).
+- `raster` — Bresenham lines, rectangles, square brushes, 4-connected flood fill.
+- Limits: 2048×2048, 64 layers, 1000 frames, `layers × frames` cels ≤ 512 MiB.
 
 ## Application layer (`src/editor`)
 
-`Editor` wraps one open `Document` and is the only way the UI changes it.
+`Editor` wraps one `Document` and is the only way the UI changes it.
 
-- **Strokes.** `begin_stroke` / `update_stroke` / `end_stroke` implement Pencil, Eraser,
-  Line, Rectangle and Filled Rectangle. During a stroke the editor writes pixels directly
-  to the active layer and remembers the *original* color of every touched pixel. Shapes
-  are previewed by restoring those pixels and redrawing. `end_stroke` turns the record
-  into one `Change::Pixels` (one undo step per gesture). `cancel_stroke` (Esc) restores.
-- **One-shot tools.** Fill and Eyedropper act in `begin_stroke`.
-- **Commands.** Layer operations build a `Change`, apply it and push it to `History`.
-- **Dirty tracking.** Every edit records the changed rectangle; the canvas takes it with
-  `take_dirty()` and re-uploads only that region of the texture.
-- **Saved state.** Each history entry has an id. The editor remembers the id that was on
-  top of the undo stack at the last save; the document is "modified" whenever the
-  current top id differs. Undoing back to the saved point makes it clean again.
+- **Strokes** record the frame and layer they started on and the original color of
+  every touched pixel; `end_stroke` turns that into one `Change::Pixels`.
+- **Frame commands**: add, duplicate, delete, move, set duration — each a `Change`.
+  `select_frame`/`next_frame`/`previous_frame` are navigation, not undo steps.
+- **Read-only mode** blocks pixel edits during animation preview.
+- **Dirty tracking** reports the rectangle to re-upload; frame switches report `Full`.
+- **Saved state** compares the id on top of the undo stack with the id at last save.
 
 ### History
 
-`Change` is a reversible operation that stores only what it needs:
+| Change             | Stored data                                         |
+|--------------------|-----------------------------------------------------|
+| `Pixels`           | frame id, layer id, per pixel: index, before, after |
+| `AddLayer`         | index; the layer and its cels only while undone     |
+| `RemoveLayer`      | index; the layer and all its cels while removed     |
+| `MoveLayer`        | from/to                                             |
+| `RenameLayer`      | old/new name                                        |
+| `SetVisible`       | new visibility                                      |
+| `AddFrame`         | index; the frame only while undone (`duplicate` flag for the label) |
+| `RemoveFrame`      | index; the removed frame while removed              |
+| `MoveFrame`        | from/to                                             |
+| `SetFrameDuration` | frame id, before/after                              |
 
-| Change          | Stored data                                   |
-|-----------------|-----------------------------------------------|
-| `Pixels`        | per pixel: index, before, after               |
-| `AddLayer`      | index; the layer itself only while undone     |
-| `RemoveLayer`   | index; the removed layer while it is removed  |
-| `MoveLayer`     | from/to                                       |
-| `RenameLayer`   | old/new name                                  |
-| `SetVisible`    | new visibility                                |
-
-Layers move between the document and the change instead of being copied. The history is
-bounded by entry count (256) and memory (256 MiB); the oldest entries are dropped first.
-Pushing a new change clears the redo stack.
+Data moves between the document and the change instead of being copied. Undoing or
+redoing a pixel change on another frame switches to that frame. The history is bounded
+by 256 entries and 256 MiB.
 
 ## File I/O (`src/file_io`)
 
-- `kgr.rs` — the project format (see [PROJECT_FORMAT.md](PROJECT_FORMAT.md)).
-- `png.rs` — PNG import (single layer) and export (flattened, with alpha). Image
-  dimensions are read from the header and checked before decoding; the decoder also gets
-  explicit allocation limits.
-- `write_atomic` writes to a temporary file in the same folder, flushes and `fsync`s it,
-  then renames it over the target. If anything fails the old file is untouched and the
-  temporary file is removed.
+- `kgr.rs` — `.kgr` v2 writer, v1 + v2 readers with validation before allocation
+  (see [PROJECT_FORMAT.md](PROJECT_FORMAT.md)).
+- `png.rs` — PNG import (one frame, one layer), current-frame export, all-frames
+  export with sanitized file names.
+- `write_atomic` — temporary file, flush, `fsync`, rename.
 
 ## UI (`src/app.rs`, `src/ui`)
 
-- `KageroApp` owns the config, the optional `Editor`, the `CanvasView` and the current
-  modal dialog. Panels never mutate the document; they return `ui::Command` values that
-  `KageroApp::execute` dispatches.
-- Actions that would discard the document (New, Open, Close, Exit, window close) go
-  through `request()`, which shows the "Unsaved changes" dialog if needed.
-- `CanvasView` holds zoom/pan, the GPU texture and the pointer state. `ViewTransform`
-  is the pure screen↔pixel mapping (unit-tested). Zoom levels are device pixels per image
-  pixel (converted with egui's `pixels_per_point`), and the image origin is snapped to a
-  device pixel, so nearest-neighbor scaling stays crisp at any Windows display scale. The
-  transparency checkerboard is a 2×2 repeating texture mapped so one cell is one image
-  pixel (power-of-two pixel blocks when zoomed far out).
-- Keyboard shortcuts are collected once per frame. When a text field has focus, only
-  Ctrl-based file shortcuts are handled; letters, Space and Ctrl+Z go to the text field.
+- `KageroApp` owns config, `Editor`, `CanvasView`, `Timeline`, `Player`, the settings
+  window, `UpdateManager` and `DiscordPresence`. Panels return `ui::Command`s; the app
+  executes them. Shortcuts live in `ui/shortcuts.rs`.
+- `canvas.rs` — view transform in device pixels, partial texture uploads for editing, a
+  frame-texture cache (256 MiB, LRU) for onion skin and preview, badges.
+- `timeline.rs` — controls and frame strip; thumbnails cached per frame and rebuilt
+  lazily (≤ 12 per UI frame, visible cards only).
+- `animation_preview.rs` — `Player`: the shown frame is computed from a monotonic clock
+  (`frame_at_time`), and the next repaint is scheduled for the next frame change.
+- `settings/` — General, Updates, Discord pages; `toggle` is the shared switch widget.
+- Settings writes are debounced (600 ms) and flushed on exit.
+
+## Services and integrations
+
+- `services/updater.rs` — GitHub Releases client behind an `HttpClient` trait (real
+  client: `ureq` + OS TLS), semantic version selection, download with checksum and
+  minisign verification, and a background `UpdateManager`. See [UPDATER.md](UPDATER.md).
+- `services/update_installer.rs` + `src/bin/kagero-updater.rs` — package extraction,
+  backup/rollback install after Kagero exits, restore.
+- `integrations/discord_rpc.rs` — presence building with privacy rules, a transport-
+  independent connection state machine and a background IPC worker. See
+  [DISCORD_RPC.md](DISCORD_RPC.md).
+
+None of these is required: failures are shown quietly and editing continues.
 
 ## Error handling
 
-- File and core errors are typed (`thiserror`) and their messages are written for users.
-- Errors are shown in a modal dialog (file operations) or in the status bar (editing).
+- Typed errors (`thiserror`) with user-facing messages; dialogs for file and update
+  errors, the status bar for editing errors, quiet status lines for network/Discord.
 - No `unwrap()`/`expect()` in user-reachable paths; tests use `expect` freely.
-- Logs go to `%APPDATA%\OnibiLab\Kagero\kagero.log`.
+- Logs: `%APPDATA%\OnibiLab\Kagero\kagero.log`.
 
 ## Extending
 
-- New tool: add a `ToolKind` variant, handle it in `Editor::begin_stroke` /
-  `update_stroke`, add an icon in `ui/icons.rs` and a shortcut in `app.rs`.
-- New undoable operation: add a `Change` variant with `apply`/`revert`/`byte_size`/`dirty`.
-- New format version: bump `KGR_FORMAT_VERSION`, keep reading older versions.
+- New tool: `ToolKind` variant → `Editor::begin_stroke`/`update_stroke`, icon, shortcut.
+- New undoable operation: `Change` variant with `apply`/`revert`/`byte_size`/`dirty`.
+- New format version: bump `KGR_FORMAT_VERSION`, add a reader branch, keep older ones.

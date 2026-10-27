@@ -16,6 +16,7 @@ Kagero (陽炎) means "heat haze"; the flame mark is the shimmer above an ember.
 | Accent pressed   | `#F06B35` | pressed state                             |
 | Success          | `#75C7B5` | "Saved", success messages                 |
 | Error            | `#E85D5D` | error text (derived, not in the brief)    |
+| Ember deep       | `#6B361C` | pressed buttons and selected items, behind light text |
 
 Text on accent uses `#1A1410`. Corner radius 4 px for widgets, 6–8 px for windows/cards.
 All tokens live in `src/theme.rs`.
@@ -75,3 +76,23 @@ Modal, centered, with the primary action as an accent button on the left:
 New Image, Unsaved changes (Save / Don't Save / Cancel), error (title in error color and a
 plain-language message), About (with a shortcut list). Escape or clicking outside closes
 a dialog as "Cancel".
+
+## 0.2 additions
+
+- **Timeline** (bottom, full width): a 38 px controls row — playback (first, previous,
+  play/stop, next, `3 / 12` counter), frame actions (new, duplicate, delete, move),
+  duration, onion skin toggle with Prev/Next/opacity, and on the right the preview
+  timing and the collapse arrow — above a scrollable strip of 64 px frame cards
+  (checkered thumbnail, number, duration). The active card has a 2 px amber border.
+  The panel is resizable (142–360 px) and collapses to the controls row (F7).
+- **Canvas badges** (top-left, small panel-colored pill): a pulsing amber dot while
+  previewing, a teal dot while onion skin is on. "Reduce motion" stops the pulse.
+- **Onion tints**: previous frame warm (#FF7A5C), next frame cool (#6FD6C2), so past and
+  future are told apart without reading labels.
+- **Settings window** (Ctrl+,): tabs on the left, pages with small uppercase section
+  titles, plain-language hints, status lines with a colored dot, and one switch style
+  (amber pill when on) used for every on/off setting.
+- **Pressed and selected states** use *Ember deep* with light text instead of bright
+  orange, so labels stay readable while clicked.
+- New pixel icons: play, stop, first/previous/next frame, duplicate, move left/right,
+  onion skin, settings.

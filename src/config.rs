@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::onion_skin::OnionSkin;
 use crate::core::Rgba;
 use crate::file_io::{write_atomic, FileError};
 
@@ -20,6 +21,11 @@ pub struct Config {
     pub palette: Vec<Rgba>,
     pub new_width: u32,
     pub new_height: u32,
+    pub ui: UiSettings,
+    pub onion: OnionSkin,
+    pub playback: PlaybackSettings,
+    pub updates: UpdateSettings,
+    pub discord: DiscordSettings,
 }
 
 impl Default for Config {
@@ -30,6 +36,116 @@ impl Default for Config {
             palette: default_palette(),
             new_width: 32,
             new_height: 32,
+            ui: UiSettings::default(),
+            onion: OnionSkin::default(),
+            playback: PlaybackSettings::default(),
+            updates: UpdateSettings::default(),
+            discord: DiscordSettings::default(),
+        }
+    }
+}
+
+/// Workspace layout, remembered between launches.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UiSettings {
+    pub timeline_visible: bool,
+    pub timeline_height: f32,
+    pub side_panel_visible: bool,
+    /// Turns off decorative motion (pulsing indicators, eased panel changes).
+    pub reduce_motion: bool,
+}
+
+impl Default for UiSettings {
+    fn default() -> Self {
+        Self {
+            timeline_visible: true,
+            timeline_height: 156.0,
+            side_panel_visible: true,
+            reduce_motion: false,
+        }
+    }
+}
+
+pub const TIMELINE_MIN_HEIGHT: f32 = 142.0;
+pub const TIMELINE_MAX_HEIGHT: f32 = 360.0;
+
+/// How the animation preview is timed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlaybackTiming {
+    /// Each frame stays on screen for its own duration.
+    FrameDurations,
+    /// Every frame lasts `1000 / fps` ms, ignoring stored durations.
+    FixedFps,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PlaybackSettings {
+    pub timing: PlaybackTiming,
+    pub fps: u32,
+}
+
+impl Default for PlaybackSettings {
+    fn default() -> Self {
+        Self {
+            timing: PlaybackTiming::FrameDurations,
+            fps: 12,
+        }
+    }
+}
+
+pub const FPS_RANGE: std::ops::RangeInclusive<u32> = 1..=60;
+
+/// GitHub updater preferences.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UpdateSettings {
+    pub check_on_startup: bool,
+    pub periodic_check: bool,
+    pub interval_hours: u32,
+    pub include_prereleases: bool,
+    pub notify: bool,
+    /// Unix time (seconds) of the last successful check.
+    pub last_check_unix: Option<u64>,
+}
+
+impl Default for UpdateSettings {
+    fn default() -> Self {
+        Self {
+            check_on_startup: true,
+            periodic_check: true,
+            interval_hours: 24,
+            include_prereleases: false,
+            notify: true,
+            last_check_unix: None,
+        }
+    }
+}
+
+pub const UPDATE_INTERVALS_HOURS: [u32; 4] = [6, 12, 24, 72];
+
+/// Discord Rich Presence preferences. By default only the general activity is shared.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DiscordSettings {
+    pub enabled: bool,
+    pub show_mode: bool,
+    pub show_project_name: bool,
+    pub show_timer: bool,
+    pub auto_reconnect: bool,
+    pub clear_on_disable: bool,
+}
+
+impl Default for DiscordSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            show_mode: true,
+            show_project_name: false,
+            show_timer: true,
+            auto_reconnect: true,
+            clear_on_disable: true,
         }
     }
 }
@@ -93,6 +209,20 @@ impl Config {
         }
         self.new_width = self.new_width.clamp(1, crate::core::MAX_CANVAS_SIZE);
         self.new_height = self.new_height.clamp(1, crate::core::MAX_CANVAS_SIZE);
+        let h = self.ui.timeline_height;
+        self.ui.timeline_height = if h.is_finite() {
+            h.clamp(TIMELINE_MIN_HEIGHT, TIMELINE_MAX_HEIGHT)
+        } else {
+            UiSettings::default().timeline_height
+        };
+        self.onion.opacity = self.onion.clamped_opacity();
+        self.playback.fps = self
+            .playback
+            .fps
+            .clamp(*FPS_RANGE.start(), *FPS_RANGE.end());
+        if !UPDATE_INTERVALS_HOURS.contains(&self.updates.interval_hours) {
+            self.updates.interval_hours = UpdateSettings::default().interval_hours;
+        }
     }
 
     pub fn save(&self, path: &Path) -> Result<(), FileError> {

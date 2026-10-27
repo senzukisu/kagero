@@ -5,6 +5,7 @@ use kagero::editor::{Change, History, PixelChange};
 
 fn pixel_change(doc: &Document, index: u32) -> Change {
     Change::Pixels {
+        frame: doc.active_frame().id,
         layer: doc.active_layer().id,
         changes: vec![PixelChange {
             index,
@@ -29,7 +30,7 @@ fn entry_limit_drops_oldest() {
     }
     assert!(history.undo(&mut doc).expect("empty").is_none());
     // The five oldest changes can no longer be undone.
-    let layer = &doc.active_layer().pixels;
+    let layer = doc.active_cel();
     assert_eq!(layer.get_index(0), Some(Rgba::WHITE));
     assert_eq!(layer.get_index(4), Some(Rgba::WHITE));
     assert_eq!(layer.get_index(5), Some(Rgba::TRANSPARENT));

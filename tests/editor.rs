@@ -15,11 +15,7 @@ fn editor(w: u32, h: u32) -> Editor {
 }
 
 fn px(e: &Editor, x: i32, y: i32) -> Rgba {
-    e.document()
-        .active_layer()
-        .pixels
-        .get(x, y)
-        .expect("in bounds")
+    e.document().active_cel().get(x, y).expect("in bounds")
 }
 
 fn drag(e: &mut Editor, points: &[(i32, i32)]) {
@@ -282,7 +278,7 @@ fn layer_operations_and_their_undo() {
     assert_eq!(e.document().layer_count(), 2);
     assert_eq!(e.document().layers()[1].name, "Background");
     assert_eq!(
-        e.document().layers()[1].pixels.get(0, 0),
+        e.document().cel(0, 1).and_then(|c| c.get(0, 0)),
         Some(RED),
         "deleted pixels come back"
     );
@@ -311,10 +307,10 @@ fn drawing_affects_only_the_active_layer() {
     e.add_layer().expect("add");
     drag(&mut e, &[(2, 2)]);
     assert_eq!(
-        e.document().layers()[0].pixels.get(2, 2),
+        e.document().cel(0, 0).and_then(|c| c.get(2, 2)),
         Some(Rgba::TRANSPARENT)
     );
-    assert_eq!(e.document().layers()[1].pixels.get(2, 2), Some(RED));
+    assert_eq!(e.document().cel(0, 1).and_then(|c| c.get(2, 2)), Some(RED));
     e.select_layer(0);
     assert_eq!(e.document().active_index(), 0);
     e.select_layer(99);

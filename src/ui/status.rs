@@ -44,6 +44,7 @@ pub fn show(
     editor: Option<&Editor>,
     hover: Option<(i32, i32)>,
     zoom: f32,
+    playing: bool,
     message: Option<&StatusMessage>,
 ) {
     ui.horizontal_centered(|ui| {
@@ -65,6 +66,22 @@ pub fn show(
                 doc.layer_count(),
                 doc.active_layer().name
             )));
+            ui.separator();
+            let frame = format!(
+                "Frame {}/{} · {} ms",
+                doc.active_frame_index() + 1,
+                doc.frame_count(),
+                doc.active_frame().duration_ms()
+            );
+            if playing {
+                ui.label(
+                    RichText::new(format!("Previewing · {frame}"))
+                        .small()
+                        .color(theme::ACCENT),
+                );
+            } else {
+                ui.label(secondary(frame));
+            }
         } else {
             ui.label(secondary("No document open".to_owned()));
         }
