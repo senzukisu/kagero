@@ -33,7 +33,5 @@ Commits made with an assistant's help are marked with a `Co-Authored-By` line in
 [git history](https://github.com/senzukisu/kagero/commits/main), so it stays transparent
 which changes had help.
 
-{% hint style="success" %}
 No user data is ever sent to an AI service by Kagero. The app itself contains no AI
 features and works fully offline.
-{% endhint %}
