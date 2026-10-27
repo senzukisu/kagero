@@ -1,0 +1,12 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+version: 1
+site:
+  title: Kagero
+  structure:
+    - type: space
+      key: space-kagero-docs
+      title: Kagero Documentation
+      path: docs
+      default: true
+      content:
+        directory: ./docs
