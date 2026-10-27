@@ -46,11 +46,10 @@ All tokens live in `src/theme.rs`.
   name and shortcut.
 - **Tool options:** only options that exist for the active tool (brush size for
   Pencil/Eraser/Line/Rectangle, sample source for Eyedropper) and a one-line hint.
-- **Canvas:** checkerboard behind transparency that follows the image resolution — about
-  32 cells across the longer side, rounded to a power of two (32×32 → 1 px cells,
-  256×256 → 8 px, 2048×2048 → 64 px). It scales together with the image when zooming and
-  cell edges always sit on pixel edges; cells only grow when zoomed out so far that they
-  would be under 4 device pixels; 1 px border; pixel grid from 600% zoom; accent outline of the brush
+- **Canvas:** checkerboard behind transparency where one square is exactly one image
+  pixel, for every image size, so it doubles as a pixel grid and scales with zoom. Only
+  when a pixel would be smaller than 3 device pixels (far zoomed out) do squares merge
+  into 2×2, 4×4, … pixel blocks, still on pixel boundaries; 1 px border; pixel grid from 600% zoom; accent outline of the brush
   footprint under the cursor. Zoom is measured in *device* pixels per image pixel and the
   image origin is snapped to a device pixel, so pixels stay perfectly even at 125%/150%
   Windows display scaling.

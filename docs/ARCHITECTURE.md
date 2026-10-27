@@ -86,7 +86,8 @@ Pushing a new change clears the redo stack.
   is the pure screen↔pixel mapping (unit-tested). Zoom levels are device pixels per image
   pixel (converted with egui's `pixels_per_point`), and the image origin is snapped to a
   device pixel, so nearest-neighbor scaling stays crisp at any Windows display scale. The
-  transparency checkerboard is a 2×2 repeating texture whose cells are whole image pixels.
+  transparency checkerboard is a 2×2 repeating texture mapped so one cell is one image
+  pixel (power-of-two pixel blocks when zoomed far out).
 - Keyboard shortcuts are collected once per frame. When a text field has focus, only
   Ctrl-based file shortcuts are handled; letters, Space and Ctrl+Z go to the text field.
 

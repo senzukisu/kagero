@@ -55,20 +55,17 @@ impl ViewTransform {
     }
 }
 
-/// Checker cells across the longer image side.
-const CHECKER_CELLS_ACROSS: u32 = 32;
 /// Cells never get smaller than this many device pixels (when zoomed far out).
-const CHECKER_MIN_DEVICE_PX: f32 = 4.0;
+const CHECKER_MIN_DEVICE_PX: f32 = 3.0;
 
 /// Size of one checkerboard cell in image pixels.
 ///
-/// It follows the image resolution (about 32 cells across: 32×32 → 1 px cells,
-/// 256×256 → 8 px, 2048×2048 → 64 px), so the pattern scales together with the image
-/// and always sits on pixel boundaries. `device_zoom` (device pixels per image pixel)
-/// only enlarges cells when zoomed out so far that they would turn into noise.
-pub fn checker_cell_pixels(width: u32, height: u32, device_zoom: f32) -> f32 {
-    let target = width.max(height).div_ceil(CHECKER_CELLS_ACROSS).max(1);
-    let mut cell = target.next_power_of_two() as f32;
+/// One cell is exactly one image pixel, for every image size, so the checkerboard
+/// doubles as a pixel grid. Only when zoomed out so far that a pixel is smaller than
+/// a few device pixels (`device_zoom` = device pixels per image pixel) do cells merge
+/// into 2×2, 4×4, … pixel blocks, which still sit on pixel boundaries.
+pub fn checker_cell_pixels(device_zoom: f32) -> f32 {
+    let mut cell = 1.0_f32;
     while cell * device_zoom < CHECKER_MIN_DEVICE_PX && cell < 4096.0 {
         cell *= 2.0;
     }
@@ -396,7 +393,7 @@ impl CanvasView {
         let image_rect = transform.image_rect(w, h);
         if let Some(checker) = &self.checker {
             // Checker cells are whole image pixels, so they line up with the pixel grid.
-            let cell = checker_cell_pixels(w, h, self.zoom);
+            let cell = checker_cell_pixels(self.zoom);
             let uv = Rect::from_min_max(
                 Pos2::ZERO,
                 Pos2::new(w as f32 / (cell * 2.0), h as f32 / (cell * 2.0)),
@@ -524,16 +521,14 @@ mod tests {
 
     #[test]
     fn checker_cells_are_whole_pixels() {
-        // Follows the image resolution, independent of zoom.
-        assert_eq!(checker_cell_pixels(32, 32, 16.0), 1.0);
-        assert_eq!(checker_cell_pixels(256, 256, 2.0), 8.0);
-        assert_eq!(checker_cell_pixels(256, 256, 32.0), 8.0);
-        assert_eq!(checker_cell_pixels(320, 180, 4.0), 16.0);
-        assert_eq!(checker_cell_pixels(2048, 2048, 1.0), 64.0);
-        assert_eq!(checker_cell_pixels(1, 1, 64.0), 1.0);
-        // Only grows when cells would be smaller than a few device pixels.
-        assert_eq!(checker_cell_pixels(32, 32, 1.0), 4.0);
-        assert_eq!(checker_cell_pixels(2048, 2048, 0.25), 64.0);
+        // One cell per image pixel whenever a pixel is at least 3 device pixels.
+        for zoom in [3.0, 4.0, 6.0, 16.0, 96.0] {
+            assert_eq!(checker_cell_pixels(zoom), 1.0);
+        }
+        // Zoomed far out, cells merge into power-of-two pixel blocks.
+        assert_eq!(checker_cell_pixels(2.0), 2.0);
+        assert_eq!(checker_cell_pixels(1.0), 4.0);
+        assert_eq!(checker_cell_pixels(0.25), 16.0);
     }
 
     #[test]
