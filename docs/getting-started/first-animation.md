@@ -1,5 +1,5 @@
 ---
-description: Draw a tiny bouncing sprite and export it — in about five minutes.
+description: "Draw a tiny bouncing sprite and export it — in about five minutes."
 icon: wand-magic-sparkles
 ---
 

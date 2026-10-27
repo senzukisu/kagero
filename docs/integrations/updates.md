@@ -1,5 +1,5 @@
 ---
-description: How Kagero checks for, verifies and installs new versions.
+description: "How Kagero checks for, verifies and installs new versions."
 icon: arrows-rotate
 ---
 

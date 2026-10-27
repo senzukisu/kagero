@@ -1,5 +1,5 @@
 ---
-description: The Kagero Ember visual system.
+description: "The Kagero Ember visual system."
 icon: palette
 ---
 

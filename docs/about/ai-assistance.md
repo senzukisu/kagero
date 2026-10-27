@@ -1,5 +1,5 @@
 ---
-description: An honest note on how Kagero is developed.
+description: "An honest note on how Kagero is developed."
 icon: robot
 ---
 

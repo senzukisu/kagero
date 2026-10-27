@@ -1,5 +1,5 @@
 ---
-description: Every shortcut in one place.
+description: "Every shortcut in one place."
 icon: keyboard
 ---
 

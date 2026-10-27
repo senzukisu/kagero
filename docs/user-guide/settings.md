@@ -1,5 +1,5 @@
 ---
-description: General, Updates and Discord settings.
+description: "General, Updates and Discord settings."
 icon: gear
 ---
 

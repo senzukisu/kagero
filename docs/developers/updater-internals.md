@@ -1,5 +1,5 @@
 ---
-description: Release artifacts, version logic, verification and the install helper.
+description: "Release artifacts, version logic, verification and the install helper."
 icon: shield-halved
 ---
 

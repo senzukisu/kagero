@@ -10,7 +10,7 @@ Version 0.2.0 Beta · Windows 10/11 x64 · Written in Rust · MIT License
 
 [Download](https://github.com/senzukisu/kagero/releases) ·
 [Changelog](CHANGELOG.md) ·
-[Documentation](#documentation)
+[Documentation](https://kagero.gitbook.io/kagero-docs)
 
 </div>
 
@@ -120,8 +120,10 @@ built with `scripts\package-release.ps1` (see the
 
 ## Documentation
 
-The full documentation is a GitBook site built from the [`docs/`](docs/README.md)
-folder of this repository.
+📖 **Read it online: [kagero.gitbook.io/kagero-docs](https://kagero.gitbook.io/kagero-docs)**
+
+The GitBook site is built from the [`docs/`](docs/README.md) folder of this repository
+and stays in sync with it.
 
 | Section | Pages |
 |---------|-------|

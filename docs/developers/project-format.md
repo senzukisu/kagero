@@ -1,5 +1,5 @@
 ---
-description: The .kgr file format, versions, migration and validation.
+description: "The .kgr file format, versions, migration and validation."
 icon: file-zipper
 ---
 

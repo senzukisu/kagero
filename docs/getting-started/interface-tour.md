@@ -1,5 +1,5 @@
 ---
-description: Where everything is in the Kagero window.
+description: "Where everything is in the Kagero window."
 icon: compass
 ---
 

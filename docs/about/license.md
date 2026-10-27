@@ -1,5 +1,5 @@
 ---
-description: MIT License and third-party components.
+description: "MIT License and third-party components."
 icon: scale-balanced
 ---
 

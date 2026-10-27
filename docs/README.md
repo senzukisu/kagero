@@ -1,5 +1,5 @@
 ---
-description: An independent pixel-art and sprite-animation editor by Onibi Lab.
+description: "An independent pixel-art and sprite-animation editor by Onibi Lab."
 icon: fire-flame-curved
 cover: images/screenshot-onion-skin.png
 coverY: 0

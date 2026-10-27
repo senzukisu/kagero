@@ -1,5 +1,5 @@
 ---
-description: Show "Working in Kagero" on your Discord profile — privately.
+description: "Show \"Working in Kagero\" on your Discord profile — privately."
 icon: discord
 ---
 

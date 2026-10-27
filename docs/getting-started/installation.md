@@ -1,5 +1,5 @@
 ---
-description: Download, unpack and run Kagero on Windows.
+description: "Download, unpack and run Kagero on Windows."
 icon: download
 ---
 

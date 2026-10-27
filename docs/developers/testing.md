@@ -1,5 +1,5 @@
 ---
-description: Automated tests, manual checklist and performance numbers.
+description: "Automated tests, manual checklist and performance numbers."
 icon: vial
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Projects (.kgr), PNG import, export and safe saving.
+description: "Projects (.kgr), PNG import, export and safe saving."
 icon: floppy-disk
 ---
 

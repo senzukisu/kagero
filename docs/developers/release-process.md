@@ -1,5 +1,5 @@
 ---
-description: How official releases are built, signed and published.
+description: "How official releases are built, signed and published."
 icon: box-archive
 ---
 

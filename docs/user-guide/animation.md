@@ -1,5 +1,5 @@
 ---
-description: Frames, the timeline, preview and onion skin.
+description: "Frames, the timeline, preview and onion skin."
 icon: film
 ---
 

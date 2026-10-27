@@ -1,5 +1,5 @@
 ---
-description: How Rich Presence is implemented, configured and kept private.
+description: "How Rich Presence is implemented, configured and kept private."
 icon: plug
 ---
 

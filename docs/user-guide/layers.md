@@ -1,5 +1,5 @@
 ---
-description: Stack, hide, rename and reorder layers.
+description: "Stack, hide, rename and reorder layers."
 icon: layer-group
 ---
 

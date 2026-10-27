@@ -1,5 +1,5 @@
 ---
-description: Pencil, eraser, fill, shapes, eyedropper and pan.
+description: "Pencil, eraser, fill, shapes, eyedropper and pan."
 icon: pencil
 ---
 

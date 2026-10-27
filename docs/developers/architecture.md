@@ -1,5 +1,5 @@
 ---
-description: How the code is organized: layers, data model, history.
+description: "How the code is organized: layers, data model, history."
 icon: sitemap
 ---
 
