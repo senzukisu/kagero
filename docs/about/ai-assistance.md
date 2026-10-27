@@ -7,11 +7,9 @@ icon: robot
 
 Kagero is developed by **Onibi Lab**. We want to be open about our tools:
 
-{% hint style="info" %}
 **Yes, large language models (LLMs) are used in Kagero's development — but not for all
 of the code.** Most often an LLM works as an assistant: helping with code, and helping
 with building and publishing releases.
-{% endhint %}
 
 ## What that means in practice
 
