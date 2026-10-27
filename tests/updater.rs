@@ -654,3 +654,17 @@ fn development_builds_never_install() {
             .expect_err("dev build");
     assert!(matches!(err, InstallError::Unsupported));
 }
+
+/// Verifies a real release package with Kagero's own code and the compiled-in key:
+/// `KAGERO_VERIFY_ZIP=dist\kagero-X.Y.Z-windows-x64.zip cargo test --test updater -- --ignored`
+#[test]
+#[ignore = "release check; needs KAGERO_VERIFY_ZIP"]
+fn verify_release_package() {
+    let zip = std::env::var("KAGERO_VERIFY_ZIP").expect("set KAGERO_VERIFY_ZIP");
+    let data = std::fs::read(&zip).expect("read zip");
+    let sig = std::fs::read_to_string(format!("{zip}.minisig")).expect("read signature");
+    verify_signature(release::UPDATE_PUBLIC_KEY, &data, &sig).expect("signature verifies");
+    let dir = temp_dir("release-check");
+    let names = extract_package(std::path::Path::new(&zip), &dir).expect("valid package");
+    println!("verified {zip}: {names:?}");
+}
