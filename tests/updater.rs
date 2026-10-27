@@ -668,3 +668,44 @@ fn verify_release_package() {
     let names = extract_package(std::path::Path::new(&zip), &dir).expect("valid package");
     println!("verified {zip}: {names:?}");
 }
+
+/// End-to-end check against the real GitHub release (network): pretends to be 0.1.0,
+/// finds the newest release, downloads and verifies it with the compiled-in key.
+/// `cargo test --test updater live_github -- --ignored --nocapture`
+#[test]
+#[ignore = "uses the network"]
+fn live_github_update_from_0_1_0() {
+    use kagero::services::updater::{HttpClient, UreqClient};
+    let http = UreqClient::new();
+    let json = http
+        .get_bytes(&release::releases_api_url(), 2 * 1024 * 1024)
+        .expect("GitHub reachable");
+    let info = available(
+        select_update(
+            &json,
+            &Version::new(0, 1, 0),
+            false,
+            release::platform_tag(),
+        )
+        .expect("parse"),
+    );
+    println!("found {} ({})", info.version, info.page_url);
+    let dir = temp_dir("live-update");
+    let package = download_package(
+        &http,
+        &info,
+        &dir,
+        release::UPDATE_PUBLIC_KEY,
+        &AtomicBool::new(false),
+        &mut |_, _| {},
+    )
+    .expect("download and verify");
+    assert!(package.signature_verified);
+    println!(
+        "verified {} sha256 {}",
+        package.path.display(),
+        package.sha256
+    );
+    let names = extract_package(&package.path, &dir.join("staging")).expect("valid package");
+    println!("contents {names:?}");
+}

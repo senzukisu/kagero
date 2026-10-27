@@ -49,10 +49,16 @@ rsign generate -p kagero.pub -s %USERPROFILE%\.kagero-release\kagero.key
 6. Create the GitHub release for the tag:
    - title `Kagero X.Y.Z <Channel>`;
    - notes: highlights, the CHANGELOG section, known limitations, install steps;
-   - mark **pre-release** for alpha/beta builds that should only reach users who opted
-     in;
+   - mark **pre-release** only for versions with a prerelease suffix (e.g.
+     `v0.3.0-beta.1`): the updater offers those only to users who enabled
+     *Include prereleases*. Plain versions such as `v0.2.0` (even if labeled "Beta")
+     are normal releases;
    - attach the three files from `dist\` exactly as named.
-7. Verify: download the zip from the release page, check
+7. Verify end to end with Kagero's own updater code (network):
+   ```
+   cargo test --test updater live_github -- --ignored --nocapture
+   ```
+   Then download the zip from the release page, check
    `rsign verify -p kagero.pub -x <zip>.minisig <zip>`, run it, and use
    Settings → Updates → Check for Updates from the previous version.
 
