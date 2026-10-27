@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Produces in dist\:
-    kagero-<version>-windows-x64.zip           flat package (see docs/UPDATER.md)
+    kagero-<version>-windows-x64.zip           flat package (see docs/developers/updater-internals.md)
     kagero-<version>-windows-x64.zip.minisig   minisign signature of the zip
     SHA256SUMS.txt                             checksums of both files
 

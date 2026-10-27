@@ -1,3 +1,8 @@
+---
+description: The .kgr file format, versions, migration and validation.
+icon: file-zipper
+---
+
 # The `.kgr` Project Format
 
 Format id `kagero-project`. Kagero 0.2 writes **version 2** and reads versions 1 and 2.

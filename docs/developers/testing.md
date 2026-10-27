@@ -1,3 +1,8 @@
+---
+description: Automated tests, manual checklist and performance numbers.
+icon: vial
+---
+
 # Testing
 
 ## Automated checks

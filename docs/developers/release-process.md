@@ -1,3 +1,8 @@
+---
+description: How official releases are built, signed and published.
+icon: box-archive
+---
+
 # Release Process
 
 Releases are published on
@@ -33,7 +38,7 @@ rsign generate -p kagero.pub -s %USERPROFILE%\.kagero-release\kagero.key
    cargo clippy --all-targets
    cargo test
    ```
-3. Smoke-test a release build manually (see [TESTING.md](TESTING.md)).
+3. Smoke-test a release build manually (see [Testing](testing.md)).
 4. Package and sign:
    ```
    powershell -ExecutionPolicy Bypass -File scripts\package-release.ps1

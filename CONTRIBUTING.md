@@ -4,9 +4,9 @@ Thanks for helping! Kagero is developed by Onibi Lab and welcomes issues and pul
 
 ## Before you start
 
-- Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The UI never edits pixels directly:
+- Read [the architecture guide](docs/developers/architecture.md). The UI never edits pixels directly:
   every document change goes through `Editor` and a `Change` in the history.
-- Check [docs/ROADMAP.md](docs/ROADMAP.md) for what is in scope for the next version.
+- Check [the roadmap](docs/about/roadmap.md) for what is in scope for the next version.
 
 ## Rules
 
@@ -35,3 +35,10 @@ Short imperative subject (`Add layer opacity`), a body explaining *why* when it 
 obvious, and an entry in `CHANGELOG.md` for user-visible changes.
 
 By contributing you agree that your contribution is licensed under the MIT License.
+
+## AI-assisted contributions
+
+Using an AI assistant is fine — Kagero itself is developed with one (see
+[How Kagero is made](docs/about/ai-assistance.md)). You are responsible for every line
+you submit: understand it, test it, and mark assisted commits with a `Co-Authored-By`
+line.

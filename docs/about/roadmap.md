@@ -1,3 +1,8 @@
+---
+description: What's done and what comes next.
+icon: map
+---
+
 # Roadmap
 
 ## 0.1.0 Alpha — done

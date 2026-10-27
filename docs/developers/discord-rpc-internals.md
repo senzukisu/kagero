@@ -1,3 +1,8 @@
+---
+description: How Rich Presence is implemented, configured and kept private.
+icon: plug
+---
+
 # Discord Rich Presence
 
 Kagero can show in your Discord profile that you are working in Kagero. It talks to the
@@ -24,7 +29,7 @@ Kagero can show in your Discord profile that you are working in Kagero. It talks
 
 Rich Presence needs an application registered in the
 [Discord Developer Portal](https://discord.com/developers/applications). Kagero's ID is
-set in [`src/release.rs`](../src/release.rs):
+set in [`src/release.rs`](https://github.com/senzukisu/kagero/blob/main/src/release.rs):
 
 ```rust
 pub const DISCORD_APPLICATION_ID: &str = "1564753232763424869";

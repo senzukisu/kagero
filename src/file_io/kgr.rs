@@ -1,5 +1,5 @@
 //! The `.kgr` project format: a ZIP archive with `manifest.json`, `document.json`
-//! and one PNG per layer per frame. See `docs/PROJECT_FORMAT.md`.
+//! and one PNG per layer per frame. See `docs/developers/project-format.md`.
 //!
 //! Version 2 stores animation frames. Version 1 files (Kagero 0.1, one image with layers)
 //! are still read and become a single-frame document.

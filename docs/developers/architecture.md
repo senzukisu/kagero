@@ -1,3 +1,8 @@
+---
+description: How the code is organized: layers, data model, history.
+icon: sitemap
+---
+
 # Kagero Architecture
 
 Kagero is one Rust crate with a library and two binaries (`kagero`, `kagero-updater`).
@@ -71,7 +76,7 @@ by 256 entries and 256 MiB.
 ## File I/O (`src/file_io`)
 
 - `kgr.rs` — `.kgr` v2 writer, v1 + v2 readers with validation before allocation
-  (see [PROJECT_FORMAT.md](PROJECT_FORMAT.md)).
+  (see [The .kgr project format](project-format.md)).
 - `png.rs` — PNG import (one frame, one layer), current-frame export, all-frames
   export with sanitized file names.
 - `write_atomic` — temporary file, flush, `fsync`, rename.
@@ -94,12 +99,12 @@ by 256 entries and 256 MiB.
 
 - `services/updater.rs` — GitHub Releases client behind an `HttpClient` trait (real
   client: `ureq` + OS TLS), semantic version selection, download with checksum and
-  minisign verification, and a background `UpdateManager`. See [UPDATER.md](UPDATER.md).
+  minisign verification, and a background `UpdateManager`. See [Updater internals](updater-internals.md).
 - `services/update_installer.rs` + `src/bin/kagero-updater.rs` — package extraction,
   backup/rollback install after Kagero exits, restore.
 - `integrations/discord_rpc.rs` — presence building with privacy rules, a transport-
   independent connection state machine and a background IPC worker. See
-  [DISCORD_RPC.md](DISCORD_RPC.md).
+  [Discord RPC internals](discord-rpc-internals.md).
 
 None of these is required: failures are shown quietly and editing continues.
 

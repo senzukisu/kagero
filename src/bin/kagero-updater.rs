@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 //! Installs a verified Kagero update after Kagero has exited, or restores the previous
-//! version. Started only by Kagero itself with local paths; see `docs/UPDATER.md`.
+//! version. Started only by Kagero itself with local paths; see `docs/developers/updater-internals.md`.
 
 use kagero::services::update_installer::{run_helper, HelperArgs};
 

@@ -3,7 +3,7 @@
 //! Network work runs on background threads; the UI polls [`UpdateManager::status`].
 //! Only assets from the official repository (see [`crate::release`]) are downloaded, and
 //! a package is installable only after its minisign signature verifies against the
-//! public key compiled into Kagero. See `docs/UPDATER.md`.
+//! public key compiled into Kagero. See `docs/developers/updater-internals.md`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};

@@ -55,7 +55,7 @@ pub enum Desired {
     Show(ActivityData),
 }
 
-/// Asset keys that must exist in the Discord Developer Portal (see docs/DISCORD_RPC.md).
+/// Asset keys that must exist in the Discord Developer Portal (see docs/developers/discord-rpc-internals.md).
 pub mod assets {
     pub const LOGO: &str = "kagero_logo";
     pub const PIXEL_ART: &str = "pixel_art";

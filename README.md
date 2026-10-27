@@ -115,21 +115,31 @@ cargo build --release    # target\release\kagero.exe
 ```
 
 Source builds can check for updates but never install them; official packages are
-built with `scripts\package-release.ps1` (see [RELEASE_PROCESS](docs/RELEASE_PROCESS.md)).
+built with `scripts\package-release.ps1` (see the
+[release process](docs/developers/release-process.md)).
 
 ## Documentation
 
-| Document | Contents |
-|----------|----------|
-| [ARCHITECTURE](docs/ARCHITECTURE.md) | Layers of the code, data model, history |
-| [ANIMATION](docs/ANIMATION.md) | Frames, timeline, preview, onion skin |
-| [PROJECT_FORMAT](docs/PROJECT_FORMAT.md) | The `.kgr` file format and migration |
-| [UI_DESIGN](docs/UI_DESIGN.md) | Kagero Ember visual system |
-| [UPDATER](docs/UPDATER.md) | Update checks, verification, installation |
-| [DISCORD_RPC](docs/DISCORD_RPC.md) | Rich Presence setup and privacy |
-| [RELEASE_PROCESS](docs/RELEASE_PROCESS.md) | How releases are built and signed |
-| [TESTING](docs/TESTING.md) | Automated tests and manual checklist |
-| [ROADMAP](docs/ROADMAP.md) | What's next |
+The full documentation is a GitBook site built from the [`docs/`](docs/README.md)
+folder of this repository.
+
+| Section | Pages |
+|---------|-------|
+| **Getting started** | [Install](docs/getting-started/installation.md) · [Your first animation](docs/getting-started/first-animation.md) · [Workspace tour](docs/getting-started/interface-tour.md) |
+| **User guide** | [Drawing tools](docs/user-guide/drawing-tools.md) · [Layers](docs/user-guide/layers.md) · [Animation](docs/user-guide/animation.md) · [Files & export](docs/user-guide/files-and-export.md) · [Settings](docs/user-guide/settings.md) · [Shortcuts](docs/user-guide/keyboard-shortcuts.md) |
+| **Integrations** | [Updates](docs/integrations/updates.md) · [Discord Rich Presence](docs/integrations/discord.md) |
+| **Developers** | [Architecture](docs/developers/architecture.md) · [Project format](docs/developers/project-format.md) · [Updater internals](docs/developers/updater-internals.md) · [Discord RPC internals](docs/developers/discord-rpc-internals.md) · [UI design](docs/developers/ui-design.md) · [Testing](docs/developers/testing.md) · [Release process](docs/developers/release-process.md) · [Contributing](docs/developers/contributing.md) |
+| **About** | [Roadmap](docs/about/roadmap.md) · [AI assistance](docs/about/ai-assistance.md) · [FAQ](docs/about/faq.md) · [License](docs/about/license.md) |
+
+## How Kagero is made
+
+Yes — large language models (LLMs) are used in Kagero's development, **but not for all
+of the code**. Most often an LLM works as an assistant: helping with code (suggestions,
+bug hunting, tests, reviews) and helping with building and publishing releases and
+documentation. Decisions about what Kagero is and whether a change goes in stay with
+the developer, and every change goes through the same formatting, Clippy and test
+checks. Commits made with an assistant's help carry a `Co-Authored-By` line.
+More in [How Kagero is made](docs/about/ai-assistance.md).
 
 ## Beta notes
 

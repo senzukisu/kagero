@@ -1,3 +1,8 @@
+---
+description: Release artifacts, version logic, verification and the install helper.
+icon: shield-halved
+---
+
 # Updater
 
 Kagero can check GitHub Releases for new versions, download them, verify them and
@@ -6,7 +11,7 @@ development build, Kagero keeps working normally.
 
 ## Configuration
 
-All values live in [`src/release.rs`](../src/release.rs). None of them is secret.
+All values live in [`src/release.rs`](https://github.com/senzukisu/kagero/blob/main/src/release.rs). None of them is secret.
 
 | Constant              | Meaning                                                       |
 |-----------------------|---------------------------------------------------------------|
@@ -121,4 +126,4 @@ same helper with `--restore`.
 
 ## Publishing an update
 
-See [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
+See [Release process](release-process.md).

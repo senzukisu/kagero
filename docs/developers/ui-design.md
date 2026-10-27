@@ -1,3 +1,8 @@
+---
+description: The Kagero Ember visual system.
+icon: palette
+---
+
 # Kagero UI Design
 
 **Mood:** a dark Japanese workshop at night, lit by warm amber. Calm, precise, functional.
