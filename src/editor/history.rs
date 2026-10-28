@@ -6,6 +6,7 @@
 
 use std::collections::VecDeque;
 
+use crate::core::selection::SelRect;
 use crate::core::{CoreError, Document, Frame, FrameId, LayerData, LayerId, Rgba};
 
 /// Default number of undo steps kept.
@@ -103,6 +104,16 @@ pub enum Change {
         before: u32,
         after: u32,
     },
+    /// Moves or clears the selection outline.
+    SetSelection {
+        before: Option<SelRect>,
+        after: Option<SelRect>,
+    },
+    /// Several changes that undo and redo together (e.g. move pixels + selection).
+    Group {
+        label: &'static str,
+        changes: Vec<Change>,
+    },
 }
 
 impl Change {
@@ -122,6 +133,8 @@ impl Change {
             Change::RemoveFrame { .. } => "Delete Frame",
             Change::MoveFrame { .. } => "Move Frame",
             Change::SetFrameDuration { .. } => "Frame Duration",
+            Change::SetSelection { .. } => "Selection",
+            Change::Group { label, .. } => label,
         }
     }
 
@@ -137,7 +150,9 @@ impl Change {
                 frame.as_ref().map_or(0, Frame::byte_size)
             }
             Change::RenameLayer { before, after, .. } => before.len() + after.len(),
-            Change::MoveLayer { .. }
+            Change::Group { changes, .. } => changes.iter().map(Change::byte_size).sum(),
+            Change::SetSelection { .. }
+            | Change::MoveLayer { .. }
             | Change::SetVisible { .. }
             | Change::MoveFrame { .. }
             | Change::SetFrameDuration { .. } => 0,
@@ -158,7 +173,17 @@ impl Change {
                     Some(acc.map_or(d, |a| a.union(d)))
                 })
             }
-            Change::RenameLayer { .. } | Change::SetFrameDuration { .. } => None,
+            Change::RenameLayer { .. }
+            | Change::SetFrameDuration { .. }
+            | Change::SetSelection { .. } => None,
+            Change::Group { changes, .. } => {
+                changes
+                    .iter()
+                    .fold(None, |acc, c| match (acc, c.dirty(doc)) {
+                        (Some(a), Some(d)) => Some(a.union(d)),
+                        (a, d) => a.or(d),
+                    })
+            }
             _ => Some(Dirty::Full),
         }
     }
@@ -209,6 +234,16 @@ impl Change {
             Change::SetFrameDuration { frame, after, .. } => {
                 let f = doc.frame_mut(*frame).ok_or(CoreError::FrameMissing)?;
                 f.set_duration_ms(*after);
+                Ok(())
+            }
+            Change::SetSelection { after, .. } => {
+                doc.set_selection(*after);
+                Ok(())
+            }
+            Change::Group { changes, .. } => {
+                for c in changes.iter_mut() {
+                    c.apply(doc)?;
+                }
                 Ok(())
             }
         }
@@ -287,6 +322,16 @@ impl Change {
             Change::SetFrameDuration { frame, before, .. } => {
                 let f = doc.frame_mut(*frame).ok_or(CoreError::FrameMissing)?;
                 f.set_duration_ms(*before);
+                Ok(())
+            }
+            Change::SetSelection { before, .. } => {
+                doc.set_selection(*before);
+                Ok(())
+            }
+            Change::Group { changes, .. } => {
+                for c in changes.iter_mut().rev() {
+                    c.revert(doc)?;
+                }
                 Ok(())
             }
         }

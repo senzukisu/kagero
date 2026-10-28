@@ -10,6 +10,7 @@ pub mod app;
 pub mod config;
 pub mod core;
 pub mod editor;
+pub mod export;
 pub mod file_io;
 pub mod integrations;
 pub mod release;

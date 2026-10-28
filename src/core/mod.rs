@@ -7,7 +7,9 @@ mod buffer;
 mod color;
 mod document;
 pub mod onion_skin;
+pub mod palette;
 pub mod raster;
+pub mod selection;
 
 pub use animation::{Frame, FrameId};
 pub use buffer::PixelBuffer;

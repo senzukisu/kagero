@@ -3,7 +3,7 @@
 //! Thumbnails are cached per frame and rebuilt only when that frame's pixels or the
 //! layer structure changed, a few per UI frame at most, and only for visible cards.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use egui::{Color32, ColorImage, Rect, RichText, Sense, Stroke, StrokeKind, TextureHandle, Vec2};
 
@@ -35,6 +35,8 @@ pub struct Timeline {
     thumbs: HashMap<FrameId, Thumb>,
     /// Duration being edited (frame, value) — committed when editing ends.
     duration_edit: Option<(FrameId, u32)>,
+    /// Frames picked with Ctrl/Shift+click (for exporting selected frames).
+    selected: BTreeSet<FrameId>,
 }
 
 /// Settings the timeline edits in place (saved by the app on `SettingsChanged`).
@@ -45,10 +47,21 @@ pub struct TimelineSettings<'a> {
 }
 
 impl Timeline {
+    /// Document positions of frames selected for export, in order.
+    pub fn selected_indices(&self, doc: &crate::core::Document) -> Vec<usize> {
+        doc.frames()
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| self.selected.contains(&f.id))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
     /// Drops cached thumbnails (e.g. when another document opens).
     pub fn clear(&mut self) {
         self.thumbs.clear();
         self.duration_edit = None;
+        self.selected.clear();
     }
 
     pub fn show(
@@ -62,6 +75,8 @@ impl Timeline {
         let doc = editor.document();
         self.thumbs
             .retain(|id, _| doc.frames().iter().any(|f| f.id == *id));
+        self.selected
+            .retain(|id| doc.frames().iter().any(|f| f.id == *id));
 
         ui.allocate_ui(Vec2::new(ui.available_width(), HEADER_HEIGHT - 6.0), |ui| {
             ui.horizontal_centered(|ui| {
@@ -430,15 +445,33 @@ impl Timeline {
                             index,
                             frame.duration_ms(),
                             index == active,
+                            self.selected.contains(&frame.id),
                             self.thumbs.get(&frame.id).map(|t| &t.texture),
                         );
                         let resp = resp.on_hover_text(format!(
-                            "Frame {} · {} ms\nClick to edit · right-click for actions",
+                            "Frame {} · {} ms\nClick to edit · Ctrl/Shift+click to select for export · right-click for actions",
                             index + 1,
                             frame.duration_ms()
                         ));
                         if resp.clicked() {
-                            commands.push(Command::SelectFrame(index));
+                            let mods = ui.input(|i| i.modifiers);
+                            if mods.command {
+                                // Toggle this frame (the current one joins the first time).
+                                if self.selected.is_empty() {
+                                    self.selected.insert(doc.active_frame().id);
+                                }
+                                if !self.selected.remove(&frame.id) {
+                                    self.selected.insert(frame.id);
+                                }
+                            } else if mods.shift {
+                                let (a, b) = (active.min(index), active.max(index));
+                                for f in &doc.frames()[a..=b] {
+                                    self.selected.insert(f.id);
+                                }
+                            } else {
+                                self.selected.clear();
+                                commands.push(Command::SelectFrame(index));
+                            }
                         }
                         resp.context_menu(|ui| {
                             ui.add_enabled_ui(!playing, |ui| {
@@ -508,6 +541,7 @@ impl Timeline {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_card(
     ui: &egui::Ui,
     rect: Rect,
@@ -515,10 +549,11 @@ fn paint_card(
     index: usize,
     duration: u32,
     active: bool,
+    selected: bool,
     texture: Option<&TextureHandle>,
 ) {
     let painter = ui.painter();
-    let bg = if active {
+    let bg = if active || selected {
         theme::SURFACE_HOVER
     } else if resp.hovered() {
         theme::SURFACE
@@ -557,11 +592,17 @@ fn paint_card(
             Color32::WHITE,
         );
     }
-    let border = if active { theme::ACCENT } else { theme::BORDER };
+    let border = if active {
+        theme::ACCENT
+    } else if selected {
+        theme::SUCCESS
+    } else {
+        theme::BORDER
+    };
     painter.rect_stroke(
         box_rect,
         2.0,
-        Stroke::new(if active { 2.0_f32 } else { 1.0_f32 }, border),
+        Stroke::new(if active || selected { 2.0_f32 } else { 1.0_f32 }, border),
         StrokeKind::Outside,
     );
     let number_color = if active {

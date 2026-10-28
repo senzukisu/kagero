@@ -4,13 +4,60 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] Beta — 2026-10-28
+
+Export & sprite workflow.
 
 ### Added
 
+- **Export dialog** (Ctrl+Shift+E, File → Export…) with Image, Animation and Sprite
+  Sheet tabs, live preview, output size, background export with progress and cancel,
+  Open Folder, and settings remembered per tab and format.
+- A unified export service (`src/export`): snapshot → prepare → encode. Exports never
+  modify the document; files are written atomically.
+- **Image export**: PNG (pixel-exact), JPEG (quality 1–100, white/black/custom
+  background, lossy-compression warning) and lossless WebP.
+- **Scale** 100/200/300/400/800 % or any integer ×1–×64, nearest neighbor; sizes over
+  16 384 px per side or 512 MiB are refused before allocation.
+- **Frame choice**: current, selected (Ctrl/Shift+click in the timeline) or all;
+  numbered names (`sprite_0001.png`) with configurable base name and digits; a single
+  file is not numbered unless asked; one confirmation before replacing existing files.
+- **Animated GIF**: per-frame durations (10 ms steps, min. 20 ms), loop forever or play
+  once, transparency threshold, soft-edge matte, exact palette up to 255 colors,
+  reduction with optional Floyd–Steinberg dithering (off by default), warnings.
+- **Sprite sheets**: horizontal/vertical strips and grids by columns or rows, spacing,
+  padding, trim, extrude, transparent or solid background, preview, overflow checks.
+- **Sprite sheet metadata**: Kagero JSON (`kagero-sprite-sheet`, version 1) and JSON
+  Hash.
+- **Rectangle Select** tool (M): move (drag, arrows), move outline (Ctrl+drag), copy,
+  cut, paste, delete, duplicate, select all, deselect, flip horizontal/vertical, rotate
+  90/180/270°. Each is one undo step that also restores the selection. Without a
+  selection, flip/rotate apply to the whole layer.
+- **Image** menu (flip/rotate) and selection items in the Edit menu.
+- **Palettes**: several palettes, new/duplicate/rename/delete, add/remove/reorder
+  colors, GIMP `.gpl` and HEX import/export, click-to-copy HEX, RGBA readout, 12 recent
+  colors, built-in Kagero Ember, Ember, Night Sakura and Misty Forest.
 - `kagero.exe <file>` opens a `.kgr` or `.png` on start (e.g. Explorer "Open with").
 - README screenshots and logo; `examples/readme_assets.rs` regenerates the logo and
   the demo animation used for them.
+- Tests: export (PNG/JPEG/WebP/GIF/sheets/metadata), selection, palettes and settings
+  migration, headless shortcut and Export dialog tests.
+
+### Changed
+
+- Ctrl+Shift+E opens the Export dialog (it used to export all frames as PNGs directly;
+  choose *All* frames in the dialog for the same result).
+- Ctrl+D duplicates the selection when there is one, otherwise the frame as before.
+- Arrow keys nudge the selection when there is one, otherwise they change frames.
+- A customized 0.2 palette is migrated into a palette named "My Palette".
+
+### Not included
+
+- Animated WebP and lossy WebP (the WebP encoder used is lossless-only); the dialog
+  says so.
+- Packed (bin-packing) sprite-sheet layouts.
+
+The `.kgr` project format is unchanged (version 2).
 
 ## [0.2.0] Beta — 2026-10-27
 

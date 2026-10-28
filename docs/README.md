@@ -18,7 +18,7 @@ frame-by-frame animation, written in Rust by **Onibi Lab**. It runs entirely on 
 computer — no account, no server, no installer.
 
 {% hint style="info" %}
-**Current version: 0.2.0 Beta** — the animation update. Windows 10/11 x64.
+**Current version: 0.3.0 Beta** — export & sprite workflow. Windows 10/11 x64.
 [Download it from GitHub Releases](https://github.com/senzukisu/kagero/releases/latest).
 {% endhint %}
 
@@ -30,7 +30,8 @@ computer — no account, no server, no installer.
 <tr><td><strong>Draw pixel art</strong></td><td>Pencil, eraser, fill, shapes and an eyedropper on a pixel-exact canvas.</td><td><a href="user-guide/drawing-tools.md">drawing-tools.md</a></td></tr>
 <tr><td><strong>Work in layers</strong></td><td>Stack, hide, rename and reorder layers — every step undoable.</td><td><a href="user-guide/layers.md">layers.md</a></td></tr>
 <tr><td><strong>Animate</strong></td><td>Frames, a timeline with thumbnails, real-time preview and onion skin.</td><td><a href="user-guide/animation.md">animation.md</a></td></tr>
-<tr><td><strong>Export</strong></td><td>Save <code>.kgr</code> projects, export the current frame or every frame as PNG.</td><td><a href="user-guide/files-and-export.md">files-and-export.md</a></td></tr>
+<tr><td><strong>Select and transform</strong></td><td>Move, copy, paste, flip and rotate parts of a layer.</td><td><a href="user-guide/selection.md">selection.md</a></td></tr>
+<tr><td><strong>Export for games</strong></td><td>PNG, JPEG, WebP, animated GIF and sprite sheets with JSON metadata, at any integer scale.</td><td><a href="user-guide/export.md">export.md</a></td></tr>
 </tbody>
 </table>
 

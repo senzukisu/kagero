@@ -6,9 +6,12 @@ use std::time::{Duration, Instant};
 
 use egui::{Frame, Margin, ViewportCommand};
 
-use crate::config::{default_palette, Config, TIMELINE_MAX_HEIGHT, TIMELINE_MIN_HEIGHT};
+use crate::config::{Config, TIMELINE_MAX_HEIGHT, TIMELINE_MIN_HEIGHT};
+use crate::core::palette::{self as palettes, Palette};
 use crate::core::Document;
 use crate::editor::{display_name, Editor};
+use crate::export::{ExportKind, FrameSelection};
+use crate::file_io::palette as palette_io;
 use crate::file_io::{self, FileError};
 use crate::integrations::discord_rpc::{build_presence, AppMode, DiscordPresence, Flags};
 use crate::release;
@@ -19,9 +22,12 @@ use crate::theme;
 use crate::ui::animation_preview::Player;
 use crate::ui::canvas::{CanvasOptions, CanvasView};
 use crate::ui::dialogs::{self, ConfirmChoice, NewDocumentResult, NewDocumentState, UnsavedChoice};
+use crate::ui::export_dialog::{ExportDialog, ExportDialogAction};
 use crate::ui::layers::RenameState;
 use crate::ui::menu::MenuState;
+use crate::ui::palette::PaletteRename;
 use crate::ui::settings::{SettingsAction, SettingsTab, SettingsView, SettingsWindow};
+use crate::ui::shortcuts::KeyContext;
 use crate::ui::status::{MessageKind, StatusMessage};
 use crate::ui::timeline::{Timeline, TimelineSettings, HEADER_HEIGHT};
 use crate::ui::{home, layers, menu, palette, shortcuts, status, tool_options, toolbar, Command};
@@ -45,17 +51,9 @@ enum Pending {
 enum Dialog {
     NewDocument(NewDocumentState),
     Unsaved(Pending),
-    Error {
-        title: String,
-        message: String,
-    },
+    Error { title: String, message: String },
     About,
     ConfirmDeleteFrame(usize),
-    ConfirmOverwriteFrames {
-        dir: PathBuf,
-        base: String,
-        existing: usize,
-    },
 }
 
 pub struct KageroApp {
@@ -67,6 +65,8 @@ pub struct KageroApp {
     timeline: Timeline,
     player: Player,
     settings: SettingsWindow,
+    export: ExportDialog,
+    palette_rename: PaletteRename,
     updater: UpdateManager,
     discord: DiscordPresence,
     session_start_unix: i64,
@@ -100,6 +100,8 @@ impl KageroApp {
             timeline: Timeline::default(),
             player: Player::default(),
             settings: SettingsWindow::default(),
+            export: ExportDialog::default(),
+            palette_rename: None,
             updater,
             discord: DiscordPresence::start(release::DISCORD_APPLICATION_ID),
             session_start_unix: updater::unix_now() as i64,
@@ -251,6 +253,7 @@ impl KageroApp {
             editor.settings = old.settings;
             editor.primary = old.primary;
             editor.secondary = old.secondary;
+            editor.clipboard = old.clipboard.clone();
         }
         self.editor = Some(editor);
         self.rename = None;
@@ -373,49 +376,6 @@ impl KageroApp {
         }
     }
 
-    /// Asks for a folder, then exports every frame (confirming before overwriting).
-    fn export_all_frames(&mut self) {
-        let Some(editor) = &mut self.editor else {
-            return;
-        };
-        editor.end_stroke();
-        let base = editor.name().to_owned();
-        let Some(dir) = native::pick_folder(self.start_dir().as_deref(), "Export All Frames")
-        else {
-            return;
-        };
-        let Some(editor) = &self.editor else {
-            return;
-        };
-        let existing = file_io::frame_export_paths(editor.document(), &dir, &base)
-            .iter()
-            .filter(|p| p.exists())
-            .count();
-        if existing > 0 {
-            self.dialog = Some(Dialog::ConfirmOverwriteFrames {
-                dir,
-                base,
-                existing,
-            });
-        } else {
-            self.write_all_frames(&dir, &base);
-        }
-    }
-
-    fn write_all_frames(&mut self, dir: &Path, base: &str) {
-        let Some(editor) = &self.editor else {
-            return;
-        };
-        match file_io::export_frames(editor.document(), dir, base) {
-            Ok(paths) => self.success(format!(
-                "Exported {} frames to {}",
-                paths.len(),
-                dir.display()
-            )),
-            Err(e) => self.error_dialog("The frames were not exported", &e),
-        }
-    }
-
     // ------------------------------------------------------------ commands
 
     fn execute(&mut self, ctx: &egui::Context, command: Command) {
@@ -444,9 +404,46 @@ impl KageroApp {
                 self.export_png();
             }
             Command::ExportAllFrames => {
-                self.stop_playback();
-                self.export_all_frames();
+                self.config.export.frames = FrameSelection::All;
+                self.execute(ctx, Command::OpenExport(ExportKind::Image));
             }
+            Command::OpenExport(kind) => {
+                if let Some(editor) = &mut self.editor {
+                    self.player.stop(editor);
+                    editor.end_stroke();
+                    self.export.open_at(kind, &mut self.config.export);
+                }
+            }
+            Command::Copy => {
+                if let Some(editor) = &mut self.editor {
+                    if editor.copy_selection() {
+                        // Ctrl+V only reaches Kagero when the system clipboard has text.
+                        let size = editor.selection().map(|r| (r.w, r.h)).unwrap_or_default();
+                        ctx.copy_text(format!("Kagero pixels {}×{}", size.0, size.1));
+                        self.info("Copied");
+                    } else {
+                        self.info("Select an area first (M, then drag on the canvas)");
+                    }
+                }
+            }
+            Command::Cut => {
+                if let Some(editor) = &mut self.editor {
+                    self.player.stop(editor);
+                    match editor.cut_selection() {
+                        Ok(true) => {
+                            ctx.copy_text("Kagero pixels".to_owned());
+                            self.info("Cut");
+                        }
+                        Ok(false) => self.info("Select an area first (M, then drag on the canvas)"),
+                        Err(e) => self.status_error(capitalize(&e.to_string())),
+                    }
+                }
+            }
+            Command::CopyHex(color) => {
+                ctx.copy_text(color.to_hex());
+                self.info(format!("Copied {}", color.to_hex()));
+            }
+            Command::UseColor(_) => {}
             Command::CloseDocument => {
                 if self.editor.is_some() {
                     self.stop_playback();
@@ -493,15 +490,61 @@ impl KageroApp {
                 }
             }
             Command::RemovePaletteColor(index) => {
-                if index < self.config.palette.len() && self.config.palette.len() > 1 {
-                    self.config.palette.remove(index);
-                    self.save_config();
+                if self.config.remove_palette_color(index) {
+                    self.schedule_config_save();
+                }
+            }
+            Command::MovePaletteColor(index, delta) => {
+                if self.config.move_palette_color(index, delta) {
+                    self.schedule_config_save();
                 }
             }
             Command::ResetPalette => {
-                self.config.palette = default_palette();
-                self.save_config();
+                self.config.restore_builtin_palettes();
+                self.schedule_config_save();
+                self.info("Built-in palettes restored");
             }
+            Command::SelectPalette(index) => {
+                if index < self.config.palettes.len() {
+                    self.config.active_palette = index;
+                    self.schedule_config_save();
+                }
+            }
+            Command::NewPalette => {
+                let first = self
+                    .editor
+                    .as_ref()
+                    .map_or(crate::core::Rgba::BLACK, |e| e.primary);
+                let palette = Palette {
+                    name: "New Palette".to_owned(),
+                    colors: vec![first],
+                };
+                if self.config.add_palette(palette) {
+                    self.schedule_config_save();
+                }
+            }
+            Command::DuplicatePalette => {
+                let mut copy = self.config.active_palette().clone();
+                copy.name = format!("{} copy", copy.name);
+                if self.config.add_palette(copy) {
+                    self.schedule_config_save();
+                }
+            }
+            Command::DeletePalette => {
+                if self.config.delete_active_palette() {
+                    self.schedule_config_save();
+                }
+            }
+            Command::RenamePalette(name) => {
+                let name = palettes::sanitize_name(&name);
+                if name != self.config.active_palette().name {
+                    let unique = self.config.unique_palette_name(&name);
+                    self.config.active_palette_mut().name = unique;
+                    self.schedule_config_save();
+                }
+            }
+            Command::ImportPalette => self.import_palette(),
+            Command::ExportPalette => self.export_palette(),
             Command::DeleteFrame(index) => {
                 let has_content = self
                     .editor
@@ -515,6 +558,48 @@ impl KageroApp {
                 }
             }
             other => self.execute_on_document(other),
+        }
+    }
+
+    fn import_palette(&mut self) {
+        let Some(path) = rfd::FileDialog::new()
+            .set_title("Import Palette")
+            .add_filter("Palettes", &["gpl", "hex", "txt"])
+            .pick_file()
+        else {
+            return;
+        };
+        match palette_io::load_palette(&path) {
+            Ok(palette) => {
+                let name = palette.name.clone();
+                if self.config.add_palette(palette) {
+                    self.schedule_config_save();
+                    self.success(format!("Imported palette “{name}”"));
+                } else {
+                    self.status_error("Too many palettes — delete one first");
+                }
+            }
+            Err(e) => self.error_dialog("The palette was not imported", &e),
+        }
+    }
+
+    fn export_palette(&mut self) {
+        let palette = self.config.active_palette().clone();
+        let Some(path) = rfd::FileDialog::new()
+            .set_title("Export Palette")
+            .add_filter("GIMP palette", &["gpl"])
+            .add_filter("HEX list", &["hex"])
+            .set_file_name(format!(
+                "{}.gpl",
+                crate::export::sequence::sanitize_stem(&palette.name)
+            ))
+            .save_file()
+        else {
+            return;
+        };
+        match palette_io::save_palette(&palette, &path) {
+            Ok(()) => self.success(format!("Saved {}", path.display())),
+            Err(e) => self.error_dialog("The palette was not saved", &e),
         }
     }
 
@@ -640,6 +725,35 @@ impl KageroApp {
             Command::MoveFrameLeft(i) => editor.move_frame_left(i),
             Command::MoveFrameRight(i) => editor.move_frame_right(i),
             Command::SetFrameDuration(i, ms) => editor.set_frame_duration(i, ms),
+            Command::SelectAll => {
+                editor.set_tool(crate::editor::ToolKind::Select);
+                editor.select_all();
+                Ok(())
+            }
+            Command::Deselect => {
+                editor.deselect();
+                Ok(())
+            }
+            Command::SetSelection(rect) => {
+                editor.set_selection(rect);
+                Ok(())
+            }
+            Command::MoveSelectionOutline(dx, dy) => {
+                editor.move_selection_outline(dx, dy);
+                Ok(())
+            }
+            Command::Paste => {
+                if editor.clipboard.is_none() {
+                    self.info("Nothing to paste — copy a selection first");
+                    return;
+                }
+                editor.set_tool(crate::editor::ToolKind::Select);
+                editor.paste().map(|_| ())
+            }
+            Command::DeleteSelection => editor.delete_selection().map(|_| ()),
+            Command::DuplicateSelection => editor.duplicate_selection().map(|_| ()),
+            Command::MoveSelection(dx, dy) => editor.move_selection(dx, dy).map(|_| ()),
+            Command::Transform(kind) => editor.transform(kind).map(|_| ()),
             _ => Ok(()),
         };
         if let Err(e) = result {
@@ -744,11 +858,14 @@ impl KageroApp {
     // ------------------------------------------------------------ input
 
     fn collect_shortcuts(&mut self, ctx: &egui::Context, commands: &mut Vec<Command>) {
-        let active = self
+        let keys = self
             .editor
             .as_ref()
-            .map_or(0, |e| e.document().active_index());
-        let (found, escape) = shortcuts::collect(ctx, active);
+            .map_or(KeyContext::default(), |e| KeyContext {
+                active_layer: e.document().active_index(),
+                has_selection: e.selection().is_some(),
+            });
+        let (found, escape) = shortcuts::collect(ctx, keys);
         commands.extend(found);
         if escape {
             if self.player.is_playing() {
@@ -757,6 +874,8 @@ impl KageroApp {
                 if editor.is_stroking() {
                     editor.cancel_stroke();
                     self.info("Stroke canceled");
+                } else if editor.selection().is_some() {
+                    editor.deselect();
                 }
             }
         }
@@ -822,27 +941,6 @@ impl KageroApp {
                     ConfirmChoice::Confirm => {
                         self.execute_on_document(Command::DeleteFrameConfirmed(index))
                     }
-                    ConfirmChoice::Cancel => {}
-                }
-            }
-            Dialog::ConfirmOverwriteFrames {
-                dir,
-                base,
-                existing,
-            } => {
-                let message = format!(
-                    "{existing} file(s) named “{base}_####.png” already exist in {}. Replace them?",
-                    dir.display()
-                );
-                match dialogs::confirm(ctx, "Replace existing files?", &message, "Replace") {
-                    ConfirmChoice::Pending => {
-                        self.dialog = Some(Dialog::ConfirmOverwriteFrames {
-                            dir,
-                            base,
-                            existing,
-                        })
-                    }
-                    ConfirmChoice::Confirm => self.write_all_frames(&dir, &base),
                     ConfirmChoice::Cancel => {}
                 }
             }
@@ -965,7 +1063,7 @@ impl KageroApp {
                     .default_width(250.0)
                     .width_range(210.0..=420.0)
                     .show(ctx, |ui| {
-                        palette::show(ui, editor, &self.config.palette, commands);
+                        palette::show(ui, editor, &self.config, &mut self.palette_rename, commands);
                         ui.add_space(8.0);
                         ui.separator();
                         ui.add_space(4.0);
@@ -1029,9 +1127,26 @@ impl eframe::App for KageroApp {
             self.execute_settings_action(ctx, action);
         }
 
+        match &self.editor {
+            Some(editor) => {
+                let selected = self.timeline.selected_indices(editor.document());
+                let action = self
+                    .export
+                    .show(ctx, editor, &selected, &mut self.config.export);
+                if action == ExportDialogAction::SettingsChanged {
+                    self.schedule_config_save();
+                }
+            }
+            None => self.export.open = false,
+        }
         self.show_dialogs(ctx);
         for command in commands {
             self.execute(ctx, command);
+        }
+        if let Some(color) = self.editor.as_mut().and_then(Editor::take_used_color) {
+            if self.config.remember_color(color) {
+                self.schedule_config_save();
+            }
         }
         self.update_presence();
         self.update_title(ctx);

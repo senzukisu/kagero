@@ -1,4 +1,5 @@
 use super::animation::{Frame, FrameId, DEFAULT_FRAME_DURATION_MS};
+use super::selection::SelRect;
 use super::{
     layers_bytes, validate_size, CoreError, PixelBuffer, Rgba, MAX_DOCUMENT_BYTES, MAX_FRAMES,
     MAX_LAYERS,
@@ -55,6 +56,8 @@ pub struct Document {
     next_frame_id: u64,
     /// Bumped when layer order or visibility changes (affects every frame's look).
     structure_revision: u64,
+    /// Rectangular selection (editor state, not saved in project files).
+    selection: Option<SelRect>,
 }
 
 impl Document {
@@ -80,6 +83,7 @@ impl Document {
             next_layer_id: 2,
             next_frame_id: 2,
             structure_revision: 0,
+            selection: None,
         })
     }
 
@@ -172,6 +176,7 @@ impl Document {
             layers: infos,
             frames: out_frames,
             structure_revision: 0,
+            selection: None,
         })
     }
 
@@ -207,6 +212,18 @@ impl Document {
 
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    // ------------------------------------------------------------ selection
+
+    /// The current selection, always clipped to the image.
+    pub fn selection(&self) -> Option<SelRect> {
+        self.selection
+    }
+
+    /// Sets (and clips) the selection. `None` or an empty result deselects.
+    pub fn set_selection(&mut self, rect: Option<SelRect>) {
+        self.selection = rect.and_then(|r| r.clip(self.width, self.height));
     }
 
     // ------------------------------------------------------------ layers

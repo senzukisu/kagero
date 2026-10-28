@@ -6,6 +6,7 @@
 pub mod animation_preview;
 pub mod canvas;
 pub mod dialogs;
+pub mod export_dialog;
 pub mod home;
 pub mod icons;
 pub mod layers;
@@ -20,7 +21,10 @@ pub mod toolbar;
 
 use std::path::PathBuf;
 
-use crate::editor::ToolKind;
+use crate::core::selection::SelRect;
+use crate::core::Rgba;
+use crate::editor::{ToolKind, Transform};
+use crate::export::ExportKind;
 
 /// Every user action that the app knows how to perform.
 #[derive(Debug, Clone, PartialEq)]
@@ -80,4 +84,31 @@ pub enum Command {
     CheckForUpdates,
     /// Persist settings changed directly by a panel widget.
     SettingsChanged,
+    // Selection and clipboard
+    SelectAll,
+    Deselect,
+    Copy,
+    Cut,
+    Paste,
+    DeleteSelection,
+    DuplicateSelection,
+    Transform(Transform),
+    /// Move the selected pixels (arrow keys, end of a drag).
+    MoveSelection(i32, i32),
+    /// Move only the selection outline.
+    MoveSelectionOutline(i32, i32),
+    SetSelection(Option<SelRect>),
+    // Export
+    OpenExport(ExportKind),
+    // Palettes and colors
+    SelectPalette(usize),
+    NewPalette,
+    DuplicatePalette,
+    DeletePalette,
+    RenamePalette(String),
+    ImportPalette,
+    ExportPalette,
+    MovePaletteColor(usize, isize),
+    CopyHex(Rgba),
+    UseColor(Rgba),
 }

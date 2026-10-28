@@ -1,9 +1,9 @@
 ---
-description: "Projects (.kgr), PNG import, export and safe saving."
+description: "Projects (.kgr), PNG import and safe saving."
 icon: floppy-disk
 ---
 
-# Projects, import and export
+# Projects and import
 
 ## Projects (`.kgr`)
 
@@ -41,20 +41,15 @@ writes the new format. Nothing to convert by hand.
 <kbd>Ctrl</kbd>+<kbd>S</kbd> then asks where to save the `.kgr` project — the original PNG
 is never overwritten.
 
-## Exporting PNG
+## Exporting
 
 | Export | Shortcut | Result |
 |--------|----------|--------|
-| **Current frame** | <kbd>Ctrl</kbd>+<kbd>E</kbd> | One PNG of the visible layers of the current frame. |
-| **All frames** | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | Pick a folder; one PNG per frame, `name_0001.png`, `name_0002.png`, … |
+| **Current frame as PNG** | <kbd>Ctrl</kbd>+<kbd>E</kbd> | One PNG of the visible layers of the current frame. |
+| **Export dialog** | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | PNG / JPEG / WebP images, animated GIF and sprite sheets, at any integer scale. |
 
-* Transparency is preserved; hidden layers are left out.
-* Onion skin is never part of an export.
-* Exporting all frames asks before replacing files that already exist.
-
-{% hint style="info" %}
-GIF and sprite-sheet export are planned — see the [roadmap](../about/roadmap.md).
-{% endhint %}
+See [Exporting images](export.md), [Animated GIF](animated-export.md) and
+[Sprite sheets](sprite-sheets.md).
 
 ## Limits
 

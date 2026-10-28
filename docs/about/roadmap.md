@@ -9,7 +9,7 @@ icon: map
 
 Single-image editor: tools, layers, undo/redo, `.kgr` v1, PNG import/export, safe saving.
 
-## 0.2.0 Beta — the animation update (this release)
+## 0.2.0 Beta — the animation update — done
 
 - [x] Frames with per-frame layer images and durations; stable frame ids
 - [x] New / duplicate / delete / move frames, all undoable
@@ -23,17 +23,33 @@ Single-image editor: tools, layers, undo/redo, `.kgr` v1, PNG import/export, saf
 - [x] Discord Rich Presence with privacy settings
 - [x] Settings window, persistent workspace layout, new shortcuts, readable pressed states
 
-Known limitations of the beta: no GIF/sprite-sheet export, no selection tools, no layer
-opacity, Windows-only packages, no automatic crash recovery.
+## 0.3.0 Beta — export & sprite workflow (this release)
 
-## 0.3 — everyday comfort
+- [x] One Export dialog with Image / Animation / Sprite Sheet tabs, preview, progress
+      and cancel; settings remembered per format
+- [x] PNG (pixel-exact), JPEG (quality, background), lossless WebP
+- [x] Integer export scale 100–800 % and custom (nearest neighbor)
+- [x] Current / selected / all frames; numbered file names; overwrite confirmation
+- [x] Animated GIF: durations, loop/once, transparency threshold, exact palette ≤ 255
+      colors, optional dithering
+- [x] Sprite sheets: strips and grids, spacing, padding, trim, extrude, background,
+      Kagero JSON and JSON Hash metadata
+- [x] Rectangle selection: move, copy/cut/paste, delete, duplicate, flip, rotate — all undoable
+- [x] Multiple palettes, GPL/HEX import and export, recent colors, built-in Ember,
+      Night Sakura and Misty Forest
 
-- GIF and sprite-sheet export, PNG export at integer scale (×2, ×4, …)
-- Selection (rectangle), move, copy/paste; flip/rotate; canvas resize/crop
+Not in 0.3.0: animated WebP and lossy WebP (the WebP encoder Kagero uses is
+lossless-only), packed (bin-packing) sprite sheets.
+
+## 0.4 — everyday comfort
+
+- Canvas resize/crop
 - Layer opacity, duplicate and merge down
 - Autosave to a recovery folder and restore after a crash
-- Frame tags/ranges for previewing a part of the animation
-- Palette import/export (GPL, hex lists); executable icon and installer
+- Frame tags/ranges for previewing and exporting a part of the animation
+- Lasso / magic-wand selection
+- Animated WebP and packed sprite sheets
+- Executable icon and installer
 
 ## Later
 

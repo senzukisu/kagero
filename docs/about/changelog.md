@@ -8,6 +8,24 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.3.0 Beta — export & sprite workflow (2026-10-28)
+
+* **Export dialog** (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) with Image, Animation
+  and Sprite Sheet tabs, live preview, background export with progress and cancel.
+* **PNG, JPEG, lossless WebP**; integer scale 100–800 % or custom; current, selected
+  or all frames; numbered names with overwrite confirmation.
+* **Animated GIF** with real durations, loop or play-once, transparency threshold and
+  exact colors (dithering optional).
+* **Sprite sheets**: strips and grids, spacing, padding, trim, extrude, background,
+  **Kagero JSON** and **JSON Hash** metadata.
+* **Rectangle selection** (<kbd>M</kbd>): move, copy/cut/paste, delete, duplicate,
+  flip and rotate — all undoable.
+* **Palettes**: several palettes, GPL/HEX import and export, click-to-copy HEX, RGBA
+  readout, recent colors, built-in Ember, Night Sakura and Misty Forest.
+* `.kgr` format unchanged — 0.3 opens and writes the same projects as 0.2.
+
+[Download 0.3.0](https://github.com/senzukisu/kagero/releases/tag/v0.3.0)
+
 ## 0.2.0 Beta — the animation update (2026-10-27)
 
 * **Animation**: frames with per-frame layer images and durations; new, duplicate,

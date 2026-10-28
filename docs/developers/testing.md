@@ -30,6 +30,13 @@ cargo test
 | `tests/file_io.rs`           | KGR round trip (memory and disk), atomic replace, PNG export/import, hidden layers in export, damaged/truncated archives, missing entries, newer/foreign versions, bad sizes, path traversal names, corrupted PNGs, oversized PNGs; **v2**: multi-frame round trip (ids, durations, active frame, frames not merged), 0.1 project migration, damaged v2 documents (missing/odd/wrong-size cels, cel counts, ids, indices), memory budget before decoding, future versions, current/all-frames export |
 | `tests/animation.rs`         | new/duplicate (independence)/delete/move frames, last frame protected, durations, undo/redo incl. switching to the edited frame, shared layers vs per-frame pixels, navigation wrap, read-only preview, frame limit, playback timing, onion skin not touching pixels or export |
 | `tests/updater.rs`           | semver ordering, no update, newest stable, prereleases on/off, invalid API data, untrusted/missing assets, network errors, verified download, unverified without key, bad signature, size and checksum mismatch, cancel, check interval; installer: package validation, install + backup + restore, failed install rollback, unsafe names, unwritable folder, helper arguments, dev builds never install |
+| `src/export/*.rs`            | GIF delay rounding, alpha threshold and matte, nearest scaling, size limits, content bounds, flattening, file naming and sanitizing, grid shapes |
+| `src/core/selection.rs`      | block flips/rotations, rectangle clipping                      |
+| `src/ui/shortcuts.rs`        | headless egui input: export and clipboard shortcuts, selection-aware arrows and Ctrl+D, text fields keep their keys |
+| `src/ui/export_dialog.rs`    | headless dialog: every tab renders and builds a valid request, selected frames, oversized output refused |
+| `tests/export.rs`            | snapshot leaves the document untouched; PNG exact pixels, alpha and scale; numbered sequences; JPEG background and quality; lossless WebP alpha; GIF frames, delays, loop/once, threshold, > 255 colors, mismatched frames, cancel; sheet layouts, padding/spacing/extrude without overlap, trim offsets, overflow refused before allocating, JSON metadata round trip |
+| `tests/selection.rs`         | clipping, move with undo, moving past edges, transparent pixels, copy/cut/paste/delete, paste into smaller images, duplicate, pixel-exact flips/rotations with undo restoring the selection, non-square rotation, whole-layer transforms, 1×1/corner/empty cases, other layers untouched, hidden layers and preview blocked |
+| `tests/palette.rs`           | GPL/HEX parsing, bad input and limits, round trips, files by extension, oversized and non-UTF-8 files, built-ins, palette edits, palette count limit, recent colors, 0.2 settings migration, damaged settings repair |
 | `tests/discord.rs`           | statuses per mode, privacy (project name opt-in, no paths), no application id, Discord not running with back-off, manual retry, change-only updates and rate limit, reconnect after disconnect, disabling clears, user disconnect |
 
 All network and Discord tests use fakes: they never contact GitHub or need Discord.
@@ -68,12 +75,29 @@ All network and Discord tests use fakes: they never contact GitHub or need Disco
 21. Ctrl+Shift+E → folder → numbered PNGs; exporting again asks before replacing.
 22. F7/F8 collapse panels; drag the timeline edge; restart → layout is kept.
 
+### Export, selection and palettes (0.3)
+
+23. Ctrl+Shift+E → Image tab: PNG at 100 % and 400 %, open the files — sharp blocks,
+    transparency intact. JPEG shows the lossy warning; WebP shows the lossless note.
+24. Ctrl+click two timeline frames → *Selected (2)* → two numbered files. Export again
+    → *Replace / Cancel*.
+25. Animation tab: GIF plays in a browser with the timeline durations; *Play once*
+    stops on the last frame.
+26. Sprite Sheet tab: try each layout, spacing, padding, extrude and trim; the preview
+    matches the written PNG; the JSON lists every frame.
+27. A huge scale shows the size error and the Export button stays disabled.
+28. M → drag a selection → drag inside to move, Ctrl+C / Ctrl+V, Delete, Shift+H,
+    Ctrl+R; each is undone and redone with the selection outline restored.
+29. Rename a layer and press Ctrl+A / Delete / arrows — only the text changes.
+30. Palettes: switch, new, rename, add/remove/reorder colors, export to `.gpl`,
+    import it back; restart → palettes and recent colors are kept.
+
 ### Services
 
-23. Offline: Help → Check for Updates shows a short network message; editing works.
-24. Settings → Discord with Discord closed: *Not connected — Discord desktop app is
+31. Offline: Help → Check for Updates shows a short network message; editing works.
+32. Settings → Discord with Discord closed: *Not connected — Discord desktop app is
     not running*, no dialogs. Start Discord → *Connected*, profile shows the activity.
-25. Turn on *Show the project name* → state shows only the file name.
+33. Turn on *Show the project name* → state shows only the file name.
 
 ## Performance
 

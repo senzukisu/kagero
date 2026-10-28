@@ -12,10 +12,12 @@ pub enum ToolKind {
     Rectangle,
     FilledRectangle,
     Pan,
+    /// Rectangular selection: drag to select, drag inside to move the pixels.
+    Select,
 }
 
 impl ToolKind {
-    pub const ALL: [ToolKind; 8] = [
+    pub const ALL: [ToolKind; 9] = [
         ToolKind::Pencil,
         ToolKind::Eraser,
         ToolKind::Fill,
@@ -24,6 +26,7 @@ impl ToolKind {
         ToolKind::Rectangle,
         ToolKind::FilledRectangle,
         ToolKind::Pan,
+        ToolKind::Select,
     ];
 
     pub fn name(self) -> &'static str {
@@ -36,6 +39,7 @@ impl ToolKind {
             ToolKind::Rectangle => "Rectangle",
             ToolKind::FilledRectangle => "Filled Rectangle",
             ToolKind::Pan => "Pan",
+            ToolKind::Select => "Rectangle Select",
         }
     }
 
@@ -50,6 +54,7 @@ impl ToolKind {
             ToolKind::Rectangle => "U",
             ToolKind::FilledRectangle => "Shift+U",
             ToolKind::Pan => "H / Space",
+            ToolKind::Select => "M",
         }
     }
 
@@ -63,7 +68,10 @@ impl ToolKind {
 
     /// Whether the tool modifies pixels of the active layer.
     pub fn edits_pixels(self) -> bool {
-        !matches!(self, ToolKind::Eyedropper | ToolKind::Pan)
+        !matches!(
+            self,
+            ToolKind::Eyedropper | ToolKind::Pan | ToolKind::Select
+        )
     }
 }
 

@@ -1,5 +1,5 @@
 ---
-description: "Pencil, eraser, fill, shapes, eyedropper and pan."
+description: "Pencil, eraser, fill, shapes, eyedropper, pan and selection."
 icon: pencil
 ---
 
@@ -15,14 +15,13 @@ icon: pencil
 | **Rectangle** | <kbd>U</kbd> | Drag to draw an outline. |
 | **Filled Rectangle** | <kbd>Shift</kbd>+<kbd>U</kbd> | Drag to draw a solid rectangle. |
 | **Pan** | <kbd>H</kbd> | Drag to move the view. <kbd>Space</kbd>+drag works with any tool. |
+| **Rectangle Select** | <kbd>M</kbd> | Select an area to move, copy, flip or rotate — see [Selection and transforms](selection.md). |
 
 ## Colors
 
-* **Left** button = primary color, **right** button = secondary color.
-* Click a palette swatch with the left/right button to set primary/secondary.
-* Click the big swatches to open a color picker (with alpha); <kbd>X</kbd> swaps them.
-* **Add primary** puts the current color into the palette; middle-click a swatch to
-  remove it; **Reset** restores the Kagero palette. The palette is saved with your settings.
+**Left** button = primary color, **right** button = secondary color; <kbd>X</kbd> swaps
+them. Palettes, HEX copying and recent colors are described in
+[Colors and palettes](palettes.md).
 
 ## Brush size
 

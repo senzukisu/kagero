@@ -62,6 +62,7 @@ pub fn show(ui: &mut egui::Ui, editor: &mut Editor, show_grid: bool, commands: &
             ToolKind::Line | ToolKind::Rectangle => hint(ui, "Drag to draw · Esc cancels"),
             ToolKind::FilledRectangle => hint(ui, "Drag to draw a filled rectangle · Esc cancels"),
             ToolKind::Pencil => hint(ui, "Left: primary · Right: secondary"),
+            ToolKind::Select => selection_options(ui, editor, commands),
         }
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -79,4 +80,87 @@ pub fn show(ui: &mut egui::Ui, editor: &mut Editor, show_grid: bool, commands: &
 
 fn hint(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).small().color(theme::TEXT_SECONDARY));
+}
+
+fn selection_options(ui: &mut egui::Ui, editor: &Editor, commands: &mut Vec<Command>) {
+    use super::icons::{icon_button, Icon};
+    use crate::editor::Transform;
+    let has = editor.selection().is_some();
+    match editor.selection() {
+        Some(r) => {
+            ui.label(
+                RichText::new(format!("{}×{} at {}, {}", r.w, r.h, r.x, r.y))
+                    .monospace()
+                    .color(theme::TEXT_PRIMARY),
+            );
+        }
+        None => hint(ui, "Drag to select · Ctrl+A selects all"),
+    }
+    ui.separator();
+    let buttons = [
+        (
+            Icon::FlipH,
+            "Flip horizontal (Shift+H)",
+            Command::Transform(Transform::FlipHorizontal),
+        ),
+        (
+            Icon::FlipV,
+            "Flip vertical (Shift+V)",
+            Command::Transform(Transform::FlipVertical),
+        ),
+        (
+            Icon::Rotate,
+            "Rotate 90° clockwise (Ctrl+R)",
+            Command::Transform(Transform::Rotate90),
+        ),
+    ];
+    for (icon, tip, command) in buttons {
+        if icon_button(ui, icon, 26.0, false, true, tip).clicked() {
+            commands.push(command);
+        }
+    }
+    if ui
+        .small_button("180°")
+        .on_hover_text("Rotate 180°")
+        .clicked()
+    {
+        commands.push(Command::Transform(Transform::Rotate180));
+    }
+    if ui
+        .small_button("270°")
+        .on_hover_text("Rotate 90° counter-clockwise (Ctrl+Shift+R)")
+        .clicked()
+    {
+        commands.push(Command::Transform(Transform::Rotate270));
+    }
+    ui.separator();
+    if icon_button(ui, Icon::Copy, 26.0, false, has, "Copy (Ctrl+C)").clicked() {
+        commands.push(Command::Copy);
+    }
+    if ui
+        .add_enabled(has, egui::Button::new("Cut").small())
+        .on_hover_text("Ctrl+X")
+        .clicked()
+    {
+        commands.push(Command::Cut);
+    }
+    let can_paste = editor.clipboard.is_some();
+    if ui
+        .add_enabled(can_paste, egui::Button::new("Paste").small())
+        .on_hover_text("Ctrl+V")
+        .clicked()
+    {
+        commands.push(Command::Paste);
+    }
+    if ui
+        .add_enabled(has, egui::Button::new("Deselect").small())
+        .on_hover_text("Esc")
+        .clicked()
+    {
+        commands.push(Command::Deselect);
+    }
+    hint(
+        ui,
+        "Drag inside: move pixels · Ctrl+drag: move outline · Arrows: nudge",
+    );
 }

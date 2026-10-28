@@ -41,6 +41,7 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | bytes | 1.12.1 | MIT | https://github.com/tokio-rs/bytes |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/cfg-if |
 | clipboard-win | 5.4.3 | BSL-1.0 | https://github.com/DoumanAsh/clipboard-win |
+| color_quant | 1.1.0 | MIT | https://github.com/image-rs/color_quant.git |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
 | crc32fast | 1.5.3 | MIT OR Apache-2.0 | https://github.com/srijs/rust-crc32fast |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 | https://github.com/RustCrypto/traits |
@@ -54,8 +55,8 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | ecolor | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui |
 | eframe | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/eframe |
 | egui | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui |
-| egui_glow | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/egui_glow |
 | egui-winit | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/egui-winit |
+| egui_glow | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/egui_glow |
 | emath | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/emath |
 | epaint | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/epaint |
 | epaint_default_fonts | 0.31.1 | (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0 | https://github.com/emilk/egui/tree/master/crates/epaint_default_fonts |
@@ -65,14 +66,16 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 | https://github.com/image-rs/fdeflate |
 | flate2 | 1.1.10 | MIT OR Apache-2.0 | https://github.com/rust-lang/flate2-rs |
 | foldhash | 0.1.5 | Zlib | https://github.com/orlp/foldhash |
+| foldhash | 0.2.0 | Zlib | https://github.com/orlp/foldhash |
 | form_urlencoded | 1.2.2 | MIT OR Apache-2.0 | https://github.com/servo/rust-url |
 | generic-array | 0.14.7 | MIT | https://github.com/fizyk20/generic-array.git |
 | getrandom | 0.2.17 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
+| gif | 0.14.2 | MIT OR Apache-2.0 | https://github.com/image-rs/image-gif |
 | glow | 0.16.0 | MIT OR Apache-2.0 OR Zlib | https://github.com/grovesNL/glow |
 | glutin | 0.32.3 | Apache-2.0 | https://github.com/rust-windowing/glutin |
+| glutin-winit | 0.5.0 | MIT | https://github.com/rust-windowing/glutin |
 | glutin_egl_sys | 0.7.1 | Apache-2.0 | https://github.com/rust-windowing/glutin |
 | glutin_wgl_sys | 0.6.1 | Apache-2.0 | https://github.com/rust-windowing/glutin |
-| glutin-winit | 0.5.0 | MIT | https://github.com/rust-windowing/glutin |
 | half | 2.7.1 | MIT OR Apache-2.0 | https://github.com/VoidStarKat/half-rs |
 | hashbrown | 0.15.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
@@ -88,6 +91,7 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | idna | 1.1.0 | MIT OR Apache-2.0 | https://github.com/servo/rust-url/ |
 | idna_adapter | 1.2.2 | Apache-2.0 OR MIT | https://github.com/hsivonen/idna_adapter |
 | image | 0.25.10 | MIT OR Apache-2.0 | https://github.com/image-rs/image |
+| image-webp | 0.2.4 | MIT OR Apache-2.0 | https://github.com/image-rs/image-webp |
 | immutable-chunkmap | 2.1.4 | Apache-2.0 OR MIT | https://github.com/estokes/immutable-chunkmap |
 | indexmap | 2.14.2 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/indexmap |
 | itoa | 1.0.18 | MIT OR Apache-2.0 | https://github.com/dtolnay/itoa |
@@ -158,15 +162,14 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | ureq | 3.5.0 | MIT OR Apache-2.0 | https://github.com/algesten/ureq |
 | ureq-proto | 0.6.5 | MIT OR Apache-2.0 | https://github.com/algesten/ureq-proto |
 | url | 2.5.8 | MIT OR Apache-2.0 | https://github.com/servo/rust-url |
-| utf8_iter | 1.0.4 | Apache-2.0 OR MIT | https://github.com/hsivonen/utf8_iter |
 | utf8-zero | 0.8.1 | MIT OR Apache-2.0 | https://github.com/algesten/utf8-zero |
+| utf8_iter | 1.0.4 | Apache-2.0 OR MIT | https://github.com/hsivonen/utf8_iter |
 | uuid | 0.8.2 | Apache-2.0 OR MIT | https://github.com/uuid-rs/uuid |
-| webbrowser | 1.2.5 | MIT OR Apache-2.0 | https://github.com/amodm/webbrowser-rs |
 | web-time | 1.1.0 | MIT OR Apache-2.0 | https://github.com/daxpedda/web-time |
+| webbrowser | 1.2.5 | MIT OR Apache-2.0 | https://github.com/amodm/webbrowser-rs |
 | weezl | 0.1.12 | MIT OR Apache-2.0 | https://github.com/image-rs/weezl |
 | winapi | 0.3.9 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
 | windows | 0.58.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
-| windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-core | 0.58.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-implement | 0.58.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-interface | 0.58.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
@@ -177,6 +180,7 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | windows-sys | 0.59.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-sys | 0.61.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows-targets | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
+| windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | winit | 0.30.13 | Apache-2.0 | https://github.com/rust-windowing/winit |
 | writeable | 0.6.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | yoke | 0.8.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |

@@ -6,7 +6,8 @@ use egui::Button;
 
 use super::settings::SettingsTab;
 use super::Command;
-use crate::editor::{Editor, ToolKind};
+use crate::editor::{Editor, ToolKind, Transform};
+use crate::export::ExportKind;
 
 /// View state the menu shows as checkmarks and labels.
 pub struct MenuState<'a> {
@@ -59,10 +60,26 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
             item(
                 ui,
                 commands,
-                "Export All Frames as PNGs…",
+                "Export…",
                 "Ctrl+Shift+E",
                 has_doc,
-                Command::ExportAllFrames,
+                Command::OpenExport(ExportKind::Image),
+            );
+            item(
+                ui,
+                commands,
+                "Export Animation as GIF…",
+                "",
+                has_doc,
+                Command::OpenExport(ExportKind::Animation),
+            );
+            item(
+                ui,
+                commands,
+                "Export Sprite Sheet…",
+                "",
+                has_doc,
+                Command::OpenExport(ExportKind::SpriteSheet),
             );
             ui.separator();
             item(
@@ -108,6 +125,54 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 Command::Redo,
             );
             ui.separator();
+            ui.separator();
+            let has_selection = editor.is_some_and(|e| e.selection().is_some());
+            let has_clipboard = editor.is_some_and(|e| e.clipboard.is_some());
+            let sel_edit = editable && has_selection;
+            item(ui, commands, "Cut", "Ctrl+X", sel_edit, Command::Cut);
+            item(ui, commands, "Copy", "Ctrl+C", has_selection, Command::Copy);
+            item(
+                ui,
+                commands,
+                "Paste",
+                "Ctrl+V",
+                editable && has_clipboard,
+                Command::Paste,
+            );
+            item(
+                ui,
+                commands,
+                "Delete Selection",
+                "Delete",
+                sel_edit,
+                Command::DeleteSelection,
+            );
+            item(
+                ui,
+                commands,
+                "Duplicate Selection",
+                "Ctrl+D",
+                sel_edit,
+                Command::DuplicateSelection,
+            );
+            ui.separator();
+            item(
+                ui,
+                commands,
+                "Select All",
+                "Ctrl+A",
+                editable,
+                Command::SelectAll,
+            );
+            item(
+                ui,
+                commands,
+                "Deselect",
+                "Esc",
+                has_selection,
+                Command::Deselect,
+            );
+            ui.separator();
             item(
                 ui,
                 commands,
@@ -116,6 +181,39 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 has_doc,
                 Command::SwapColors,
             );
+        });
+
+        ui.menu_button("Image", |ui| {
+            let target = if editor.is_some_and(|e| e.selection().is_some()) {
+                "Selection"
+            } else {
+                "Layer"
+            };
+            ui.label(
+                egui::RichText::new(format!("Applies to: {target}"))
+                    .small()
+                    .weak(),
+            );
+            for (text, shortcut, kind) in [
+                ("Flip Horizontal", "Shift+H", Transform::FlipHorizontal),
+                ("Flip Vertical", "Shift+V", Transform::FlipVertical),
+                ("Rotate 90° Clockwise", "Ctrl+R", Transform::Rotate90),
+                ("Rotate 180°", "", Transform::Rotate180),
+                (
+                    "Rotate 90° Counterclockwise",
+                    "Ctrl+Shift+R",
+                    Transform::Rotate270,
+                ),
+            ] {
+                item(
+                    ui,
+                    commands,
+                    text,
+                    shortcut,
+                    editable,
+                    Command::Transform(kind),
+                );
+            }
         });
 
         ui.menu_button("Tools", |ui| {

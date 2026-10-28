@@ -1,6 +1,7 @@
 //! Loading, saving, exporting and validating files.
 
 pub mod kgr;
+pub mod palette;
 pub mod png;
 
 use std::fs::{self, File};

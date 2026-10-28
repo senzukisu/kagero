@@ -4,12 +4,14 @@
 //! every change in the [`History`].
 
 mod history;
+mod selection_ops;
 mod tools;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub use history::{Applied, Change, Dirty, History, PixelChange};
+pub use selection_ops::{Clipboard, Transform};
 pub use tools::{SampleSource, ToolKind, ToolSettings, BRUSH_SIZE_RANGE};
 
 use crate::core::animation::clamp_duration;
@@ -24,6 +26,8 @@ pub enum EditError {
     EmptyName,
     #[error("stop the animation preview to edit")]
     ReadOnly,
+    #[error("select an area first (M, then drag on the canvas)")]
+    NoSelection,
     #[error(transparent)]
     Core(#[from] CoreError),
 }
@@ -65,6 +69,10 @@ pub struct Editor {
     stroke: Option<Stroke>,
     dirty: Option<Dirty>,
     read_only: bool,
+    /// Pixels copied with Ctrl+C / Ctrl+X (kept when another document opens).
+    pub clipboard: Option<Clipboard>,
+    /// Last color painted with, for the "recent colors" list.
+    used_color: Option<Rgba>,
 }
 
 impl Editor {
@@ -83,6 +91,8 @@ impl Editor {
             stroke: None,
             dirty: Some(Dirty::Full),
             read_only: false,
+            clipboard: None,
+            used_color: None,
         }
     }
 
@@ -142,6 +152,11 @@ impl Editor {
         }
     }
 
+    /// The color used by the last stroke or fill, once.
+    pub fn take_used_color(&mut self) -> Option<Rgba> {
+        self.used_color.take()
+    }
+
     pub fn swap_colors(&mut self) {
         std::mem::swap(&mut self.primary, &mut self.secondary);
     }
@@ -169,14 +184,20 @@ impl Editor {
             return Err(EditError::ReadOnly);
         }
         match self.tool {
-            ToolKind::Pan => Ok(()),
+            // Pan and Select are handled by the canvas (navigation and selection).
+            ToolKind::Pan | ToolKind::Select => Ok(()),
             ToolKind::Eyedropper => {
                 if let Some(c) = self.sample(pos) {
                     self.set_color(slot, c);
                 }
                 Ok(())
             }
-            ToolKind::Fill => self.fill(pos, self.color(slot)),
+            ToolKind::Fill => {
+                let color = self.color(slot);
+                self.fill(pos, color)?;
+                self.used_color = Some(color);
+                Ok(())
+            }
             tool => {
                 let layer = self.doc.active_layer();
                 if !layer.visible {
@@ -187,6 +208,9 @@ impl Editor {
                 } else {
                     self.color(slot)
                 };
+                if tool != ToolKind::Eraser {
+                    self.used_color = Some(color);
+                }
                 self.stroke = Some(Stroke {
                     tool,
                     frame: self.doc.active_frame().id,
