@@ -210,19 +210,38 @@ impl ExportDialog {
         let frames = frames_for(s.frames, editor, selected);
         self.refresh_preview(ui.ctx(), editor, &frames, s.layers);
 
-        ui.horizontal_top(|ui| {
-            ui.vertical(|ui| {
-                ui.set_width(370.0);
-                ui.add_enabled_ui(!running, |ui| {
-                    self.options(ui, editor, selected, s, &frames);
+        // Options and preview scroll together if the screen is too short for them,
+        // so the footer (folder, Export) always stays visible.
+        let max_height = (ui.ctx().screen_rect().height() - 260.0).max(200.0);
+        egui::ScrollArea::vertical()
+            .max_height(max_height)
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                let mut divider_x = 0.0;
+                let row = ui.horizontal_top(|ui| {
+                    ui.vertical(|ui| {
+                        ui.set_width(370.0);
+                        ui.add_enabled_ui(!running, |ui| {
+                            self.options(ui, editor, selected, s, &frames);
+                        });
+                    });
+                    // A divider as tall as this row: `ui.separator()` here would
+                    // stretch to the whole screen height.
+                    ui.add_space(6.0);
+                    divider_x = ui.cursor().min.x;
+                    ui.add_space(7.0);
+                    ui.vertical(|ui| {
+                        ui.set_width(PREVIEW.x);
+                        self.preview_ui(ui, s);
+                    });
                 });
+                let rect = row.response.rect;
+                ui.painter().vline(
+                    divider_x,
+                    rect.y_range(),
+                    egui::Stroke::new(1.0_f32, theme::BORDER),
+                );
             });
-            ui.separator();
-            ui.vertical(|ui| {
-                ui.set_width(PREVIEW.x);
-                self.preview_ui(ui, s);
-            });
-        });
         ui.separator();
         self.footer(ui, editor, s, &frames);
     }

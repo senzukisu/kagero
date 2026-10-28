@@ -4,6 +4,20 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- The Export dialog could be taller than the screen (its title and the Export button
+  off-screen at 1920×1080): the divider between options and preview stretched to the
+  full screen height. It now has the height of its row, and the options scroll when
+  the screen is too short.
+
+### Changed
+
+- README rewritten for 0.3.6 with new screenshots (editor with onion skin, animation
+  preview, sprite sheet export).
+
 ## [0.3.6] Beta — 2026-10-29
 
 The window update.
