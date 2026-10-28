@@ -2,3 +2,6 @@
 *.kgr.tmp
 .*.tmp
 /dist
+
+# Python caches (scripts/build-font.py)
+__pycache__/
