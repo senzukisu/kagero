@@ -4,6 +4,43 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.5] Beta — 2026-10-28
+
+The pixel interface.
+
+### Added
+
+- **Kagero Pixel**, Kagero's own pixel font (MIT): ASCII, Cyrillic and the interface's
+  typographic symbols, 186 glyphs with 10-pixel capitals (text stays about as large as
+  in 0.3.0). Source in `assets/fonts/kagero-pixel.txt`, built into `KageroPixel.ttf`
+  by `scripts/build-font.py` and embedded in the executable.
+  Text sizes snap so one font pixel is always whole device pixels (sharp at 100–200 %
+  display scale); headings use 2×. Characters the font lacks fall back to egui's fonts.
+- **Pixel-style interface**: square corners, hard offset shadows on windows, menus and
+  the start card, bevelled icon buttons (raised on hover, pressed in when held or
+  selected), outlined text buttons, rectangular slider handles, solid scrollbars.
+
+- **Redesigned About window**: banner with the flame and a version badge, studio,
+  license and links (documentation, changelog, GitHub), and the main shortcuts drawn
+  as pixel keycaps.
+
+### Changed
+
+- All 31 icons redrawn as 16×16 pixel art with outlines, shading and color; 2× in the
+  toolbar (now 36 px buttons), 1× elsewhere; disabled icons fade to gray. The active
+  tool is shown pressed in with an amber outline instead of a solid orange fill.
+- Pixel bitmaps (icons, logo) are drawn as one mesh per bitmap on whole device pixels.
+
+### Fixed
+
+- **Discord Rich Presence showed no pictures**: it referred to art assets that were
+  never uploaded to the Discord application. The Kagero flame and the drawing/animation
+  icons now load from image URLs in this repository (`docs/images/discord/`).
+- Kagero opened in a small window placed off to the side. It now opens **maximized**;
+  if you restore it to a window, the next start opens a centered window instead.
+- 1-pixel-wide bitmap pixels could disappear because egui's anti-aliased rectangle fill
+  collapses them; bitmaps no longer use it.
+
 ## [0.3.0] Beta — 2026-10-28
 
 Export & sprite workflow.

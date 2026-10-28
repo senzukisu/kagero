@@ -12,7 +12,7 @@ Notes:
   certificate bundle is shipped.
 - On Windows Kagero may *load* an installed system Japanese font (Yu Gothic, MS Gothic or Meiryo) at
   runtime to display kanji. No system font is copied or redistributed.
-- All icons and the Kagero logo are original work by Onibi Lab (MIT).
+- All icons, the Kagero logo and the **Kagero Pixel** font are original work by Onibi Lab (MIT).
 - No code, icons or assets from Aseprite are used.
 
 Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies only).

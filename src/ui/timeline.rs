@@ -527,7 +527,7 @@ impl Timeline {
                         rect.center(),
                         egui::Align2::CENTER_CENTER,
                         "+",
-                        egui::FontId::proportional(20.0),
+                        theme::font(2),
                         color,
                     );
                     if resp.on_hover_text("New empty frame").clicked() && enabled {
@@ -567,7 +567,7 @@ fn paint_card(
     );
     // A small fixed checkerboard tells transparency apart from dark pixels.
     let cell = THUMB_BOX / 6.0;
-    painter.rect_filled(box_rect, 2.0, theme::CHECKER_DARK);
+    painter.rect_filled(box_rect, 0.0, theme::CHECKER_DARK);
     for cy in 0..6 {
         for cx in 0..6 {
             if (cx + cy) % 2 == 0 {
@@ -611,17 +611,17 @@ fn paint_card(
         theme::TEXT_PRIMARY
     };
     painter.text(
-        egui::Pos2::new(rect.center().x, box_rect.max.y + 5.0),
+        egui::Pos2::new(rect.center().x, box_rect.max.y + 4.0),
         egui::Align2::CENTER_TOP,
         format!("{}", index + 1),
-        egui::FontId::proportional(12.0),
+        theme::font(1),
         number_color,
     );
     painter.text(
         egui::Pos2::new(rect.center().x, box_rect.max.y + 17.0),
         egui::Align2::CENTER_TOP,
         format!("{duration} ms"),
-        egui::FontId::proportional(9.5),
+        theme::font(1),
         theme::TEXT_SECONDARY,
     );
 }

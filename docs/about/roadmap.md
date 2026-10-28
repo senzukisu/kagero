@@ -23,7 +23,14 @@ Single-image editor: tools, layers, undo/redo, `.kgr` v1, PNG import/export, saf
 - [x] Discord Rich Presence with privacy settings
 - [x] Settings window, persistent workspace layout, new shortcuts, readable pressed states
 
-## 0.3.0 Beta — export & sprite workflow (this release)
+## 0.3.5 Beta — pixel interface (this release)
+
+- [x] Kagero Pixel font, pixel-style frames, bevels and hard shadows
+- [x] 16×16 colored pixel icons
+- [x] Opens maximized; remembers windowed mode
+- [x] Redesigned About window; Discord presence images
+
+## 0.3.0 Beta — export & sprite workflow — done
 
 - [x] One Export dialog with Image / Animation / Sprite Sheet tabs, preview, progress
       and cancel; settings remembered per format

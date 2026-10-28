@@ -70,6 +70,8 @@ pub struct UiSettings {
     pub side_panel_visible: bool,
     /// Turns off decorative motion (pulsing indicators, eased panel changes).
     pub reduce_motion: bool,
+    /// Open the main window maximized (remembered from the last session).
+    pub window_maximized: bool,
 }
 
 impl Default for UiSettings {
@@ -79,6 +81,7 @@ impl Default for UiSettings {
             timeline_height: 156.0,
             side_panel_visible: true,
             reduce_motion: false,
+            window_maximized: true,
         }
     }
 }

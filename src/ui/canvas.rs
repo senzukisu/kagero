@@ -706,7 +706,7 @@ impl CanvasView {
         options: &CanvasOptions,
         onion_visible: bool,
     ) {
-        let font = egui::FontId::proportional(12.0);
+        let font = theme::font(1);
         let origin = viewport.min + Vec2::new(12.0, 10.0);
         let text = if options.playing {
             format!(
@@ -729,10 +729,10 @@ impl CanvasView {
             origin,
             Vec2::new(galley.size().x + dot + 22.0, galley.size().y + 10.0),
         );
-        painter.rect_filled(rect, 6.0, theme::PANEL.gamma_multiply(0.92));
+        painter.rect_filled(rect, 0.0, theme::PANEL.gamma_multiply(0.92));
         painter.rect_stroke(
             rect,
-            6.0,
+            0.0,
             Stroke::new(1.0_f32, theme::BORDER),
             StrokeKind::Inside,
         );

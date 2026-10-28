@@ -67,6 +67,10 @@ pub struct KageroApp {
     settings: SettingsWindow,
     export: ExportDialog,
     palette_rename: PaletteRename,
+    /// Last seen maximized state of the window (`None` until the first frame).
+    seen_maximized: Option<bool>,
+    /// The saved window state was applied on the first frame.
+    window_restored: bool,
     updater: UpdateManager,
     discord: DiscordPresence,
     session_start_unix: i64,
@@ -102,6 +106,8 @@ impl KageroApp {
             settings: SettingsWindow::default(),
             export: ExportDialog::default(),
             palette_rename: None,
+            seen_maximized: None,
+            window_restored: false,
             updater,
             discord: DiscordPresence::start(release::DISCORD_APPLICATION_ID),
             session_start_unix: updater::unix_now() as i64,
@@ -947,6 +953,35 @@ impl KageroApp {
         }
     }
 
+    /// Remembers whether the user maximized or restored the window, so the next
+    /// start looks the same. Only changes after the first frame count: while the
+    /// window opens, the OS may report "not maximized" before maximizing it.
+    fn remember_window_state(&mut self, ctx: &egui::Context) {
+        if !self.window_restored {
+            // `with_maximized` at window creation isn't always honored on Windows,
+            // so ask again once the window exists.
+            self.window_restored = true;
+            if self.config.ui.window_maximized {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            }
+            return;
+        }
+        let (maximized, minimized) =
+            ctx.input(|i| (i.viewport().maximized, i.viewport().minimized));
+        let Some(maximized) = maximized else {
+            return;
+        };
+        if minimized == Some(true) {
+            return;
+        }
+        let previous = self.seen_maximized.replace(maximized);
+        if previous.is_some_and(|p| p != maximized) && maximized != self.config.ui.window_maximized
+        {
+            self.config.ui.window_maximized = maximized;
+            self.schedule_config_save();
+        }
+    }
+
     fn update_title(&mut self, ctx: &egui::Context) {
         let title = match &self.editor {
             Some(e) => format!(
@@ -1101,6 +1136,8 @@ fn capitalize(s: &str) -> String {
 
 impl eframe::App for KageroApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        theme::sync_pixel_scale(ctx);
+        self.remember_window_state(ctx);
         self.handle_close_request(ctx);
         self.poll_updates();
 

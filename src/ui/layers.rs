@@ -97,7 +97,7 @@ pub fn show(
                 ui.painter().rect_filled(row_rect, theme::RADIUS as f32, bg);
                 if selected {
                     let bar = Rect::from_min_size(row_rect.min, Vec2::new(3.0, row_height));
-                    ui.painter().rect_filled(bar, 1.0, theme::ACCENT);
+                    ui.painter().rect_filled(bar, 0.0, theme::ACCENT);
                 }
 
                 // Visibility toggle on the left.
@@ -159,7 +159,7 @@ pub fn show(
                         name_rect.left_center(),
                         egui::Align2::LEFT_CENTER,
                         &layer.name,
-                        egui::FontId::proportional(14.0),
+                        theme::font(1),
                         color,
                     );
                 }

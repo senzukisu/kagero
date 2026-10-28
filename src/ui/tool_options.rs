@@ -2,7 +2,7 @@
 
 use egui::RichText;
 
-use super::icons::{paint_icon, Icon};
+use super::icons::{paint_icon, Icon, Tint};
 use super::Command;
 use crate::editor::{Editor, SampleSource, ToolKind, BRUSH_SIZE_RANGE};
 use crate::theme;
@@ -14,8 +14,7 @@ pub fn show(ui: &mut egui::Ui, editor: &mut Editor, show_grid: bool, commands: &
             ui.painter(),
             rect,
             Icon::for_tool(editor.tool),
-            theme::TEXT_PRIMARY,
-            theme::ACCENT,
+            Tint::Normal,
         );
         ui.label(
             RichText::new(editor.tool.name())

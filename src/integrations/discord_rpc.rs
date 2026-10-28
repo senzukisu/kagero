@@ -55,12 +55,19 @@ pub enum Desired {
     Show(ActivityData),
 }
 
-/// Asset keys that must exist in the Discord Developer Portal (see docs/developers/discord-rpc-internals.md).
+/// Presence images. Discord accepts HTTPS URLs as well as Developer Portal asset
+/// keys, so the images are served straight from the repository
+/// (`docs/images/discord/`) and need no upload (see
+/// docs/developers/discord-rpc-internals.md).
 pub mod assets {
-    pub const LOGO: &str = "kagero_logo";
-    pub const PIXEL_ART: &str = "pixel_art";
-    pub const ANIMATION: &str = "animation";
-    pub const WORKSHOP: &str = "workshop";
+    pub const LOGO: &str =
+        "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/kagero-logo.png";
+    pub const PIXEL_ART: &str =
+        "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/pixel-art.png";
+    pub const ANIMATION: &str =
+        "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/animation.png";
+    pub const WORKSHOP: &str =
+        "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/workshop.png";
 }
 
 /// Keeps only a short, printable file stem.

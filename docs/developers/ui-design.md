@@ -1,11 +1,12 @@
 ---
-description: "The Kagero Ember visual system."
+description: "The Kagero Ember visual system: palette, pixel font, icons and layout."
 icon: palette
 ---
 
 # Kagero UI Design
 
-**Mood:** a dark Japanese workshop at night, lit by warm amber. Calm, precise, functional.
+**Mood:** a dark Japanese workshop at night, lit by warm amber. Calm, precise, functional —
+and, since 0.3.5, drawn in pixels like the art made in it.
 Kagero (陽炎) means "heat haze"; the flame mark is the shimmer above an ember.
 
 ## Palette
@@ -22,9 +23,21 @@ Kagero (陽炎) means "heat haze"; the flame mark is the shimmer above an ember.
 | Success          | `#75C7B5` | "Saved", success messages                 |
 | Error            | `#E85D5D` | error text (derived, not in the brief)    |
 | Ember deep       | `#6B361C` | pressed buttons and selected items, behind light text |
+| Bevel light      | `#4A4F5C` | top-left edge of raised buttons, window outline |
+| Bevel dark       | `#0E0F13` | bottom-right edge, button outlines, icon outlines |
 
-Text on accent uses `#1A1410`. Corner radius 4 px for widgets, 6–8 px for windows/cards.
-All tokens live in `src/theme.rs`.
+Text on accent uses `#1A1410`. All tokens live in `src/theme.rs`.
+
+## Pixel style (0.3.5)
+
+* **Square corners** everywhere (`RADIUS = 0`).
+* **Hard shadows**: windows, menus and the start card cast an offset shadow with no
+  blur (4 px windows, 3 px menus, 6 px start card).
+* **Bevels**: icon buttons are flat until hovered (raised: light top-left, dark
+  bottom-right) and look pressed in when held or selected (dark top-left, ember fill,
+  1 px amber outline for the active tool). Held icons sink by one pixel.
+* **Outlined buttons**: text buttons sit in a 1 px dark outline; hover turns it amber.
+* Slider handles are small rectangles, scrollbars are solid 8 px bars.
 
 ## Layout
 
@@ -47,9 +60,9 @@ All tokens live in `src/theme.rs`.
 - **Start screen:** centered card with the flame mark, "Kagero", "陽炎 · pixel art editor",
   "by Onibi Lab", *Create New* (accent) and *Open Project*, plus a Recent Projects list
   (missing files are dimmed and can be removed). Footer: studio, version, license.
-- **Toolbar:** 34 px icon buttons in groups (Pencil/Eraser · Fill/Eyedropper ·
-  Line/Rect/Filled · Pan). The active tool has an accent background. Tooltips show the
-  name and shortcut.
+- **Toolbar:** 36 px icon buttons with 2× icons in groups (Pencil/Eraser ·
+  Fill/Eyedropper · Line/Rect/Filled · Pan/Select). The active tool is pressed in with an
+  amber outline. Tooltips show the name and shortcut.
 - **Tool options:** only options that exist for the active tool (brush size for
   Pencil/Eraser/Line/Rectangle, sample source for Eyedropper) and a one-line hint.
 - **Canvas:** checkerboard behind transparency where one square is exactly one image
@@ -65,15 +78,31 @@ All tokens live in `src/theme.rs`.
 
 ## Icons
 
-All icons are original 12×12 pixel bitmaps defined in `src/ui/icons.rs` and drawn as
-rectangles, so they stay crisp at any UI scale. The window icon is the 16×16 flame mark
-scaled ×4. No third-party icon assets are used.
+All icons are original 16×16 pixel bitmaps in `src/ui/icons.rs`, colored from a small
+fixed palette (`k` outline, `#` light, `g` gray, `d` dim, `o` ember, `p` flame, `r` rust,
+`y` glow, `b` sky, `n` navy, `t` mint, `w` wood, `e` blush) with dark outlines and
+two-tone shading. They are drawn as one mesh of whole device pixels — 2× in the
+toolbar, 1× in compact rows — and fade to gray when disabled. The window icon is the
+16×16 flame mark scaled ×4. No third-party icon assets are used.
 
 ## Fonts
 
-egui's bundled fonts. On Windows, a system Japanese font (Yu Gothic / MS Gothic / Meiryo)
-is loaded at runtime as a fallback so "陽炎" renders. It is never redistributed; if none
-is found, the kanji simply do not render.
+**Kagero Pixel** is Kagero's own bitmap-style font (MIT, Onibi Lab): 186 glyphs —
+ASCII, the typographic marks the interface uses (· × … — ° “ ” → …) and Cyrillic.
+Capitals are 10 pixels tall, lowercase 7, descenders 2. Glyphs are drawn on a compact
+8-row grid and the build doubles rows 2 and 7, which hold only vertical strokes in
+almost every glyph, so horizontal strokes stay one pixel thin.
+
+* Source: `assets/fonts/kagero-pixel.txt` — every glyph drawn as `#`/`.` rows.
+* Build: `python scripts/build-font.py` (needs `fonttools`) writes
+  `assets/fonts/KageroPixel.ttf`, which is embedded in the executable. Each pixel is a
+  square outline, so the font stays sharp.
+* Sizes: one font pixel is always a whole number of *device* pixels (1 px at 100 % and
+  125 % display scale, 2 px at 150–200 %), so text never blurs; headings use 2×, the
+  start-screen and About titles 3×. `theme::font(n)` returns the pixel font at n×.
+* Fallbacks: egui's bundled fonts for characters Kagero Pixel doesn't have, and on
+  Windows a system Japanese font (Yu Gothic / MS Gothic / Meiryo) loaded at runtime so
+  "陽炎" renders. The system font is never redistributed.
 
 ## Dialogs
 

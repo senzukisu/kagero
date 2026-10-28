@@ -647,7 +647,7 @@ impl ExportDialog {
         let shown = size * fit;
         let (rect, _) = ui.allocate_exact_size(PREVIEW, egui::Sense::hover());
         let painter = ui.painter_at(rect);
-        painter.rect_filled(rect, 4.0, theme::BACKGROUND);
+        painter.rect_filled(rect, 0.0, theme::BACKGROUND);
         let img_rect = egui::Rect::from_center_size(rect.center(), shown);
         // Checkerboard behind transparency.
         let cell = 8.0;

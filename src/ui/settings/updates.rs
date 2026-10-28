@@ -194,7 +194,7 @@ pub fn show(
 fn release_card(ui: &mut egui::Ui, info: &ReleaseInfo) {
     egui::Frame::new()
         .fill(theme::SURFACE)
-        .corner_radius(6)
+        .corner_radius(0)
         .inner_margin(egui::Margin::same(10))
         .show(ui, |ui| {
             ui.set_width(400.0);

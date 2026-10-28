@@ -8,6 +8,20 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.3.5 Beta — pixel interface (2026-10-28)
+
+* **Pixel interface**: square corners, hard drop shadows, bevelled buttons — Kagero now
+  looks like the art you make in it.
+* **Kagero Pixel**, Kagero's own pixel font (Latin, Cyrillic and interface symbols),
+  about as large as before and always sharp at 100–200 % display scale.
+* **New icons**: all 31 redrawn as colorful 16×16 pixel art; disabled icons fade to gray.
+* **New About window** with the flame banner, links and shortcut keycaps.
+* **Fix**: Discord Rich Presence now shows the Kagero flame and activity icons.
+* **Fix**: Kagero now opens maximized (and remembers if you prefer a window, which then
+  opens centered) instead of a small window off to the side.
+
+[Download 0.3.5](https://github.com/senzukisu/kagero/releases/tag/v0.3.5)
+
 ## 0.3.0 Beta — export & sprite workflow (2026-10-28)
 
 * **Export dialog** (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) with Image, Animation

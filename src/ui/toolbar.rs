@@ -15,7 +15,7 @@ pub fn show(ui: &mut egui::Ui, current: ToolKind, commands: &mut Vec<Command>) {
                 ui.add_space(2.0);
             }
             let tip = format!("{} ({})", tool.name(), tool.shortcut());
-            if icon_button(ui, Icon::for_tool(tool), 34.0, tool == current, true, &tip).clicked() {
+            if icon_button(ui, Icon::for_tool(tool), 36.0, tool == current, true, &tip).clicked() {
                 commands.push(Command::SetTool(tool));
             }
         }

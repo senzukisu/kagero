@@ -42,20 +42,22 @@ integration is simply turned off.
 The application's **name** in the portal ("Kagero") is what Discord shows as
 "Playing Kagero".
 
-## Images (Rich Presence assets)
+## Images
 
-In the portal open the application → *Rich Presence* → *Art Assets* and upload images
-(at least 512×512 PNG) with exactly these keys:
+Discord accepts HTTPS image URLs in place of Developer Portal asset keys, so Kagero's
+presence images live in the repository and are loaded from GitHub — nothing has to be
+uploaded to the portal:
 
-| Key           | Used as                         |
-|---------------|---------------------------------|
-| `kagero_logo` | Large image, always             |
-| `pixel_art`   | Small image while drawing       |
-| `animation`   | Small image for animations      |
-| `workshop`    | Small image on the start screen |
+| File (`docs/images/discord/`) | Used as                         |
+|-------------------------------|---------------------------------|
+| `kagero-logo.png` (512×512)   | Large image, always             |
+| `pixel-art.png` (128×128)     | Small image while drawing       |
+| `animation.png` (128×128)     | Small image for animations      |
+| `workshop.png` (128×128)      | Small image on the start screen |
 
-Assets can take a few minutes to appear. Until they exist, the presence still works,
-just without pictures.
+The URLs (`assets` in `src/integrations/discord_rpc.rs`) point at the `main` branch,
+so new images show up once they are pushed. The images are generated from the flame
+mark and the pencil/play icons.
 
 ## What is shown
 
@@ -91,6 +93,6 @@ history or anything else from the document. Turning the integration off (or
 |----------------------------------|------------------------------------------------------------|
 | "Discord desktop app is not running" | Start Discord (the browser version has no IPC)        |
 | Connected but nothing shown      | Activity sharing is off in Discord's privacy settings      |
-| No images                        | Upload the assets above with the exact keys                |
+| No images                        | Discord loads them from GitHub: check the network, or wait a minute after a push |
 | Works after restart only         | Turn on *Reconnect automatically*, or press Connect/Retry  |
 | Discord runs as administrator    | Run both as the same user/elevation level                  |

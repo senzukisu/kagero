@@ -226,71 +226,177 @@ pub fn error(ctx: &egui::Context, title: &str, message: &str) -> bool {
 /// Shows the About box; returns `true` when dismissed.
 pub fn about(ctx: &egui::Context) -> bool {
     let mut close = false;
-    let modal = Modal::new(Id::new("about-dialog")).show(ctx, |ui| {
-        ui.set_width(420.0);
-        ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(48.0), egui::Sense::hover());
-            super::icons::paint_bitmap(
-                ui.painter(),
-                rect,
-                &super::icons::LOGO,
-                theme::TEXT_PRIMARY,
-                theme::ACCENT,
-            );
-            ui.vertical(|ui| {
-                ui.label(RichText::new("Kagero").size(24.0).strong());
-                ui.label(
-                    RichText::new(format!(
-                        "Version {} {}",
-                        crate::APP_VERSION,
-                        crate::APP_CHANNEL
-                    ))
-                    .color(theme::TEXT_SECONDARY),
+    let modal = Modal::new(Id::new("about-dialog"))
+        .frame(
+            egui::Frame::new()
+                .fill(theme::PANEL)
+                .stroke(egui::Stroke::new(1.0_f32, theme::BEVEL_LIGHT))
+                .shadow(egui::Shadow {
+                    offset: [6, 6],
+                    blur: 0,
+                    spread: 0,
+                    color: egui::Color32::from_black_alpha(170),
+                })
+                .inner_margin(egui::Margin::ZERO),
+        )
+        .show(ctx, |ui| {
+            ui.set_width(560.0);
+            ui.spacing_mut().item_spacing.y = 4.0;
+            about_banner(ui);
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(20, 14))
+                .show(ui, |ui| {
+                    ui.label(format!(
+                        "An independent pixel-art and sprite-animation editor by {}.",
+                        crate::STUDIO_NAME
+                    ));
+                    ui.add_space(6.0);
+                    let repo = format!(
+                        "https://github.com/{}/{}",
+                        crate::release::GITHUB_OWNER,
+                        crate::release::GITHUB_REPO
+                    );
+                    egui::Grid::new("about-facts")
+                        .num_columns(2)
+                        .spacing([16.0, 4.0])
+                        .show(ui, |ui| {
+                            fact(ui, "Studio", |ui| {
+                                ui.label(crate::STUDIO_NAME);
+                            });
+                            fact(ui, "License", |ui| {
+                                ui.label("MIT (dependencies: THIRD_PARTY_LICENSES.md)");
+                            });
+                            fact(ui, "Made with", |ui| {
+                                ui.label("Rust, egui and the Kagero Pixel font");
+                            });
+                            fact(ui, "Links", |ui| {
+                                ui.hyperlink_to(
+                                    "Documentation",
+                                    "https://kagero.gitbook.io/kagero-docs",
+                                );
+                                ui.label(RichText::new("·").color(theme::TEXT_SECONDARY));
+                                ui.hyperlink_to(
+                                    "Changelog",
+                                    format!("{repo}/blob/main/CHANGELOG.md"),
+                                );
+                                ui.label(RichText::new("·").color(theme::TEXT_SECONDARY));
+                                ui.hyperlink_to("GitHub", repo.clone());
+                            });
+                        });
+
+                    ui.add_space(12.0);
+                    ui.label(RichText::new("SHORTCUTS").color(theme::TEXT_SECONDARY));
+                    ui.add_space(2.0);
+                    egui::Grid::new("about-shortcuts")
+                        .num_columns(4)
+                        .spacing([10.0, 5.0])
+                        .show(ui, |ui| {
+                            let rows = [
+                                ("B E G I", "Draw, erase, fill, pick", "M", "Select"),
+                                ("L U", "Line, rectangle", "Ctrl+C Ctrl+V", "Copy, paste"),
+                                ("Space", "Pan (hold)", "Ctrl+Z Ctrl+Y", "Undo, redo"),
+                                ("0 1", "Fit, 100%", "Ctrl+Shift+E", "Export"),
+                                ("X", "Swap colors", "Enter", "Play / stop"),
+                                ("O", "Onion skin", "Alt+N Alt+D", "New, duplicate frame"),
+                            ];
+                            for (k1, v1, k2, v2) in rows {
+                                keycaps(ui, k1);
+                                ui.label(RichText::new(v1).color(theme::TEXT_SECONDARY));
+                                keycaps(ui, k2);
+                                ui.label(RichText::new(v2).color(theme::TEXT_SECONDARY));
+                                ui.end_row();
+                            }
+                        });
+
+                    ui.add_space(14.0);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(format!("© 2026 {}", crate::STUDIO_NAME))
+                                .color(theme::TEXT_SECONDARY),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.add(accent_button("Close")).clicked() {
+                                close = true;
+                            }
+                        });
+                    });
+                });
+        });
+    close || modal.should_close()
+}
+
+/// The dark banner at the top of About: flame, name and version badge.
+fn about_banner(ui: &mut egui::Ui) {
+    egui::Frame::new()
+        .fill(theme::BACKGROUND)
+        .inner_margin(egui::Margin::symmetric(20, 16))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                let (rect, _) = ui.allocate_exact_size(Vec2::splat(64.0), egui::Sense::hover());
+                super::icons::paint_bitmap(
+                    ui.painter(),
+                    rect,
+                    &super::icons::LOGO,
+                    super::icons::Tint::Normal,
                 );
+                ui.add_space(12.0);
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 2.0;
+                    ui.label(
+                        RichText::new("Kagero")
+                            .font(theme::font(3))
+                            .color(theme::TEXT_PRIMARY),
+                    );
+                    ui.label(RichText::new("陽炎 · pixel art editor").color(theme::ACCENT));
+                    ui.add_space(4.0);
+                    egui::Frame::new()
+                        .fill(theme::EMBER_DEEP)
+                        .stroke(egui::Stroke::new(1.0_f32, theme::ACCENT))
+                        .inner_margin(egui::Margin::symmetric(6, 2))
+                        .show(ui, |ui| {
+                            ui.label(
+                                RichText::new(format!(
+                                    "VERSION {} {}",
+                                    crate::APP_VERSION,
+                                    crate::APP_CHANNEL.to_uppercase()
+                                ))
+                                .color(theme::TEXT_PRIMARY),
+                            );
+                        });
+                });
             });
         });
-        ui.add_space(8.0);
-        ui.label(format!(
-            "An independent pixel-art editor by {}.",
-            crate::STUDIO_NAME
-        ));
-        ui.label(
-            RichText::new(
-                "Source code under the MIT License. See THIRD_PARTY_LICENSES.md for dependencies.",
-            )
-            .small()
-            .color(theme::TEXT_SECONDARY),
-        );
-        ui.add_space(8.0);
-        ui.label(RichText::new("Shortcuts").strong());
-        egui::Grid::new("about-shortcuts")
-            .num_columns(2)
-            .show(ui, |ui| {
-                for (k, v) in [
-                    ("B / E / G / I", "Pencil / Eraser / Fill / Eyedropper"),
-                    ("L / U / Shift+U / H", "Line / Rectangle / Filled / Pan"),
-                    ("Space + drag", "Pan the canvas"),
-                    ("Wheel, + / −", "Zoom"),
-                    ("Home / 0 / 1", "Center / Fit / 100%"),
-                    ("X", "Swap colors"),
-                    ("Ctrl+Z / Ctrl+Y", "Undo / Redo"),
-                    ("Enter", "Play / stop animation preview"),
-                    (", / .", "Previous / next frame"),
-                    ("Alt+N / Alt+D", "New / duplicate frame"),
-                    ("O", "Onion skin"),
-                    ("F7 / F8", "Timeline / side panel"),
-                ] {
-                    ui.label(RichText::new(k).monospace().color(theme::ACCENT));
-                    ui.label(v);
-                    ui.end_row();
-                }
-            });
-        ui.add_space(12.0);
-        if ui.add(accent_button("Close")).clicked() {
-            close = true;
+    // A 2-pixel ember rule between the banner and the body.
+    let (line, _) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 2.0), egui::Sense::hover());
+    ui.painter().rect_filled(line, 0.0, theme::ACCENT_PRESSED);
+}
+
+fn fact(ui: &mut egui::Ui, name: &str, value: impl FnOnce(&mut egui::Ui)) {
+    ui.label(RichText::new(name).color(theme::TEXT_SECONDARY));
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        value(ui);
+    });
+    ui.end_row();
+}
+
+/// Space-separated keys drawn as small bevelled keycaps.
+fn keycaps(ui: &mut egui::Ui, keys: &str) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 3.0;
+        for key in keys.split(' ') {
+            let resp = egui::Frame::new()
+                .fill(theme::SURFACE)
+                .stroke(egui::Stroke::new(1.0_f32, theme::BEVEL_DARK))
+                .inner_margin(egui::Margin::symmetric(5, 1))
+                .show(ui, |ui| {
+                    ui.label(RichText::new(key).color(theme::ACCENT));
+                });
+            super::icons::bevel(ui.painter(), resp.response.rect.shrink(1.0), true);
         }
     });
-    close || modal.should_close()
 }
 
 /// The primary call-to-action button style.

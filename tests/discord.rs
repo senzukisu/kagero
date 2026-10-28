@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use kagero::config::DiscordSettings;
 use kagero::integrations::discord_rpc::{
-    build_presence, ActivityData, AppMode, ConnectionState, Desired, DiscordPresence, Flags,
-    PresenceClient, RpcTransport, MIN_UPDATE_INTERVAL,
+    assets, build_presence, ActivityData, AppMode, ConnectionState, Desired, DiscordPresence,
+    Flags, PresenceClient, RpcTransport, MIN_UPDATE_INTERVAL,
 };
 
 #[derive(Default)]
@@ -98,7 +98,8 @@ fn statuses_for_every_mode() {
             Desired::Show(a) => {
                 assert_eq!(a.details, details);
                 assert_eq!(a.state, state);
-                assert_eq!(a.large_image, "kagero_logo");
+                assert_eq!(a.large_image, assets::LOGO);
+                assert!(a.large_image.starts_with("https://") && a.large_image.ends_with(".png"));
                 assert_eq!(a.start, Some(1_700_000_000));
             }
             Desired::Clear => panic!("enabled by default"),

@@ -1,6 +1,6 @@
 [package]
 name = "kagero"
-version = "0.3.0"
+version = "0.3.5"
 edition = "2021"
 rust-version = "1.85"
 authors = ["Onibi Lab"]
@@ -40,6 +40,10 @@ sha2 = "0.10"
 minisign-verify = "0.3"
 # Discord Rich Presence over the local desktop-client IPC pipe.
 discord-rich-presence = "1"
+
+[dev-dependencies]
+# The font test reads Kagero Pixel with the same parser egui uses.
+ab_glyph = "0.2"
 
 [profile.dev.package."*"]
 # Keep the canvas responsive in debug builds.

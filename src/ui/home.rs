@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use egui::{Align, Button, Frame, Layout, Margin, RichText, Vec2};
 
-use super::icons::{paint_bitmap, LOGO};
+use super::icons::{paint_bitmap, Tint, LOGO};
 use super::Command;
 use crate::theme;
 
@@ -22,7 +22,13 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
         Frame::new()
             .fill(theme::PANEL)
             .stroke(egui::Stroke::new(1.0_f32, theme::BORDER))
-            .corner_radius(8)
+            .corner_radius(0)
+            .shadow(egui::Shadow {
+                offset: [6, 6],
+                blur: 0,
+                spread: 0,
+                color: egui::Color32::from_black_alpha(160),
+            })
             .inner_margin(Margin::same(28))
             .show(ui, |ui| {
                 ui.set_width(card_width - 56.0);
@@ -62,23 +68,17 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
 
 fn brand_column(ui: &mut egui::Ui, commands: &mut Vec<Command>) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(96.0), egui::Sense::hover());
-    paint_bitmap(
-        ui.painter(),
-        rect,
-        &LOGO,
-        theme::TEXT_PRIMARY,
-        theme::ACCENT,
-    );
+    paint_bitmap(ui.painter(), rect, &LOGO, Tint::Normal);
     ui.add_space(6.0);
     ui.label(
         RichText::new("Kagero")
-            .size(40.0)
+            .font(theme::font(3))
             .strong()
             .color(theme::TEXT_PRIMARY),
     );
     ui.label(
         RichText::new("陽炎 · pixel art editor")
-            .size(15.0)
+            .font(theme::font(1))
             .color(theme::ACCENT),
     );
     ui.label(
