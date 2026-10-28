@@ -23,7 +23,11 @@ Single-image editor: tools, layers, undo/redo, `.kgr` v1, PNG import/export, saf
 - [x] Discord Rich Presence with privacy settings
 - [x] Settings window, persistent workspace layout, new shortcuts, readable pressed states
 
-## 0.3.6 Beta — the window update (this release)
+## 0.3.7 Beta — hotfix (this release)
+
+- [x] Export dialog fits on the screen again
+
+## 0.3.6 Beta — the window update — done
 
 - [x] Custom pixel title bar with window buttons, drag, double-click and edge resize
 - [x] Classic font by default; Kagero Pixel as an experimental option

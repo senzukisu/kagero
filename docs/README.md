@@ -18,7 +18,7 @@ frame-by-frame animation, written in Rust by **Onibi Lab**. It runs entirely on 
 computer — no account, no server, no installer.
 
 {% hint style="info" %}
-**Current version: 0.3.6 Beta** — the window update. Windows 10/11 x64.
+**Current version: 0.3.7 Beta** — the window update, with a hotfix. Windows 10/11 x64.
 [Download it from GitHub Releases](https://github.com/senzukisu/kagero/releases/latest).
 {% endhint %}
 

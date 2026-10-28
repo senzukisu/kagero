@@ -8,6 +8,13 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.3.7 Beta — hotfix (2026-10-29)
+
+* **Fix**: the Export dialog could be taller than a 1080p screen, with its Export
+  button out of reach. It now fits, and its options scroll when space is short.
+
+[Download 0.3.7](https://github.com/senzukisu/kagero/releases/tag/v0.3.7)
+
 ## 0.3.6 Beta — the window update (2026-10-29)
 
 * **Custom title bar** with the flame, menus, title and pixel window buttons; drag to

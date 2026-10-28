@@ -4,7 +4,9 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.7] Beta — 2026-10-29
+
+A hotfix for 0.3.6.
 
 ### Fixed
 
