@@ -4,6 +4,33 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] Beta — 2026-10-29
+
+The window update.
+
+### Added
+
+- **Custom title bar**: Kagero draws its own window frame — the flame, the menus,
+  the document title and pixel-style minimize, maximize/restore and close buttons
+  in one 32 px bar. Drag the bar to move the window, double-click it to maximize or
+  restore; resize a restored window from its edges. Close still asks about unsaved
+  changes.
+- **Settings → General → Pixel font (experimental)** switches the interface to
+  Kagero Pixel.
+
+### Changed
+
+- The interface font is the classic font from 0.3.0 again (as large as before).
+  Kagero Pixel stays available as the experimental option above while it is being
+  improved; it is now larger and wider (11-pixel capitals, 6-pixel-wide letters).
+
+### Fixed
+
+- Kagero could still open "maximized" but only 1280×800 (larger with display
+  scaling) at the top-left of the screen: Windows marked the window maximized at
+  creation before it had its final size. The window is now created normally and
+  maximized on the first frame, filling the work area.
+
 ## [0.3.5] Beta — 2026-10-28
 
 The pixel interface.

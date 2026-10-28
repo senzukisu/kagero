@@ -87,11 +87,16 @@ toolbar, 1× in compact rows — and fade to gray when disabled. The window icon
 
 ## Fonts
 
-**Kagero Pixel** is Kagero's own bitmap-style font (MIT, Onibi Lab): 186 glyphs —
-ASCII, the typographic marks the interface uses (· × … — ° “ ” → …) and Cyrillic.
-Capitals are 10 pixels tall, lowercase 7, descenders 2. Glyphs are drawn on a compact
-8-row grid and the build doubles rows 2 and 7, which hold only vertical strokes in
-almost every glyph, so horizontal strokes stay one pixel thin.
+The default interface font is the **classic** one (egui's bundled fonts, body 14 pt,
+headings 20 pt), as in Kagero 0.3.0.
+
+**Kagero Pixel** (Settings → General → *Pixel font (experimental)*) is Kagero's own
+bitmap-style font (MIT, Onibi Lab): 186 glyphs — ASCII, the typographic marks the
+interface uses (· × … — ° “ ” → …) and Cyrillic. Capitals are 11 pixels tall and
+usually 6 wide, lowercase 8, descenders 2. Glyphs are drawn on a compact 8×5 grid; the
+build draws rows 2, 6 and 7 and one interior column per glyph twice, choosing ones
+that hold no horizontal (rows) or vertical (columns) strokes, so strokes stay one
+pixel thin. It is meant to become the default once it is polished.
 
 * Source: `assets/fonts/kagero-pixel.txt` — every glyph drawn as `#`/`.` rows.
 * Build: `python scripts/build-font.py` (needs `fonttools`) writes
@@ -99,10 +104,20 @@ almost every glyph, so horizontal strokes stay one pixel thin.
   square outline, so the font stays sharp.
 * Sizes: one font pixel is always a whole number of *device* pixels (1 px at 100 % and
   125 % display scale, 2 px at 150–200 %), so text never blurs; headings use 2×, the
-  start-screen and About titles 3×. `theme::font(n)` returns the pixel font at n×.
+  start-screen and About titles 3×. `theme::font(n)` returns the current interface
+  font at n× (classic: 14 / 20 / 34 pt).
 * Fallbacks: egui's bundled fonts for characters Kagero Pixel doesn't have, and on
   Windows a system Japanese font (Yu Gothic / MS Gothic / Meiryo) loaded at runtime so
   "陽炎" renders. The system font is never redistributed.
+
+## Title bar (0.3.6)
+
+Kagero draws its own window frame (`src/ui/title_bar.rs`; the system frame is off):
+one 32 px bar with the flame, the menus, the document title centered on the window,
+and 46 px minimize / maximize-restore / close buttons drawn as 10×10 pixel glyphs
+(close turns red on hover). Dragging empty space moves the window, double-click
+maximizes or restores, and a restored window resizes from a 5 px border. The window
+is created centered and maximized on the first frame when it was maximized last time.
 
 ## Dialogs
 

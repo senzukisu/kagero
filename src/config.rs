@@ -72,6 +72,8 @@ pub struct UiSettings {
     pub reduce_motion: bool,
     /// Open the main window maximized (remembered from the last session).
     pub window_maximized: bool,
+    /// Use the experimental Kagero Pixel interface font instead of the classic one.
+    pub pixel_font: bool,
 }
 
 impl Default for UiSettings {
@@ -82,6 +84,7 @@ impl Default for UiSettings {
             side_panel_visible: true,
             reduce_motion: false,
             window_maximized: true,
+            pixel_font: false,
         }
     }
 }

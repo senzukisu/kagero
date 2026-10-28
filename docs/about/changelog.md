@@ -8,6 +8,16 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.3.6 Beta — the window update (2026-10-29)
+
+* **Custom title bar** with the flame, menus, title and pixel window buttons; drag to
+  move, double-click to maximize, resize from the edges.
+* **Classic font is back** as the default, as large as in 0.3.0. Kagero Pixel (now
+  larger and wider) is an experimental option in Settings → General.
+* **Fix**: Kagero now really opens maximized, filling the screen.
+
+[Download 0.3.6](https://github.com/senzukisu/kagero/releases/tag/v0.3.6)
+
 ## 0.3.5 Beta — pixel interface (2026-10-28)
 
 * **Pixel interface**: square corners, hard drop shadows, bevelled buttons — Kagero now

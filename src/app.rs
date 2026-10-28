@@ -1005,8 +1005,12 @@ impl KageroApp {
         };
         let playing = self.player.is_playing();
 
-        egui::TopBottomPanel::top("menu-bar")
-            .frame(bar(theme::BACKGROUND))
+        crate::ui::title_bar::resize_edges(ctx);
+        let title = self.window_title.clone();
+        egui::TopBottomPanel::top("title-bar")
+            .frame(Frame::new().fill(theme::BACKGROUND))
+            .exact_height(crate::ui::title_bar::HEIGHT)
+            .show_separator_line(false)
             .show(ctx, |ui| {
                 let state = MenuState {
                     editor: self.editor.as_ref(),
@@ -1017,7 +1021,7 @@ impl KageroApp {
                     timeline_visible: self.config.ui.timeline_visible,
                     side_panel_visible: self.config.ui.side_panel_visible,
                 };
-                menu::show(ui, &state, commands);
+                crate::ui::title_bar::show(ui, &title, |ui| menu::show(ui, &state, commands));
             });
 
         if let Some(editor) = &mut self.editor {
@@ -1136,7 +1140,7 @@ fn capitalize(s: &str) -> String {
 
 impl eframe::App for KageroApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        theme::sync_pixel_scale(ctx);
+        theme::sync_fonts(ctx, self.config.ui.pixel_font);
         self.remember_window_state(ctx);
         self.handle_close_request(ctx);
         self.poll_updates();

@@ -11,19 +11,19 @@ fn main() {
     tracing::info!("Kagero {} starting", kagero::APP_VERSION);
 
     let (rgba, width, height) = logo_rgba(4);
-    // Open maximized unless the user left Kagero in a window last time; a windowed
-    // start is centered on the screen instead of wherever the OS puts it.
-    let maximized = Config::default_path()
-        .map(|p| Config::load(&p).ui.window_maximized)
-        .unwrap_or(true);
+    // The window starts centered; the app maximizes it on its first frame when the
+    // user left it maximized. (Maximizing at creation is unreliable on Windows with
+    // display scaling: the window is marked maximized but keeps its initial size.)
+    // Kagero draws its own title bar, so the system frame is turned off.
     let options = eframe::NativeOptions {
-        centered: !maximized,
+        centered: true,
         viewport: egui::ViewportBuilder::default()
             .with_title("Kagero")
             .with_app_id("kagero")
             .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([820.0, 540.0])
-            .with_maximized(maximized)
+            .with_decorations(false)
+            .with_resizable(true)
             .with_icon(egui::IconData {
                 rgba,
                 width,

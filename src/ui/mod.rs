@@ -16,6 +16,7 @@ pub mod settings;
 pub mod shortcuts;
 pub mod status;
 pub mod timeline;
+pub mod title_bar;
 pub mod tool_options;
 pub mod toolbar;
 

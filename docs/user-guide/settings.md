@@ -15,6 +15,8 @@ and are saved automatically.
 * Show the timeline (<kbd>F7</kbd>)
 * Show the colors and layers panel (<kbd>F8</kbd>)
 * Pixel grid when zoomed in (<kbd>Ctrl</kbd>+<kbd>G</kbd>)
+* **Pixel font (experimental)** — uses Kagero Pixel, Kagero's own bitmap font, for the
+  whole interface. Off by default (the classic font).
 * **Reduce motion** — turns off the pulsing preview indicator and eased transitions
 
 **Onion skin**

@@ -6,7 +6,7 @@
 
 **An independent pixel-art and sprite-animation editor by Onibi Lab.**
 
-Version 0.3.5 Beta · Windows 10/11 x64 · Written in Rust · MIT License
+Version 0.3.6 Beta · Windows 10/11 x64 · Written in Rust · MIT License
 
 [Download](https://github.com/senzukisu/kagero/releases) ·
 [Changelog](CHANGELOG.md) ·
@@ -20,7 +20,7 @@ Kagero ("heat haze") is a small, fast desktop editor for pixel art and frame-by-
 animation. It is inspired by the general workflow of dedicated sprite editors, but its
 design, code, pixel icons and pixel font are its own. The interface uses the warm,
 dark **Kagero Ember** style — a quiet workshop lit by amber light — drawn in crisp
-pixels: square corners, hard shadows and the Kagero Pixel font.
+pixels: its own title bar, square corners and hard shadows.
 
 ![Kagero with an 8-frame animation open: onion skin shows the neighbor frames in warm and cool tints, the timeline shows frame thumbnails](docs/images/screenshot-onion-skin.png)
 
@@ -82,7 +82,7 @@ Everything works offline. Discord and GitHub are never required.
 
 ## Install
 
-1. Download `kagero-0.3.5-windows-x64.zip` from the
+1. Download `kagero-0.3.6-windows-x64.zip` from the
    [Releases page](https://github.com/senzukisu/kagero/releases).
 2. Extract it to a folder you own, for example `%LOCALAPPDATA%\Programs\Kagero`.
 3. Run `kagero.exe`.
@@ -93,7 +93,7 @@ needed. Settings and the log file are in `%APPDATA%\OnibiLab\Kagero`.
 To check a download by hand:
 
 ```
-rsign verify kagero-0.3.5-windows-x64.zip -p kagero.pub
+rsign verify kagero-0.3.6-windows-x64.zip -p kagero.pub
 ```
 
 ## Keyboard shortcuts
@@ -166,7 +166,7 @@ More in [How Kagero is made](docs/about/ai-assistance.md).
 
 ## Beta notes
 
-0.3.5 is a beta. Known limitations:
+0.3.6 is a beta. Known limitations:
 - WebP export is lossless only; animated WebP is not available (use GIF).
 - Sprite sheets use equal cells; packed (bin-packing) layouts are not available.
 - Rectangle selection only; no layer opacity or canvas resize yet.

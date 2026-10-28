@@ -23,7 +23,13 @@ Single-image editor: tools, layers, undo/redo, `.kgr` v1, PNG import/export, saf
 - [x] Discord Rich Presence with privacy settings
 - [x] Settings window, persistent workspace layout, new shortcuts, readable pressed states
 
-## 0.3.5 Beta — pixel interface (this release)
+## 0.3.6 Beta — the window update (this release)
+
+- [x] Custom pixel title bar with window buttons, drag, double-click and edge resize
+- [x] Classic font by default; Kagero Pixel as an experimental option
+- [x] Reliable maximized start
+
+## 0.3.5 Beta — pixel interface — done
 
 - [x] Kagero Pixel font, pixel-style frames, bevels and hard shadows
 - [x] 16×16 colored pixel icons
@@ -49,6 +55,8 @@ Not in 0.3.0: animated WebP and lossy WebP (the WebP encoder Kagero uses is
 lossless-only), packed (bin-packing) sprite sheets.
 
 ## 0.4 — everyday comfort
+
+- Kagero Pixel as the default interface font once it is polished
 
 - Canvas resize/crop
 - Layer opacity, duplicate and merge down

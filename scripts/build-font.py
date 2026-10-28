@@ -1,15 +1,19 @@
 """Builds assets/fonts/KageroPixel.ttf from assets/fonts/kagero-pixel.txt.
 
-Glyphs are drawn on a compact grid (capitals 8 rows tall). The build makes them
-taller by doubling source rows 1 and 6 — rows that hold vertical strokes in almost
-every glyph — so the font has 10-pixel capitals and a 7-pixel x-height while
-horizontal strokes stay one pixel thin.
+Glyphs are drawn on a compact grid (capitals 8×5). The build enlarges them by
+drawing some rows and columns twice, chosen so that strokes stay one pixel thin:
+
+* rows 1, 5 and 6 — rows that hold vertical strokes or diagonals in almost every
+  glyph — giving 11-pixel capitals and an 8-pixel x-height;
+* one interior column per glyph 4–6 pixels wide: the column with the fewest
+  vertical-stroke pixels (closest to the middle on ties), so stems stay one pixel
+  wide and only horizontal strokes get longer — 5-pixel capitals become 6.
 
 Every pixel becomes a square outline of 100 font units, so the font renders with
 perfectly sharp edges whenever one font pixel covers whole screen pixels (Kagero
-picks its text sizes that way). The vertical metrics are in pixels: ascent 11 (cap
-height 10 plus one row of air), descent 2, line gap 2. The font size that maps one
-font pixel to one point is therefore 13.
+picks its text sizes that way). The vertical metrics are in pixels: ascent 12 (cap
+height 11 plus one row of air), descent 2, line gap 2. The font size that maps one
+font pixel to one point is therefore 14.
 
 Requires fontTools (`pip install fonttools`). Optional: `--preview out.png` writes a
 sample sheet rendered straight from the glyph source.
@@ -30,10 +34,10 @@ OUTPUT = ROOT / "assets" / "fonts" / "KageroPixel.ttf"
 
 UNIT = 100  # font units per pixel
 SOURCE_ABOVE = 8  # rows above the baseline in the source
-TALL_ROWS = (1, 6)  # source rows drawn twice
+TALL_ROWS = (1, 5, 6)  # source rows drawn twice
 ABOVE = SOURCE_ABOVE + len(TALL_ROWS)  # rows above the baseline in the font
 ASCENT, DESCENT, LINE_GAP = ABOVE + 1, 2, 2
-X_HEIGHT = 7
+X_HEIGHT = 8
 FAMILY = "Kagero Pixel"
 VERSION = "1.000"
 
@@ -86,7 +90,26 @@ def parse(text):
         if target not in glyphs:
             raise ValueError(f"alias {alias!r} points to missing glyph {target!r}")
         glyphs[alias] = glyphs[target]
-    return {ch: tall(rows) for ch, rows in glyphs.items()}
+    return {ch: tall(wide(rows)) for ch, rows in glyphs.items()}
+
+
+def wide(rows):
+    """Doubles the interior column that touches the fewest vertical strokes."""
+    width = len(rows[0])
+    if not 4 <= width <= 6:
+        return rows
+
+    def stem_pixels(c):
+        return sum(
+            1
+            for r, row in enumerate(rows)
+            if row[c] == "#"
+            and ((r > 0 and rows[r - 1][c] == "#") or (r + 1 < len(rows) and rows[r + 1][c] == "#"))
+        )
+
+    middle = (width - 1) / 2
+    col = min(range(1, width - 1), key=lambda c: (stem_pixels(c), abs(c - middle)))
+    return [row[: col + 1] + row[col] + row[col + 1 :] for row in rows]
 
 
 def tall(rows):

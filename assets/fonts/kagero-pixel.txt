@@ -4,8 +4,8 @@
 #
 # Each glyph is "[char]" (or "[U+XXXX]", "[space]") followed by its rows.
 # The first 8 rows sit on the baseline (row 1 = cap height); rows 9–10 are
-# descenders and may be omitted. The build draws rows 2 and 7 twice, so the font's
-# capitals are 10 pixels tall. "#" is a pixel, "." is empty. The glyph width is
+# descenders and may be omitted. The build draws rows 2, 6 and 7 twice (11-pixel
+# capitals) and one interior column of most glyphs twice (see build-font.py). "#" is a pixel, "." is empty. The glyph width is
 # the row length; one empty column is added after every glyph.
 
 [space]
@@ -593,8 +593,8 @@
 ..##.
 .#.#.
 #..#.
-#..#.
 #####
+...#.
 ...#.
 ...#.
 
@@ -673,9 +673,9 @@
 .#.#.
 #####
 .#.#.
-.#.#.
 #####
 .#.#.
+.....
 .....
 
 [$]
@@ -833,10 +833,10 @@
 [=]
 .....
 .....
-.....
 #####
 .....
 #####
+.....
 .....
 .....
 
@@ -1636,8 +1636,8 @@
 .....
 #...#
 #...#
-#...#
 .####
+....#
 ....#
 ....#
 
@@ -1717,8 +1717,8 @@
 .....
 .####
 #...#
-#...#
 .####
+..#.#
 .#..#
 #...#
 
