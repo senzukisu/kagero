@@ -35,8 +35,7 @@ All three checks must pass before a change is merged.
 
 Using an AI assistant is fine — Kagero itself is developed with one
 ([how Kagero is made](../about/ai-assistance.md)). You are responsible for every line
-you submit: understand it, test it, and mark assisted commits with a
-`Co-Authored-By` line.
+you submit: understand it and test it.
 
 ## Commit style
 

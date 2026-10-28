@@ -29,9 +29,9 @@ Every change — written by hand or with help — goes through the same checks:
   format, the updater and the Discord integration)
 * manual testing of the app before a release
 
-Commits made with an assistant's help are marked with a `Co-Authored-By` line in the
-[git history](https://github.com/senzukisu/kagero/commits/main), so it stays transparent
-which changes had help.
+Up to version 0.3.7, commits made with an assistant's help carry a `Co-Authored-By`
+line in the [git history](https://github.com/senzukisu/kagero/commits/main). Newer
+commits are not marked individually; this page is the general note instead.
 
 No user data is ever sent to an AI service by Kagero. The app itself contains no AI
 features and works fully offline.

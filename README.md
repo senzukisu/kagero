@@ -217,8 +217,7 @@ of the code**. Most often an LLM works as an assistant: helping with code (sugge
 bug hunting, tests, reviews) and helping with building and publishing releases and
 documentation. Decisions about what Kagero is and whether a change goes in stay with
 the developer, and every change goes through the same formatting, Clippy and test
-checks. Commits made with an assistant's help carry a `Co-Authored-By` line.
-More in [How Kagero is made](docs/about/ai-assistance.md).
+checks. More in [How Kagero is made](docs/about/ai-assistance.md).
 
 ## Beta notes
 
