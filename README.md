@@ -170,7 +170,7 @@ A step-by-step walkthrough: [Your first animation](docs/getting-started/first-an
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> · <kbd>Ctrl</kbd>+<kbd>E</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | Save · export frame as PNG · Export dialog |
 | <kbd>F7</kbd> / <kbd>F8</kbd> · <kbd>Ctrl</kbd>+<kbd>,</kbd> | Timeline / side panel · Settings |
 
-All of them: [Keyboard shortcuts](docs/user-guide/keyboard-shortcuts.md). Every
+All of them: [Keyboard shortcuts](docs/reference/keyboard-shortcuts.md). Every
 shortcut can be changed in **Settings → Shortcuts**.
 
 ## Building from source
@@ -208,9 +208,9 @@ More in [Architecture](docs/developers/architecture.md).
 | Section | Pages |
 |---------|-------|
 | **Getting started** | [Install & update](docs/getting-started/installation.md) · [Quick start](docs/getting-started/first-animation.md) · [The workspace](docs/getting-started/interface-tour.md) |
-| **Draw** | [Tools & canvas](docs/user-guide/drawing-tools.md) · [Selection](docs/user-guide/selection.md) · [Colors & palettes](docs/user-guide/palettes.md) · [Layers](docs/user-guide/layers.md) |
-| **Animate & export** | [Animation](docs/user-guide/animation.md) · [Projects & import](docs/user-guide/files-and-export.md) · [Export](docs/user-guide/export.md) · [Animated GIF](docs/user-guide/animated-export.md) · [Sprite sheets](docs/user-guide/sprite-sheets.md) |
-| **Reference** | [Shortcuts](docs/user-guide/keyboard-shortcuts.md) · [Settings & Discord](docs/user-guide/settings.md) · [FAQ](docs/about/faq.md) |
+| **Draw** | [Tools & canvas](docs/draw/drawing-tools.md) · [Selection](docs/draw/selection.md) · [Colors & palettes](docs/draw/palettes.md) · [Layers](docs/draw/layers.md) |
+| **Animate & export** | [Animation](docs/animate/animation.md) · [Projects & import](docs/export/files-and-export.md) · [Export](docs/export/export/README.md) · [Animated GIF](docs/export/export/animated-export.md) · [Sprite sheets](docs/export/export/sprite-sheets.md) |
+| **Reference** | [Shortcuts](docs/reference/keyboard-shortcuts.md) · [Settings & Discord](docs/reference/settings.md) · [FAQ](docs/reference/faq.md) |
 | **Developers** | [Architecture](docs/developers/architecture.md) · [Project format](docs/developers/project-format.md) · [Sprite sheet metadata](docs/developers/metadata-format.md) · [Services](docs/developers/services.md) · [UI design](docs/developers/ui-design.md) · [Contributing](docs/developers/contributing.md) |
 | **About** | [Roadmap](docs/about/roadmap.md) · [Changelog](docs/about/changelog.md) · [How Kagero is made](docs/about/ai-assistance.md) · [License](docs/about/license.md) |
 

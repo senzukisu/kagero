@@ -11,7 +11,7 @@ layout:
 
 # Welcome to Kagero
 
-<figure><img src="images/logo.png" alt="Kagero flame logo" width="96"><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/logo.png" alt="Kagero flame logo" width="96"><figcaption></figcaption></figure>
 
 **Kagero 陽炎** ("heat haze") is a small, fast desktop editor for pixel art and
 frame-by-frame animation by **Onibi Lab**. Draw on a pixel-exact canvas, animate with a
@@ -28,9 +28,9 @@ program that runs offline, with no account and no installer.
 <table data-view="cards">
 <thead><tr><th></th><th></th><th data-hidden data-card-cover data-type="files"></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead>
 <tbody>
-<tr><td><strong>Install & update</strong></td><td>Download, unzip, run — and keep Kagero up to date.</td><td><a href="images/start-screen.png">start-screen.png</a></td><td><a href="getting-started/installation.md">installation.md</a></td></tr>
-<tr><td><strong>Quick start</strong></td><td>Your first animation, from a blank canvas to a sprite sheet, in ten minutes.</td><td><a href="images/timeline.png">timeline.png</a></td><td><a href="getting-started/first-animation.md">first-animation.md</a></td></tr>
-<tr><td><strong>The workspace</strong></td><td>What every part of the window does.</td><td><a href="images/workspace-map.png">workspace-map.png</a></td><td><a href="getting-started/interface-tour.md">interface-tour.md</a></td></tr>
+<tr><td><strong>Install & update</strong></td><td>Download, unzip, run — and keep Kagero up to date.</td><td><a href=".gitbook/assets/start-screen.png">start-screen.png</a></td><td><a href="getting-started/installation.md">installation.md</a></td></tr>
+<tr><td><strong>Quick start</strong></td><td>Your first animation, from a blank canvas to a sprite sheet, in ten minutes.</td><td><a href=".gitbook/assets/timeline.png">timeline.png</a></td><td><a href="getting-started/first-animation.md">first-animation.md</a></td></tr>
+<tr><td><strong>The workspace</strong></td><td>What every part of the window does.</td><td><a href=".gitbook/assets/workspace-map.png">workspace-map.png</a></td><td><a href="getting-started/interface-tour.md">interface-tour.md</a></td></tr>
 </tbody>
 </table>
 
@@ -39,9 +39,9 @@ program that runs offline, with no account and no installer.
 <table data-view="cards">
 <thead><tr><th></th><th></th><th data-hidden data-card-cover data-type="files"></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead>
 <tbody>
-<tr><td><strong>Draw</strong></td><td>Pencil, fill, shapes, selection and transforms, palettes and layers.</td><td><a href="images/selection.png">selection.png</a></td><td><a href="user-guide/drawing-tools.md">drawing-tools.md</a></td></tr>
-<tr><td><strong>Animate</strong></td><td>Frames with their own timing, live thumbnails, real-time preview, onion skin.</td><td><a href="images/preview.png">preview.png</a></td><td><a href="user-guide/animation.md">animation.md</a></td></tr>
-<tr><td><strong>Export for games</strong></td><td>PNG, JPEG, WebP, animated GIF and sprite sheets with JSON metadata.</td><td><a href="images/export-sheet.png">export-sheet.png</a></td><td><a href="user-guide/export.md">export.md</a></td></tr>
+<tr><td><strong>Draw</strong></td><td>Pencil, fill, shapes, selection and transforms, palettes and layers.</td><td><a href=".gitbook/assets/selection.png">selection.png</a></td><td><a href="draw/drawing-tools.md">drawing-tools.md</a></td></tr>
+<tr><td><strong>Animate</strong></td><td>Frames with their own timing, live thumbnails, real-time preview, onion skin.</td><td><a href=".gitbook/assets/preview.png">preview.png</a></td><td><a href="animate/animation.md">animation.md</a></td></tr>
+<tr><td><strong>Export for games</strong></td><td>PNG, JPEG, WebP, animated GIF and sprite sheets with JSON metadata.</td><td><a href=".gitbook/assets/export-sheet.png">export-sheet.png</a></td><td><a href="export/export/README.md">export.md</a></td></tr>
 </tbody>
 </table>
 

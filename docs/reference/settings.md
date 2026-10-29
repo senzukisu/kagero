@@ -11,7 +11,7 @@ icon: gear
 
 {% tabs %}
 {% tab title="General" %}
-<figure><img src="../images/settings-general.png" alt="Settings, General page: workspace and onion skin options"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-general.png" alt="Settings, General page: workspace and onion skin options"><figcaption></figcaption></figure>
 
 * Show the timeline (<kbd>F7</kbd>) and the colors & layers panel (<kbd>F8</kbd>)
 * Pixel grid when zoomed in (<kbd>Ctrl</kbd>+<kbd>G</kbd>)
@@ -21,13 +21,13 @@ icon: gear
 {% endtab %}
 
 {% tab title="Shortcuts" %}
-<figure><img src="../images/settings-shortcuts.png" alt="Settings, Shortcuts page: actions grouped by Files, Edit, Tools and more, each with its key, a restore and a remove button"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-shortcuts.png" alt="Settings, Shortcuts page: actions grouped by Files, Edit, Tools and more, each with its key, a restore and a remove button"><figcaption></figcaption></figure>
 
 See [Changing shortcuts](#changing-shortcuts) below.
 {% endtab %}
 
 {% tab title="Updates" %}
-<figure><img src="../images/settings-updates.png" alt="Settings, Updates page"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-updates.png" alt="Settings, Updates page"><figcaption></figcaption></figure>
 
 * Current version and build type, **Check for Updates**, download with progress,
   **Install and Restart**
@@ -39,13 +39,13 @@ How updating works: [Install & update](../getting-started/installation.md#update
 {% endtab %}
 
 {% tab title="Discord" %}
-<figure><img src="../images/settings-discord.png" alt="Settings, Discord page: Rich Presence connection and privacy options"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-discord.png" alt="Settings, Discord page: Rich Presence connection and privacy options"><figcaption></figcaption></figure>
 
 See [Discord Rich Presence](#discord-rich-presence) below.
 {% endtab %}
 
 {% tab title="Experimental" %}
-<figure><img src="../images/settings-experimental.png" alt="Settings, Experimental page: pixel font, pixel-perfect pencil and tiled view"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-experimental.png" alt="Settings, Experimental page: pixel font, pixel-perfect pencil and tiled view"><figcaption></figcaption></figure>
 
 See [Experimental features](#experimental-features) below.
 {% endtab %}
@@ -82,7 +82,7 @@ tested and may change in a later version; your projects are never affected.
 | **Pixel-perfect pencil** | 1 px Pencil and Eraser strokes skip the doubled pixel in "L" corners, so freehand lines stay one pixel thin. |
 | **Tiled view** | Shows the image repeated around itself, dimmed, to check seamless tiles and patterns. View only — the copies are never drawn on or exported. |
 
-<figure><img src="../images/tiled-view.png" alt="Tiled view: the sprite in the middle with dimmed copies repeated around it"><figcaption><p>Tiled view: the image in the middle, dimmed copies around it.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/tiled-view.png" alt="Tiled view: the sprite in the middle with dimmed copies repeated around it"><figcaption><p>Tiled view: the image in the middle, dimmed copies around it.</p></figcaption></figure>
 
 ## Plugins and themes
 
@@ -91,11 +91,11 @@ your own themes) are planned — their pages show what's coming.
 
 {% tabs %}
 {% tab title="Plugins" %}
-<figure><img src="../images/settings-plugins.png" alt="Settings, Plugins page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-plugins.png" alt="Settings, Plugins page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
 {% endtab %}
 
 {% tab title="Themes" %}
-<figure><img src="../images/settings-themes.png" alt="Settings, Themes page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-themes.png" alt="Settings, Themes page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
 {% endtab %}
 {% endtabs %}
 

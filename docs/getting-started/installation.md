@@ -48,7 +48,7 @@ is signed — see [Verify the download](#verify-the-download).
 {% endstep %}
 {% endstepper %}
 
-<figure><img src="../images/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
 
 ## Update
 
@@ -65,7 +65,7 @@ Kagero updates itself from the official
   files (keeping a backup of the previous version) and starts it again — usually within
   a few seconds.
 
-<figure><img src="../images/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
 
 {% hint style="info" %}
 **Install and Restart** needs an official build in a folder you can write to. Builds

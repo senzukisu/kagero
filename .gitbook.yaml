@@ -8,8 +8,20 @@ structure:
 # Pages merged in the 2026-10-29 docs rewrite.
 redirects:
   integrations/updates: getting-started/installation.md
-  integrations/discord: user-guide/settings.md
+  integrations/discord: reference/settings.md
   developers/updater-internals: developers/services.md
   developers/discord-rpc-internals: developers/services.md
   developers/testing: developers/contributing.md
   developers/release-process: developers/contributing.md
+  user-guide/drawing-tools: draw/drawing-tools.md
+  user-guide/selection: draw/selection.md
+  user-guide/palettes: draw/palettes.md
+  user-guide/layers: draw/layers.md
+  user-guide/animation: animate/animation.md
+  user-guide/files-and-export: export/files-and-export.md
+  user-guide/export: export/export/README.md
+  user-guide/animated-export: export/export/animated-export.md
+  user-guide/sprite-sheets: export/export/sprite-sheets.md
+  user-guide/keyboard-shortcuts: reference/keyboard-shortcuts.md
+  user-guide/settings: reference/settings.md
+  about/faq: reference/faq.md

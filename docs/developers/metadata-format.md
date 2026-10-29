@@ -5,7 +5,7 @@ icon: brackets-curly
 
 # Sprite sheet metadata
 
-When a [sprite sheet](../user-guide/sprite-sheets.md) is exported with metadata, Kagero
+When a [sprite sheet](../export/export/sprite-sheets.md) is exported with metadata, Kagero
 writes `name.json` next to `name.png`. Both formats are UTF-8 JSON, written atomically.
 Coordinates are in pixels of the **output** image (after scaling); `(0, 0)` is the
 top-left corner.

@@ -6,10 +6,10 @@ icon: images
 # Animated GIF
 
 The **Animation** tab of the Export dialog (**File → Export Animation as GIF…**) writes
-`name.gif`. Choose the frames, a [scale](export.md#frames-layers-scale) and a folder;
+`name.gif`. Choose the frames, a [scale](README.md#frames-layers-scale) and a folder;
 the preview plays with the real frame durations.
 
-<figure><img src="../images/export-gif.png" alt="The Export dialog on the Animation tab: GIF options for repeat, transparency, soft edges and dithering, with an animated preview"><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/export-gif.png" alt="The Export dialog on the Animation tab: GIF options for repeat, transparency, soft edges and dithering, with an animated preview"><figcaption></figcaption></figure>
 
 ## Timing
 

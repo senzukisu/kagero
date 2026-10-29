@@ -18,7 +18,7 @@ icon: floppy-disk
 
 <kbd>Enter</kbd> creates, <kbd>Esc</kbd> cancels. Kagero remembers the last size.
 
-<figure><img src="../images/new-image.png" alt="The New Image dialog: preset cards, width and height with a swap button, background swatches and a preview"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/new-image.png" alt="The New Image dialog: preset cards, width and height with a swap button, background swatches and a preview"><figcaption></figcaption></figure>
 
 ## Projects (`.kgr`)
 
@@ -63,4 +63,4 @@ PNG is never overwritten.
 Damaged or unsupported files show a clear error and never crash Kagero. The file layout
 is described in [The .kgr project format](../developers/project-format.md).
 
-To get images out of Kagero, see [Export](export.md).
+To get images out of Kagero, see [Export](export/README.md).

@@ -48,7 +48,7 @@ its bottom left. On small screens the options scroll, and the button stays visib
 <summary>My GIF colors or transparency look different.</summary>
 
 GIF has at most 255 colors plus one transparent color, and no semi-transparency. See
-[Animated GIF](../user-guide/animated-export.md#colors-and-transparency) for the
+[Animated GIF](../export/export/animated-export.md#colors-and-transparency) for the
 options that control both.
 
 </details>

@@ -10,27 +10,27 @@
 
 ## Draw
 
-* [Tools & canvas](user-guide/drawing-tools.md)
-* [Selection & transforms](user-guide/selection.md)
-* [Colors & palettes](user-guide/palettes.md)
-* [Layers](user-guide/layers.md)
+* [Tools & canvas](draw/drawing-tools.md)
+* [Selection & transforms](draw/selection.md)
+* [Colors & palettes](draw/palettes.md)
+* [Layers](draw/layers.md)
 
 ## Animate
 
-* [Animation](user-guide/animation.md)
+* [Animation](animate/animation.md)
 
 ## Export
 
-* [Projects & import](user-guide/files-and-export.md)
-* [Export](user-guide/export.md)
-  * [Animated GIF](user-guide/animated-export.md)
-  * [Sprite sheets](user-guide/sprite-sheets.md)
+* [Projects & import](export/files-and-export.md)
+* [Export](export/export/README.md)
+  * [Animated GIF](export/export/animated-export.md)
+  * [Sprite sheets](export/export/sprite-sheets.md)
 
 ## Reference
 
-* [Keyboard shortcuts](user-guide/keyboard-shortcuts.md)
-* [Settings](user-guide/settings.md)
-* [FAQ & troubleshooting](about/faq.md)
+* [Keyboard shortcuts](reference/keyboard-shortcuts.md)
+* [Settings](reference/settings.md)
+* [FAQ & troubleshooting](reference/faq.md)
 
 ## Developers
 

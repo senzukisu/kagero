@@ -15,7 +15,7 @@ Everything leaves Kagero through one **Export** dialog —
 | **Animation** | An animated GIF | [Animated GIF](animated-export.md) |
 | **Sprite Sheet** | One image with all frames, plus optional JSON | [Sprite sheets](sprite-sheets.md) |
 
-<figure><img src="../images/export-image.png" alt="The Export dialog on the Image tab: PNG at 400%, all 8 frames, file names, a preview and the folder"><figcaption><p>The Image tab. Every tab has a live preview and shows the output size.</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/export-image.png" alt="The Export dialog on the Image tab: PNG at 400%, all 8 frames, file names, a preview and the folder"><figcaption><p>The Image tab. Every tab has a live preview and shows the output size.</p></figcaption></figure>
 
 The dialog remembers its settings per tab and per format. Exporting never changes your
 project: Kagero copies the frames first and encodes in the background, so you can keep

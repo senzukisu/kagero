@@ -8,7 +8,7 @@ icon: film
 Kagero animates frame by frame: you draw each frame, and every frame keeps its own
 image on each layer and its own **duration**.
 
-<figure><img src="../images/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration, onion skin settings and eight frame cards"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration, onion skin settings and eight frame cards"><figcaption></figcaption></figure>
 
 ## Frames
 
@@ -42,7 +42,7 @@ frame has an amber border.
 <kbd>Enter</kbd> (or the play button) loops the animation from the current frame;
 <kbd>Enter</kbd> or <kbd>Esc</kbd> stops on the frame that was showing.
 
-<figure><img src="../images/preview.png" alt="The animation preview playing, with the Previewing badge in the corner of the canvas"><figcaption><p>While the preview plays, a badge shows the frame; drawing is paused.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/preview.png" alt="The animation preview playing, with the Previewing badge in the corner of the canvas"><figcaption><p>While the preview plays, a badge shows the frame; drawing is paused.</p></figcaption></figure>
 
 {% tabs %}
 {% tab title="Frame durations" %}
@@ -68,5 +68,5 @@ Onion skin is purely visual: it never changes your pixels, is never saved and ne
 appears in exports. It hides while the preview plays.
 {% endhint %}
 
-To export the animation, see [Animated GIF](animated-export.md) and
-[Sprite sheets](sprite-sheets.md).
+To export the animation, see [Animated GIF](../export/export/animated-export.md) and
+[Sprite sheets](../export/export/sprite-sheets.md).

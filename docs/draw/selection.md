@@ -9,7 +9,7 @@ Press <kbd>M</kbd> (or pick **Rectangle Select**) to work with a part of the act
 layer. Drag on the canvas; marching ants show the selection, and the tool options bar
 shows its size and position with buttons for every action.
 
-<figure><img src="../images/selection.png" alt="A rectangle selection around the flame sprite, with the selection actions in the tool options bar"><figcaption><p>A 17×18 selection; flip, rotate, cut, copy, paste and deselect are in the tool options bar.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/selection.png" alt="A rectangle selection around the flame sprite, with the selection actions in the tool options bar"><figcaption><p>A 17×18 selection; flip, rotate, cut, copy, paste and deselect are in the tool options bar.</p></figcaption></figure>
 
 ## Select
 

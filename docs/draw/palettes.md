@@ -5,7 +5,7 @@ icon: palette
 
 # Colors & palettes
 
-<figure><img src="../images/side-panel.png" alt="The colors panel with primary and secondary swatches, HEX and RGBA values, the palette picker and swatches, and the layers panel below" width="320"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/side-panel.png" alt="The colors panel with primary and secondary swatches, HEX and RGBA values, the palette picker and swatches, and the layers panel below" width="320"><figcaption></figcaption></figure>
 
 ## Primary and secondary
 

@@ -15,7 +15,7 @@ every core feature once: drawing, frames, onion skin, preview, saving and export
 Click **Create New** on the start screen (or press <kbd>Ctrl</kbd>+<kbd>N</kbd>). Pick
 the **Sprite 32×32** preset, keep the **Transparent** background and click **Create**.
 
-<figure><img src="../images/new-image.png" alt="The New Image dialog with preset cards, size, background and preview"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/new-image.png" alt="The New Image dialog with preset cards, size, background and preview"><figcaption></figcaption></figure>
 {% endstep %}
 
 {% step %}
@@ -56,7 +56,7 @@ Press <kbd>Enter</kbd> to play the loop; <kbd>Enter</kbd> or <kbd>Esc</kbd> stop
 Give a frame more or less time in the timeline's **Duration** field — a shorter bottom
 frame makes a snappier bounce.
 
-<figure><img src="../images/timeline.png" alt="The timeline: playback buttons, frame counter, duration, onion skin and frame cards"><figcaption><p>The timeline with eight frames; the current one has an amber border.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/timeline.png" alt="The timeline: playback buttons, frame counter, duration, onion skin and frame cards"><figcaption><p>The timeline with eight frames; the current one has an amber border.</p></figcaption></figure>
 {% endstep %}
 
 {% step %}
@@ -70,4 +70,4 @@ frame makes a snappier bounce.
 {% endstepper %}
 
 **Next:** [the workspace](interface-tour.md) explains every part of the window, and
-[Export](../user-guide/export.md) covers all export options.
+[Export](../export/export/README.md) covers all export options.

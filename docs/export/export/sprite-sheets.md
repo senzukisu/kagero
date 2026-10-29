@@ -9,7 +9,7 @@ The **Sprite Sheet** tab (**File → Export Sprite Sheet…**) puts the frames o
 and can write a JSON file that says where each frame is. The preview shows the real
 sheet and its size before you export.
 
-<figure><img src="../images/export-sheet.png" alt="The Export dialog on the Sprite Sheet tab: a 4-column grid at 400% with 2 px spacing and padding, Kagero JSON metadata, and a preview of the 4×2 sheet"><figcaption><p>Eight frames as a 4×2 grid at 400 % — 522×262 px.</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/export-sheet.png" alt="The Export dialog on the Sprite Sheet tab: a 4-column grid at 400% with 2 px spacing and padding, Kagero JSON metadata, and a preview of the 4×2 sheet"><figcaption><p>Eight frames as a 4×2 grid at 400 % — 522×262 px.</p></figcaption></figure>
 
 ## Layout
 
@@ -44,8 +44,8 @@ anything is allocated.
 | **No metadata** | Just the image |
 
 The JSON file is saved next to the image with the same name. Frame names follow the
-[file-name rules](export.md#file-names): `name_0001`, `name_0002`, … Both formats are
-described field by field in [Sprite sheet metadata](../developers/metadata-format.md).
+[file-name rules](README.md#file-names): `name_0001`, `name_0002`, … Both formats are
+described field by field in [Sprite sheet metadata](../../developers/metadata-format.md).
 
 {% hint style="info" %}
 Packed (bin-packing) layouts aren't available yet; every frame uses an equal cell.
