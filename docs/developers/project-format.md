@@ -5,13 +5,13 @@ icon: file-zipper
 
 # The `.kgr` Project Format
 
-Format id `kagero-project`. Kagero 0.2 and 0.3 write **version 2** and read versions 1
+Format id `kagero-project`. Kagero 0.2 and later write **version 2** and read versions 1
 and 2. The format version is independent of the application version.
 
 {% hint style="info" %}
-Kagero 0.3 did **not** change the format. The selection, the clipboard, palettes and
-export settings are not part of a project: palettes and export settings live in the
-user settings file (`config.json`), the selection and clipboard only in memory.
+The selection, the clipboard, palettes and export settings are not part of a project:
+palettes and export settings live in the user settings file (`config.json`), the
+selection and clipboard only in memory. That's why the format hasn't changed since 0.2.
 {% endhint %}
 
 A `.kgr` file is a standard ZIP archive.

@@ -4,6 +4,16 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Documentation rewritten and reorganized (Getting started · Draw · Animate · Export ·
+  Reference · Developers · About), with new screenshots of every screen. Updates and
+  Discord moved into *Install & update* and *Settings*; the updater and Discord
+  internals into *Services*; testing and releasing into *Contributing*. Old page
+  addresses redirect to the new ones.
+
 ## [0.3.7] Beta — 2026-10-29
 
 A hotfix for 0.3.6.

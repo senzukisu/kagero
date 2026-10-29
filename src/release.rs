@@ -1,7 +1,7 @@
 //! Release identity: where official updates come from and which integrations are wired.
 //!
-//! Maintainers: these values are public (no secrets). See `docs/developers/updater-internals.md` and
-//! `docs/developers/discord-rpc-internals.md` before changing them.
+//! Maintainers: these values are public (no secrets). See `docs/developers/services.md`
+//! before changing them.
 
 /// GitHub account that publishes official Kagero releases.
 pub const GITHUB_OWNER: &str = "senzukisu";

@@ -20,5 +20,5 @@ list with versions is in
 
 * egui bundles the Ubuntu-Light, Hack, Noto Emoji and emoji-icon fonts (Ubuntu Font
   Licence 1.0, MIT, SIL OFL 1.1).
-* Kagero's icons and logo are original work by Onibi Lab.
+* Kagero's icons, logo and the Kagero Pixel font are original work by Onibi Lab (MIT).
 * Kagero is not affiliated with Aseprite, Igara Studio or Discord.

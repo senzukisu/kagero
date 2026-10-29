@@ -1,160 +1,131 @@
 ---
-description: "How the code is organized: layers, data model, history."
+description: "How the code is organized: layers, data model, history, export."
 icon: sitemap
 ---
 
-# Kagero Architecture
+# Architecture
 
-Kagero is one Rust crate with a library and two binaries (`kagero`, `kagero-updater`).
-The code is split into layers; each depends only on the layers below it.
+Kagero is one Rust crate with a library and two binaries: `kagero` (the editor) and
+`kagero-updater` (the install helper). The code is split into layers; each depends only
+on the layers below it.
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│ UI           app.rs, ui/*          panels, canvas, timeline,      │
-│                                     settings, dialogs, shortcuts  │
-├──────────────────────────────────────────────────────────────────┤
-│ Application  editor/*              Editor, tools, History         │
-├──────────────────────────────────────────────────────────────────┤
-│ Pixel Engine core/*                Rgba, PixelBuffer, Document,   │
-│                                     frames, onion skin, raster    │
-├──────────────────────────────────────────────────────────────────┤
-│ File I/O     file_io/*             KGR v1/v2, PNG, palettes,      │
-│                                     atomic writes                 │
-└──────────────────────────────────────────────────────────────────┘
-  export/        snapshot → prepare → encode: PNG/JPEG/WebP, GIF,
-                 sprite sheets, JSON metadata, background jobs
-  services/      native dialogs, logging, updater, update installer
+┌───────────────────────────────────────────────────────────────────┐
+│ UI           app.rs, ui/*      title bar, canvas, timeline, panels, │
+│                                dialogs, export dialog, shortcuts   │
+├───────────────────────────────────────────────────────────────────┤
+│ Application  editor/*          Editor, tools, selection ops, History│
+├───────────────────────────────────────────────────────────────────┤
+│ Pixel engine core/*            Rgba, PixelBuffer, Document, frames,│
+│                                onion skin, raster, selection, palette│
+├───────────────────────────────────────────────────────────────────┤
+│ I/O          file_io/*         .kgr, PNG, palette files, atomic writes│
+│              export/*          snapshot → prepare → encode          │
+└───────────────────────────────────────────────────────────────────┘
+  services/      updater, update installer, native dialogs, logging
   integrations/  Discord Rich Presence
-  config.rs      persisted settings     theme.rs   Kagero Ember style
-  release.rs     update source, signing key, Discord application ID
+  config.rs  settings · theme.rs  Kagero Ember style · release.rs  public IDs/keys
 ```
 
-## Pixel engine (`src/core`)
+## Pixel engine — `src/core`
 
-- `Rgba` — straight-alpha 8-bit color; integer "source over" compositing.
-- `PixelBuffer` — `width × height × 4` bytes, bounds-checked accessors, size validated
-  (`1..=2048` per side) before allocating.
-- `Document` — layers (`LayerInfo`: id, name, visibility; bottom to top) shared by all
-  frames, and `Frame`s (`animation.rs`: id, duration, one cel per layer, revision
-  counter). Invariants: ≥ 1 layer and frame, each frame has exactly one cel per layer.
-  The active layer and frame are indices kept in range by every mutator.
-- `LayerId` / `FrameId` are stable across reordering; history entries use them.
-- `structure_revision` and per-frame `revision` change when pixels or layer
-  order/visibility change; caches (thumbnails, frame textures) key on them.
-- `onion_skin.rs` — which neighbor frames to overlay and how (pure, view-only).
-- `raster` — Bresenham lines, rectangles, square brushes, 4-connected flood fill.
-- `selection.rs` — `SelRect` (clipped rectangles) and `Block` (a copied pixel block with
-  flips and rotations), plus `clear`/`stamp`. The document keeps the current selection
-  in memory only.
-- `palette.rs` — `Palette` and the built-in palettes.
-- Limits: 2048×2048, 64 layers, 1000 frames, `layers × frames` cels ≤ 512 MiB.
+* `Rgba` — straight-alpha 8-bit color with integer "source over" compositing.
+* `PixelBuffer` — `width × height × 4` bytes, bounds-checked, size validated
+  (1–2048 per side) before allocation.
+* `Document` — layers (`LayerInfo`: id, name, visibility) shared by all frames, and
+  `Frame`s (id, duration, one cel per layer, revision). At least one layer and frame;
+  active indices always in range. `LayerId`/`FrameId` stay stable across reordering.
+  The current selection lives here in memory only.
+* `structure_revision` and per-frame `revision` change with pixels or layer
+  order/visibility; thumbnail and texture caches key on them.
+* `raster` (lines, rectangles, brushes, flood fill), `onion_skin` (view-only overlay
+  plan), `selection` (`SelRect`, `Block` with flips/rotations), `palette` (built-ins).
+* Limits: 2048×2048, 64 layers, 1000 frames, all cels ≤ 512 MiB.
 
-## Application layer (`src/editor`)
+## Application — `src/editor`
 
-`Editor` wraps one `Document` and is the only way the UI changes it.
+`Editor` wraps one `Document` and is the **only** way the UI changes it.
 
-- **Strokes** record the frame and layer they started on and the original color of
-  every touched pixel; `end_stroke` turns that into one `Change::Pixels`.
-- **Frame commands**: add, duplicate, delete, move, set duration — each a `Change`.
-  `select_frame`/`next_frame`/`previous_frame` are navigation, not undo steps.
-- **Selection operations** (`selection_ops.rs`): copy, cut, paste, delete, move,
-  duplicate, flip/rotate. Each is one undo step: a `Change::Group` with the pixel diff
-  of the active cel and a `SetSelection` change, so undo restores pixels *and* the
-  selection outline. Without a selection, transforms apply to the whole layer.
-- **Read-only mode** blocks pixel edits during animation preview.
-- **Dirty tracking** reports the rectangle to re-upload; frame switches report `Full`.
-- **Saved state** compares the id on top of the undo stack with the id at last save.
+* **Strokes** remember the frame and layer they started on and each touched pixel's
+  original color; `end_stroke` turns that into one `Change::Pixels`.
+* **Frame and layer commands** are `Change`s too. Navigation is not an undo step.
+* **Selection operations** (`selection_ops.rs`) diff the active cel and record a
+  `Change::Group` of the pixel change plus `SetSelection`, so undo restores pixels and
+  the outline together.
+* **Read-only mode** blocks pixel edits during the preview.
+* **Saved state** compares the top of the undo stack with the state at the last save.
 
-### History
+The history is bounded (256 entries, 256 MiB). Data moves between the document and a
+`Change` instead of being copied; undoing a change on another frame switches to it.
 
-| Change             | Stored data                                         |
-|--------------------|-----------------------------------------------------|
-| `Pixels`           | frame id, layer id, per pixel: index, before, after |
-| `AddLayer`         | index; the layer and its cels only while undone     |
-| `RemoveLayer`      | index; the layer and all its cels while removed     |
-| `MoveLayer`        | from/to                                             |
-| `RenameLayer`      | old/new name                                        |
-| `SetVisible`       | new visibility                                      |
-| `AddFrame`         | index; the frame only while undone (`duplicate` flag for the label) |
-| `RemoveFrame`      | index; the removed frame while removed              |
-| `MoveFrame`        | from/to                                             |
-| `SetFrameDuration` | frame id, before/after                              |
-| `SetSelection`     | selection before/after                              |
-| `Group`            | label and a list of changes, reverted in reverse order |
+| Change | Stored data |
+|--------|-------------|
+| `Pixels` | frame id, layer id, per pixel: index, before, after |
+| `AddLayer` / `RemoveLayer` | index; the layer and its cels while removed |
+| `MoveLayer`, `RenameLayer`, `SetVisible` | from/to, old/new name, visibility |
+| `AddFrame` / `RemoveFrame` / `MoveFrame` | index; the frame while removed; from/to |
+| `SetFrameDuration` | frame id, before/after |
+| `SetSelection` · `Group` | selection before/after · a labeled list of changes |
 
-Data moves between the document and the change instead of being copied. Undoing or
-redoing a pixel change on another frame switches to that frame. The history is bounded
-by 256 entries and 256 MiB.
+## Files — `src/file_io`
 
-## File I/O (`src/file_io`)
+* `kgr.rs` — `.kgr` v2 writer, v1 and v2 readers that validate before allocating
+  ([format](project-format.md)).
+* `png.rs` — PNG import (one frame, one layer) and quick current-frame export.
+* `palette.rs` — GIMP `.gpl` and HEX palette files (1 MiB, 256 colors max).
+* `write_atomic` — temporary file, flush, `fsync`, rename.
 
-- `kgr.rs` — `.kgr` v2 writer, v1 + v2 readers with validation before allocation
-  (see [The .kgr project format](project-format.md)).
-- `png.rs` — PNG import (one frame, one layer), current-frame export, all-frames
-  export with sanitized file names.
-- `palette.rs` — GIMP `.gpl` and HEX palette files (1 MiB, 256 colors max).
-- `write_atomic` — temporary file, flush, `fsync`, rename.
+## Export — `src/export`
 
-## Export (`src/export`)
+1. **Snapshot** (`render::snapshot`, UI thread) copies the composited frames
+   (`FrameImage`: index, duration, RGBA). The document is never touched again.
+2. **Prepare** — `scale_nearest`; sprite-sheet `plan` (cells, grid, positions in checked
+   64-bit math) and `compose`; GIF palette analysis.
+3. **Encode** — `still.rs` (PNG, JPEG over a background, lossless WebP), `gif.rs` (one
+   global palette, index 0 transparent, exact ≤ 255 colors or NeuQuant, optional
+   Floyd–Steinberg), `metadata.rs` ([Kagero JSON, JSON Hash](metadata-format.md)).
+   Files are encoded in memory and written with `write_atomic`.
 
-Every export goes through three stages:
+`service.rs` turns an `ExportRequest` into files; `ExportJob` runs it on a thread with a
+cancel flag and progress. Every output size is checked against 16 384 px per side and
+512 MiB before allocation. `ExportSettings` is stored in the settings file.
 
-1. **Snapshot** (`render::snapshot`, UI thread) — copies the composited frames
-   (`FrameImage`: index, duration, RGBA image). The document is never touched again.
-2. **Prepare** — `scale_nearest`, sprite-sheet `plan` (cell size, grid, positions with
-   checked 64-bit math) and `compose`, GIF palette analysis.
-3. **Encode** — `still.rs` (PNG, JPEG over a background, lossless WebP), `gif.rs`
-   (one global palette, index 0 transparent, exact colors ≤ 255 or NeuQuant, optional
-   Floyd–Steinberg), `metadata.rs` (Kagero JSON v1, JSON Hash). Files are encoded in
-   memory and written with `write_atomic`.
+## UI — `src/app.rs`, `src/ui`
 
-`service.rs` turns an `ExportRequest` into files; `ExportJob` runs it on a thread with
-a cancel flag and progress counter. All output sizes are checked against
-`MAX_OUTPUT_SIDE` (16 384) and `MAX_OUTPUT_BYTES` (512 MiB) before allocation.
-`ExportSettings` (options.rs) is stored in the settings file and sanitized on load.
-
-## UI (`src/app.rs`, `src/ui`)
-
-- `KageroApp` owns config, `Editor`, `CanvasView`, `Timeline`, `Player`, the settings
-  window, `UpdateManager` and `DiscordPresence`. Panels return `ui::Command`s; the app
-  executes them. Shortcuts live in `ui/shortcuts.rs`.
-- `canvas.rs` — view transform in device pixels, partial texture uploads for editing, a
-  frame-texture cache (256 MiB, LRU) for onion skin and preview, badges.
-- `timeline.rs` — controls and frame strip; thumbnails cached per frame and rebuilt
-  lazily (≤ 12 per UI frame, visible cards only); Ctrl/Shift+click selects frames for
-  export.
-- `export_dialog.rs` — the Export window: tabs, options, cached preview textures, the
-  running `ExportJob`, overwrite confirmation.
-- `palette.rs` — colors panel: palette picker and menu, swatch context menu, recent colors.
-- Clipboard: Ctrl+C/X/V arrive from egui as clipboard events, and Ctrl+V only when the
-  system clipboard holds text, so copying also puts a short text marker there.
-- `animation_preview.rs` — `Player`: the shown frame is computed from a monotonic clock
-  (`frame_at_time`), and the next repaint is scheduled for the next frame change.
-- `settings/` — General, Updates, Discord pages; `toggle` is the shared switch widget.
-- Settings writes are debounced (600 ms) and flushed on exit.
+* `KageroApp` owns the config, `Editor`, `CanvasView`, `Timeline`, `Player`, the dialogs,
+  `UpdateManager` and `DiscordPresence`. Panels return `ui::Command`s; the app executes
+  them. Shortcuts are collected in `ui/shortcuts.rs` and never steal keys from text
+  fields.
+* `title_bar.rs` — Kagero's own window frame (the system frame is off): menus, title,
+  window buttons, drag/double-click, edge resizing. The window is maximized on the
+  first frame, which is reliable on Windows with display scaling.
+* `canvas.rs` — view transform in device pixels, partial texture uploads while
+  drawing, a frame-texture cache for onion skin and preview, selection drawing.
+* `timeline.rs` — controls and frame cards with lazily rebuilt thumbnails;
+  Ctrl/Shift+click selects frames for export.
+* `export_dialog.rs`, `palette.rs`, `layers.rs`, `settings/`, `dialogs.rs`, `home.rs`.
+* `icons.rs` — 16×16 pixel icons drawn as one mesh of whole device pixels.
+* `theme.rs` — colors, square corners, hard shadows, and the classic or Kagero Pixel
+  font ([UI design](ui-design.md)).
+* Settings writes are debounced (600 ms) and flushed on exit.
 
 ## Services and integrations
 
-- `services/updater.rs` — GitHub Releases client behind an `HttpClient` trait (real
-  client: `ureq` + OS TLS), semantic version selection, download with checksum and
-  minisign verification, and a background `UpdateManager`. See [Updater internals](updater-internals.md).
-- `services/update_installer.rs` + `src/bin/kagero-updater.rs` — package extraction,
-  backup/rollback install after Kagero exits, restore.
-- `integrations/discord_rpc.rs` — presence building with privacy rules, a transport-
-  independent connection state machine and a background IPC worker. See
-  [Discord RPC internals](discord-rpc-internals.md).
-
-None of these is required: failures are shown quietly and editing continues.
+The updater, the install helper and Discord Rich Presence are described in
+[Services](services.md). None of them is required: failures are shown quietly and
+editing continues.
 
 ## Error handling
 
-- Typed errors (`thiserror`) with user-facing messages; dialogs for file and update
+* Typed errors (`thiserror`) with user-facing messages: dialogs for file and update
   errors, the status bar for editing errors, quiet status lines for network/Discord.
-- No `unwrap()`/`expect()` in user-reachable paths; tests use `expect` freely.
-- Logs: `%APPDATA%\OnibiLab\Kagero\kagero.log`.
+* No `unwrap()`/`expect()` in user-reachable code; tests use `expect` freely.
+* Logs: `%APPDATA%\OnibiLab\Kagero\kagero.log`.
 
 ## Extending
 
-- New tool: `ToolKind` variant → `Editor::begin_stroke`/`update_stroke`, icon, shortcut.
-- New undoable operation: `Change` variant with `apply`/`revert`/`byte_size`/`dirty`.
-- New format version: bump `KGR_FORMAT_VERSION`, add a reader branch, keep older ones.
+* **New tool:** a `ToolKind` variant → `Editor::begin_stroke`/`update_stroke`, an icon in
+  `icons.rs`, a shortcut.
+* **New undoable operation:** a `Change` variant with `apply`/`revert`/`byte_size`/`dirty`.
+* **New project format version:** bump `KGR_FORMAT_VERSION`, add a reader branch, keep
+  the older ones.

@@ -8,7 +8,7 @@
 //!    copies the new files in, and rolls everything back if any step fails;
 //! 5. the helper starts Kagero again (new version, or the old one after a rollback).
 //!
-//! Nothing from the network is ever passed to a shell. See `docs/developers/updater-internals.md`.
+//! Nothing from the network is ever passed to a shell. See `docs/developers/services.md`.
 
 use std::fs;
 use std::io::Read;

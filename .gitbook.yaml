@@ -4,3 +4,12 @@ root: ./docs/
 structure:
   readme: README.md
   summary: SUMMARY.md
+
+# Pages merged in the 2026-10-29 docs rewrite.
+redirects:
+  integrations/updates: getting-started/installation.md
+  integrations/discord: user-guide/settings.md
+  developers/updater-internals: developers/services.md
+  developers/discord-rpc-internals: developers/services.md
+  developers/testing: developers/contributing.md
+  developers/release-process: developers/contributing.md

@@ -25,8 +25,8 @@ with building and publishing releases.
 Every change — written by hand or with help — goes through the same checks:
 
 * `cargo fmt --check` and `cargo clippy --all-targets`
-* the automated test suite (100+ tests covering drawing, layers, animation, the project
-  format, the updater and the Discord integration)
+* the automated test suite (170+ tests covering drawing, layers, animation, selection,
+  export, the project format, the updater and the Discord integration)
 * manual testing of the app before a release
 
 Up to version 0.3.7, commits made with an assistant's help carry a `Co-Authored-By`

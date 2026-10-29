@@ -1,9 +1,9 @@
 ---
-description: "Download, unpack and run Kagero on Windows."
+description: "Download, unpack and run Kagero — and keep it up to date."
 icon: download
 ---
 
-# Install Kagero
+# Install & update
 
 ## Requirements
 
@@ -37,22 +37,61 @@ user account can write to.
 {% step %}
 ### Run
 
-Start `kagero.exe`. Pin it to the taskbar or create a shortcut if you like.
+Start `kagero.exe` and pin it to the taskbar if you like. Kagero opens maximized on the
+start screen.
 
-Windows SmartScreen may warn that the app is unrecognized, because the executable isn't
-code-signed with a paid certificate. Choose **More info → Run anyway**. The package
-itself is signed — see below.
+Windows SmartScreen may say the app is unrecognized, because the executable isn't
+signed with a paid certificate. Choose **More info → Run anyway**. The package itself
+is signed — see [Verify the download](#verify-the-download).
 {% endstep %}
 {% endstepper %}
 
-## Verify the download (optional)
+<figure><img src="../images/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
 
-Each release ships `SHA256SUMS.txt` and a minisign signature (`.minisig`).
+## Update
+
+Kagero updates itself from the official
+[GitHub Releases](https://github.com/senzukisu/kagero/releases).
+
+* **Help → Check for Updates…** or **Settings → Updates → Check for Updates**.
+* By default Kagero also checks at startup and once a day while it runs (6, 12, 24 or
+  72 hours, or off).
+* **Download Update** shows progress and can be canceled. Kagero then checks the size,
+  the SHA-256 checksum and the package's **digital signature**; a package that fails
+  any check is deleted and never installed.
+* **Install and Restart** asks you to save unsaved work, closes Kagero, replaces its
+  files (keeping a backup of the previous version) and starts it again — usually within
+  a few seconds.
+
+<figure><img src="../images/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
+
+{% hint style="info" %}
+**Install and Restart** needs an official build in a folder you can write to. Builds
+made from source, or copies in `C:\Program Files`, can still check and download —
+install those updates by hand from the release page.
+{% endhint %}
+
+### If an update goes wrong
+
+* A failed installation **rolls back automatically** to the previous version.
+* **Settings → Updates → Restore Previous Version** brings back the version you had
+  before the last update.
+* Details are logged in `<install folder>\.kagero-backup\update.log`.
+
+| Message | Meaning |
+|---------|---------|
+| *couldn't reach GitHub* | No internet, a proxy or a firewall. Kagero keeps working; try later. |
+| *request limit was reached* | GitHub allows about 60 checks per hour per network. Wait an hour. |
+| *signature is missing or invalid* | Not an official package — it won't be installed. |
+
+## Verify the download
+
+Each release has `SHA256SUMS.txt` and a minisign signature (`.minisig`).
 
 {% tabs %}
 {% tab title="Checksum (PowerShell)" %}
 ```powershell
-Get-FileHash .\kagero-0.2.0-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\kagero-0.3.7-windows-x64.zip -Algorithm SHA256
 ```
 
 Compare the result with the line in `SHA256SUMS.txt`.
@@ -60,7 +99,7 @@ Compare the result with the line in `SHA256SUMS.txt`.
 
 {% tab title="Signature (rsign / minisign)" %}
 ```powershell
-rsign verify kagero-0.2.0-windows-x64.zip -P RWSXS+R3BCdmSx47V91P3O9sUYv3G3tdbivI9Dta7p0hSgnJqkRV8wDe
+rsign verify kagero-0.3.7-windows-x64.zip -P RWSXS+R3BCdmSx47V91P3O9sUYv3G3tdbivI9Dta7p0hSgnJqkRV8wDe
 ```
 
 The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blob/main/kagero.pub).
@@ -75,20 +114,7 @@ The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blo
 | Log file | `%APPDATA%\OnibiLab\Kagero\kagero.log` |
 | Previous version after an update | `<install folder>\.kagero-backup\` |
 
-## Uninstall
+**Uninstall:** delete the Kagero folder, and `%APPDATA%\OnibiLab\Kagero` to remove the
+settings too. Your `.kgr` projects stay wherever you saved them.
 
-Delete the Kagero folder, and `%APPDATA%\OnibiLab\Kagero` if you also want to remove
-the settings. Your `.kgr` projects are wherever you saved them.
-
-## Build from source
-
-{% code title="Requires Rust stable with the MSVC toolchain" %}
-```bash
-git clone https://github.com/senzukisu/kagero
-cd kagero
-cargo run --release
-```
-{% endcode %}
-
-Builds from source can check for updates but never install them; see
-[Updates](../integrations/updates.md).
+To build Kagero yourself, see [Contributing](../developers/contributing.md).

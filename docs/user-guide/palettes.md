@@ -3,47 +3,38 @@ description: "Primary and secondary colors, palettes, palette files and recent c
 icon: palette
 ---
 
-# Colors and palettes
+# Colors & palettes
+
+<figure><img src="../images/side-panel.png" alt="The colors panel with primary and secondary swatches, HEX and RGBA values, the palette picker and swatches, and the layers panel below" width="320"><figcaption></figcaption></figure>
 
 ## Primary and secondary
 
-* **Left** mouse button paints with the primary color, **right** with the secondary.
-* Click a big swatch to open the color picker (with alpha); <kbd>X</kbd> swaps them.
-* Under each swatch is its **HEX** code — click it to copy (`#RRGGBB`, or `#RRGGBBAA`
-  for translucent colors). The line below shows the primary color as **R G B A**.
-
-## Recent colors
-
-The last 12 colors you painted or filled with appear in the **Recent** row. Click one
-to use it again. They are kept between sessions.
+* The **left** mouse button paints with the primary color, the **right** with the
+  secondary. <kbd>X</kbd> swaps them.
+* Click a big swatch for the color picker (with alpha).
+* Under each swatch is its **HEX** code — click to copy (`#RRGGBB`, or `#RRGGBBAA` for
+  translucent colors). The line below shows the primary color as **R G B A**.
+* The **Recent** row keeps the last 12 colors you painted or filled with.
 
 ## Palettes
 
-Pick the palette in the drop-down above the swatches. Built-in palettes:
+Pick a palette in the drop-down above the swatches. Click a swatch to use it;
+right-click it for **Use as Secondary**, **Copy HEX**, **Move Left / Right** and
+**Remove from Palette**. Switching palettes never changes your drawing.
 
-| Palette | Colors |
-|---------|------|
-| **Kagero Ember** | The default: neutrals, ember warms, moss greens and night blues. |
-| **Ember** | A fire ramp from soot to white-hot, with warm earth tones. |
-| **Night Sakura** | Deep night blues, cherry-blossom pinks and a moonlit teal. |
-| **Misty Forest** | Layered greens, fog greys and bark browns. |
+| Built-in palette | Colors |
+|------------------|--------|
+| **Kagero Ember** | The default: neutrals, ember warms, moss greens and night blues |
+| **Ember** | A fire ramp from soot to white-hot, with warm earth tones |
+| **Night Sakura** | Deep night blues, cherry-blossom pinks and a moonlit teal |
+| **Misty Forest** | Layered greens, fog greys and bark browns |
 
-Click a swatch to make it the primary color. Right-click a swatch for **Use as
-Primary / Secondary**, **Copy HEX**, **Move Left / Right** and **Remove from Palette**.
+The **...** menu next to the picker: **Add Primary Color**, **New / Duplicate /
+Rename / Delete Palette**, **Import / Export Palette…** and **Restore Built-in
+Palettes** (your own palettes are kept).
 
-The **...** menu next to the palette picker:
-
-| Item | What it does |
-|------|--------------|
-| Add Primary Color | Adds the current primary color (duplicates are skipped). |
-| New / Duplicate Palette | Creates a palette and switches to it. |
-| Rename / Delete Palette | The last remaining palette can't be deleted. |
-| Import Palette… | Reads a `.gpl` or `.hex` file. |
-| Export Palette… | Saves the current palette as `.gpl` or `.hex`. |
-| Restore Built-in Palettes | Brings back the built-ins as shipped; your own palettes are kept. |
-
-Switching palettes never changes your drawing. Palettes are saved with your settings,
-not in projects. A palette holds up to 256 colors; you can keep up to 64 palettes.
+Palettes are saved with your settings, not in projects: up to 64 palettes of up to 256
+colors.
 
 ## Palette files
 
@@ -53,8 +44,3 @@ not in projects. A palette holds up to 256 colors; you can keep up to 64 palette
 | **HEX** (`.hex`, `.txt`) | One `RRGGBB` per line; `AARRGGBB` lines keep alpha. `;` and `//` start comments. |
 
 Files over 1 MiB or with more than 256 colors are refused with a clear message.
-
-{% hint style="info" %}
-Upgrading from 0.2: if you had customized the single 0.2 palette, it appears as
-**My Palette**.
-{% endhint %}

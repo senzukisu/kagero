@@ -176,7 +176,7 @@ cargo build --release    # target\release\kagero.exe
 
 Before a commit: `cargo fmt --check` and `cargo clippy --all-targets`. Source builds can
 check for updates but never install them; official packages are built and signed with
-`scripts\package-release.ps1` ([release process](docs/developers/release-process.md)).
+`scripts\package-release.ps1` ([releasing](docs/developers/contributing.md#releasing)).
 The Kagero Pixel font is drawn in `assets/fonts/kagero-pixel.txt` and built with
 `python scripts/build-font.py` (needs `fonttools`).
 
@@ -198,11 +198,12 @@ More in [Architecture](docs/developers/architecture.md).
 
 | Section | Pages |
 |---------|-------|
-| **Getting started** | [Install](docs/getting-started/installation.md) · [Your first animation](docs/getting-started/first-animation.md) · [Workspace tour](docs/getting-started/interface-tour.md) |
-| **User guide** | [Drawing tools](docs/user-guide/drawing-tools.md) · [Selection](docs/user-guide/selection.md) · [Palettes](docs/user-guide/palettes.md) · [Layers](docs/user-guide/layers.md) · [Animation](docs/user-guide/animation.md) · [Projects](docs/user-guide/files-and-export.md) · [Export](docs/user-guide/export.md) · [Animated GIF](docs/user-guide/animated-export.md) · [Sprite sheets](docs/user-guide/sprite-sheets.md) · [Settings](docs/user-guide/settings.md) · [Shortcuts](docs/user-guide/keyboard-shortcuts.md) |
-| **Integrations** | [Updates](docs/integrations/updates.md) · [Discord Rich Presence](docs/integrations/discord.md) |
-| **Developers** | [Architecture](docs/developers/architecture.md) · [Project format](docs/developers/project-format.md) · [Sprite sheet metadata](docs/developers/metadata-format.md) · [Updater internals](docs/developers/updater-internals.md) · [Discord RPC internals](docs/developers/discord-rpc-internals.md) · [UI design](docs/developers/ui-design.md) · [Testing](docs/developers/testing.md) · [Release process](docs/developers/release-process.md) · [Contributing](docs/developers/contributing.md) |
-| **About** | [Roadmap](docs/about/roadmap.md) · [Changelog](docs/about/changelog.md) · [AI assistance](docs/about/ai-assistance.md) · [FAQ](docs/about/faq.md) · [License](docs/about/license.md) |
+| **Getting started** | [Install & update](docs/getting-started/installation.md) · [Quick start](docs/getting-started/first-animation.md) · [The workspace](docs/getting-started/interface-tour.md) |
+| **Draw** | [Tools & canvas](docs/user-guide/drawing-tools.md) · [Selection](docs/user-guide/selection.md) · [Colors & palettes](docs/user-guide/palettes.md) · [Layers](docs/user-guide/layers.md) |
+| **Animate & export** | [Animation](docs/user-guide/animation.md) · [Projects & import](docs/user-guide/files-and-export.md) · [Export](docs/user-guide/export.md) · [Animated GIF](docs/user-guide/animated-export.md) · [Sprite sheets](docs/user-guide/sprite-sheets.md) |
+| **Reference** | [Shortcuts](docs/user-guide/keyboard-shortcuts.md) · [Settings & Discord](docs/user-guide/settings.md) · [FAQ](docs/about/faq.md) |
+| **Developers** | [Architecture](docs/developers/architecture.md) · [Project format](docs/developers/project-format.md) · [Sprite sheet metadata](docs/developers/metadata-format.md) · [Services](docs/developers/services.md) · [UI design](docs/developers/ui-design.md) · [Contributing](docs/developers/contributing.md) |
+| **About** | [Roadmap](docs/about/roadmap.md) · [Changelog](docs/about/changelog.md) · [How Kagero is made](docs/about/ai-assistance.md) · [License](docs/about/license.md) |
 
 ## What's next
 

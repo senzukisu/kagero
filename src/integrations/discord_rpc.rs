@@ -58,7 +58,7 @@ pub enum Desired {
 /// Presence images. Discord accepts HTTPS URLs as well as Developer Portal asset
 /// keys, so the images are served straight from the repository
 /// (`docs/images/discord/`) and need no upload (see
-/// docs/developers/discord-rpc-internals.md).
+/// docs/developers/services.md).
 pub mod assets {
     pub const LOGO: &str =
         "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/kagero-logo.png";
