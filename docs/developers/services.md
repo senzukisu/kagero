@@ -28,8 +28,10 @@ For version `X.Y.Z` the release tagged `vX.Y.Z` contains:
 | `kagero-X.Y.Z-windows-x64.zip.minisig` | minisign signature of the zip |
 | `SHA256SUMS.txt` | `sha256  filename` lines |
 
-The zip is **flat** and contains exactly `kagero.exe`, `kagero-updater.exe`,
-`README.md`, `LICENSE`, `THIRD_PARTY_LICENSES.md` and `CHANGELOG.md`.
+The zip is **flat** and contains `kagero.exe`, `kagero-updater.exe` and
+`SHA256SUMS.txt` (checksums of the two executables). The license texts are compiled
+into Kagero (Help → Licenses). Installers only require the two executables and accept
+any other safe file name, so older versions update to smaller packages fine.
 
 ### Checking
 
@@ -84,10 +86,18 @@ documented desktop RPC handshake and `SET_ACTIVITY`. No server, login or token.
 * `PresenceClient` is a transport-independent state machine: connect, send only
   changes (at most one per 4 s), retry with back-off (5 s → 2 min), clear on disable.
   Tests drive it with a fake transport.
-* `DiscordPresence` runs it on a background thread; shutting down clears the activity.
+* `DiscordPresence` runs it on a background thread; shutting down clears the activity
+  and waits at most 1.5 s, so a stalled Discord never delays closing Kagero.
+* The IPC handshake runs on its own thread with an **8-second timeout**: Discord
+  sometimes stalls it for half a minute after quick reconnects, and the client then
+  retries with back-off instead of hanging.
+* Activities: start screen, pixel art, animation, preview and **Exporting** (while the
+  Export dialog is open), plus an optional **Get Kagero** button linking to the latest
+  release.
 
 **Images** are HTTPS URLs to files in this repository (`docs/images/discord/`:
-`kagero-logo.png` 512×512, `pixel-art.png`, `animation.png`, `workshop.png` 128×128),
+`kagero-logo.png` 512×512, `pixel-art.png`, `animation.png`, `export.png`,
+`workshop.png` 128×128),
 so nothing has to be uploaded to the Developer Portal; new images appear once pushed to
 `main`.
 

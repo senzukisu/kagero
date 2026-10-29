@@ -52,6 +52,8 @@ struct Stroke {
     drawn: bool,
     /// Original color of every pixel touched during the stroke.
     before: HashMap<u32, Rgba>,
+    /// Last painted pixels of a pixel-perfect stroke (newest last).
+    trail: Vec<(i32, i32)>,
 }
 
 /// An open document with its editing state.
@@ -220,6 +222,7 @@ impl Editor {
                     last: pos,
                     drawn: false,
                     before: HashMap::new(),
+                    trail: Vec::new(),
                 });
                 self.update_stroke(pos);
                 Ok(())
@@ -243,7 +246,11 @@ impl Editor {
                 let from = stroke.last;
                 let mut points = Vec::new();
                 raster::line(from, pos, |x, y| points.push((x, y)));
+                let pixel_perfect = self.settings.pixel_perfect && size == 1;
                 for (x, y) in points {
+                    if pixel_perfect {
+                        self.pixel_perfect_step(&mut stroke, (x, y));
+                    }
                     self.stamp(&mut stroke, x, y, size);
                 }
             }
@@ -344,6 +351,40 @@ impl Editor {
     }
 
     /// Puts back every pixel the stroke has touched so far.
+    /// Pixel-perfect strokes: before painting `next`, takes back the previous pixel
+    /// when it only forms an "L" corner between its neighbors (a doubled pixel).
+    fn pixel_perfect_step(&mut self, stroke: &mut Stroke, next: (i32, i32)) {
+        if stroke.trail.last() == Some(&next) {
+            return;
+        }
+        if let [.., a, b] = stroke.trail[..] {
+            let diagonal = (next.0 - a.0).abs() == 1 && (next.1 - a.1).abs() == 1;
+            let corner = (b.0 == a.0 && b.1 == next.1) || (b.1 == a.1 && b.0 == next.0);
+            if diagonal && corner {
+                self.unstamp(stroke, b);
+                stroke.trail.pop();
+            }
+        }
+        stroke.trail.push(next);
+        if stroke.trail.len() > 3 {
+            stroke.trail.remove(0);
+        }
+    }
+
+    /// Gives one pixel of the stroke its original color back.
+    fn unstamp(&mut self, stroke: &mut Stroke, (x, y): (i32, i32)) {
+        let Some(cel) = self.doc.cel_by_id_mut(stroke.frame, stroke.layer) else {
+            return;
+        };
+        let Some(index) = cel.index_of(x, y) else {
+            return;
+        };
+        if let Some(&before) = stroke.before.get(&index) {
+            cel.set_index(index, before);
+            self.add_dirty(Dirty::pixel(x as u32, y as u32));
+        }
+    }
+
     fn restore(&mut self, stroke: &mut Stroke) {
         let w = self.doc.width();
         let Some(cel) = self.doc.cel_by_id_mut(stroke.frame, stroke.layer) else {

@@ -101,6 +101,8 @@ pub const BRUSH_SIZE_RANGE: std::ops::RangeInclusive<u32> = 1..=32;
 pub struct ToolSettings {
     pub brush_size: u32,
     pub sample_source: SampleSource,
+    /// Experimental: 1-px Pencil/Eraser strokes skip the doubled pixel in corners.
+    pub pixel_perfect: bool,
 }
 
 impl Default for ToolSettings {
@@ -108,6 +110,7 @@ impl Default for ToolSettings {
         Self {
             brush_size: 1,
             sample_source: SampleSource::Merged,
+            pixel_perfect: false,
         }
     }
 }

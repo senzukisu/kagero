@@ -116,6 +116,8 @@ pub struct CanvasOptions {
     /// Animation preview is running: show frames, block drawing.
     pub playing: bool,
     pub reduce_motion: bool,
+    /// Experimental: show the image repeated around itself (for seamless tiles).
+    pub tiled: bool,
 }
 
 /// Canvas state that is not part of the document.
@@ -557,15 +559,12 @@ impl CanvasView {
         let painter = ui.painter_at(viewport);
         painter.rect_filled(viewport, 0.0, theme::BACKGROUND);
         let image_rect = transform.image_rect(w, h);
-        if let Some(checker) = &self.checker {
-            // Checker cells are whole image pixels, so they line up with the pixel grid.
-            let cell = checker_cell_pixels(self.zoom);
-            let uv = Rect::from_min_max(
-                Pos2::ZERO,
-                Pos2::new(w as f32 / (cell * 2.0), h as f32 / (cell * 2.0)),
-            );
-            painter.image(checker.id(), image_rect, uv, Color32::WHITE);
-        }
+        // Checker cells are whole image pixels, so they line up with the pixel grid.
+        let cell = checker_cell_pixels(self.zoom);
+        let checker_uv = Rect::from_min_max(
+            Pos2::ZERO,
+            Pos2::new(w as f32 / (cell * 2.0), h as f32 / (cell * 2.0)),
+        );
         let full_uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
         let doc = editor.document();
         let main = if options.playing {
@@ -573,8 +572,39 @@ impl CanvasView {
         } else {
             self.texture.as_ref().map(TextureHandle::id)
         };
-        if let Some(id) = main {
-            painter.image(id, image_rect, full_uv, Color32::WHITE);
+        // Tiled view: eight dimmed copies around the image. View only.
+        let tiles: &[(f32, f32)] = if options.tiled {
+            &[
+                (-1.0, -1.0),
+                (0.0, -1.0),
+                (1.0, -1.0),
+                (-1.0, 0.0),
+                (1.0, 0.0),
+                (-1.0, 1.0),
+                (0.0, 1.0),
+                (1.0, 1.0),
+                (0.0, 0.0),
+            ]
+        } else {
+            &[(0.0, 0.0)]
+        };
+        for &(tx, ty) in tiles {
+            let rect =
+                image_rect.translate(Vec2::new(tx * image_rect.width(), ty * image_rect.height()));
+            if !rect.intersects(viewport) {
+                continue;
+            }
+            let tint = if tx == 0.0 && ty == 0.0 {
+                Color32::WHITE
+            } else {
+                Color32::from_gray(150)
+            };
+            if let Some(checker) = &self.checker {
+                painter.image(checker.id(), rect, checker_uv, tint);
+            }
+            if let Some(id) = main {
+                painter.image(id, rect, full_uv, tint);
+            }
         }
         // Onion skin: tinted, translucent neighbors drawn over the active frame. View only.
         let overlays = if options.playing {

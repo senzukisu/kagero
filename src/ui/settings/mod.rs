@@ -1,11 +1,17 @@
-//! Settings window: General, Updates and Integrations → Discord.
+//! Settings window: a side menu of pages (General, Shortcuts, Updates, Discord,
+//! Experimental, Plugins, Themes) with a header for the open page.
 
 mod discord;
+mod experimental;
 mod general;
+mod keys;
+mod soon;
 mod updates;
 
-use egui::{Color32, RichText, Sense, Vec2};
+use egui::{Color32, Rect, RichText, Sense, Vec2};
 
+use super::icons::{paint_icon, Icon, Tint};
+use super::keymap::Action;
 use crate::config::Config;
 use crate::integrations::discord_rpc::ConnectionState;
 use crate::services::updater::UpdateStatus;
@@ -14,19 +20,80 @@ use crate::theme;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsTab {
     General,
+    Shortcuts,
     Updates,
     Discord,
+    Experimental,
+    Plugins,
+    Themes,
 }
 
 impl SettingsTab {
     fn label(self) -> &'static str {
         match self {
             SettingsTab::General => "General",
+            SettingsTab::Shortcuts => "Shortcuts",
             SettingsTab::Updates => "Updates",
             SettingsTab::Discord => "Discord",
+            SettingsTab::Experimental => "Experimental",
+            SettingsTab::Plugins => "Plugins",
+            SettingsTab::Themes => "Themes",
         }
     }
+
+    fn icon(self) -> Icon {
+        match self {
+            SettingsTab::General => Icon::Settings,
+            SettingsTab::Shortcuts => Icon::Keyboard,
+            SettingsTab::Updates => Icon::Download,
+            SettingsTab::Discord => Icon::Chat,
+            SettingsTab::Experimental => Icon::Flask,
+            SettingsTab::Plugins => Icon::Plug,
+            SettingsTab::Themes => Icon::Palette,
+        }
+    }
+
+    fn description(self) -> &'static str {
+        match self {
+            SettingsTab::General => "Workspace layout and onion skin.",
+            SettingsTab::Shortcuts => {
+                "Change any keyboard shortcut. Click a key, then press the new one."
+            }
+            SettingsTab::Updates => "Check for, download and install new versions of Kagero.",
+            SettingsTab::Discord => "Show what you're working on in your Discord profile.",
+            SettingsTab::Experimental => {
+                "Features that are still being tested. Turn them on to try them."
+            }
+            SettingsTab::Plugins => "Extend Kagero with new tools, formats and effects.",
+            SettingsTab::Themes => "Change how Kagero looks.",
+        }
+    }
+
+    fn is_soon(self) -> bool {
+        matches!(self, SettingsTab::Plugins | SettingsTab::Themes)
+    }
 }
+
+/// The side menu, in groups.
+const MENU: [(&str, &[SettingsTab]); 3] = [
+    (
+        "App",
+        &[
+            SettingsTab::General,
+            SettingsTab::Shortcuts,
+            SettingsTab::Updates,
+        ],
+    ),
+    ("Integrations", &[SettingsTab::Discord]),
+    (
+        "Labs",
+        &[
+            SettingsTab::Experimental,
+            SettingsTab::Plugins,
+            SettingsTab::Themes,
+        ],
+    ),
+];
 
 /// What the user asked for in the settings window; executed by the app.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +122,12 @@ pub struct SettingsView {
 pub struct SettingsWindow {
     pub open: bool,
     pub tab: SettingsTab,
+    /// The shortcut waiting for a key press (Shortcuts page).
+    capturing: Option<Action>,
+    /// Search text on the Shortcuts page.
+    filter: String,
+    /// Last note on the Shortcuts page ("Ctrl+P was taken from Fill").
+    note: Option<String>,
 }
 
 impl Default for SettingsWindow {
@@ -62,6 +135,9 @@ impl Default for SettingsWindow {
         Self {
             open: false,
             tab: SettingsTab::General,
+            capturing: None,
+            filter: String::new(),
+            note: None,
         }
     }
 }
@@ -72,6 +148,11 @@ impl SettingsWindow {
         self.tab = tab;
     }
 
+    /// While a shortcut waits for its new key, the app must not run shortcuts.
+    pub fn is_capturing(&self) -> bool {
+        self.open && self.capturing.is_some()
+    }
+
     pub fn show(
         &mut self,
         ctx: &egui::Context,
@@ -80,75 +161,159 @@ impl SettingsWindow {
     ) -> Vec<SettingsAction> {
         let mut actions = Vec::new();
         if !self.open {
+            self.capturing = None;
             return actions;
         }
         let mut open = true;
+        let height = (ctx.screen_rect().height() - 140.0).clamp(360.0, 560.0);
         egui::Window::new(RichText::new("Settings").strong())
             .id(egui::Id::new("kagero-settings"))
             .open(&mut open)
             .collapsible(false)
             .resizable(false)
-            .default_size([600.0, 470.0])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
-                ui.set_min_size(Vec2::new(600.0, 440.0));
+                ui.set_width(780.0);
+                ui.set_height(height);
                 ui.horizontal_top(|ui| {
                     ui.vertical(|ui| {
-                        ui.set_width(124.0);
-                        for tab in [
-                            SettingsTab::General,
-                            SettingsTab::Updates,
-                            SettingsTab::Discord,
-                        ] {
-                            let selected = self.tab == tab;
-                            let mut text = RichText::new(tab.label()).color(theme::TEXT_PRIMARY);
-                            if selected {
-                                text = text.strong();
-                            }
-                            if ui
-                                .add_sized(
-                                    [120.0, 30.0],
-                                    egui::SelectableLabel::new(selected, text),
-                                )
-                                .clicked()
-                            {
-                                self.tab = tab;
-                            }
-                        }
+                        ui.set_width(170.0);
+                        self.menu(ui);
                     });
-                    ui.separator();
+                    ui.add_space(6.0);
+                    let x = ui.cursor().min.x;
+                    ui.painter().vline(
+                        x,
+                        ui.max_rect().y_range(),
+                        egui::Stroke::new(1.0_f32, theme::BORDER),
+                    );
+                    ui.add_space(14.0);
                     ui.vertical(|ui| {
-                        ui.set_width(450.0);
+                        ui.set_width(ui.available_width());
+                        page_header(ui, self.tab);
                         egui::ScrollArea::vertical()
-                            .max_height(430.0)
-                            .auto_shrink([false, true])
+                            .id_salt(("settings-page", self.tab.label()))
+                            .auto_shrink([false, false])
                             .show(ui, |ui| match self.tab {
                                 SettingsTab::General => general::show(ui, config, &mut actions),
+                                SettingsTab::Shortcuts => keys::show(
+                                    ui,
+                                    config,
+                                    &mut self.capturing,
+                                    &mut self.filter,
+                                    &mut self.note,
+                                    &mut actions,
+                                ),
                                 SettingsTab::Updates => {
                                     updates::show(ui, config, view, &mut actions)
                                 }
                                 SettingsTab::Discord => {
                                     discord::show(ui, config, view, &mut actions)
                                 }
+                                SettingsTab::Experimental => {
+                                    experimental::show(ui, config, &mut actions)
+                                }
+                                SettingsTab::Plugins => soon::plugins(ui),
+                                SettingsTab::Themes => soon::themes(ui),
                             });
                     });
                 });
             });
         if !open {
             self.open = false;
+            self.capturing = None;
         }
         actions
     }
+
+    fn menu(&mut self, ui: &mut egui::Ui) {
+        for (group, tabs) in MENU {
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new(group.to_uppercase())
+                    .small()
+                    .color(theme::TEXT_SECONDARY),
+            );
+            ui.add_space(2.0);
+            for &tab in tabs {
+                if menu_row(ui, tab, self.tab == tab).clicked() && self.tab != tab {
+                    self.tab = tab;
+                    self.capturing = None;
+                    self.note = None;
+                }
+            }
+        }
+    }
+}
+
+/// One row of the side menu: icon, label and a "Soon" tag for planned pages.
+fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(166.0, 30.0), Sense::click());
+    let painter = ui.painter();
+    if selected {
+        painter.rect_filled(rect, 0.0, theme::EMBER_DEEP);
+        let bar = Rect::from_min_size(rect.min, Vec2::new(3.0, rect.height()));
+        painter.rect_filled(bar, 0.0, theme::ACCENT);
+    } else if resp.hovered() {
+        painter.rect_filled(rect, 0.0, theme::SURFACE_HOVER);
+    }
+    let icon = Rect::from_center_size(
+        egui::pos2(rect.left() + 20.0, rect.center().y),
+        Vec2::splat(16.0),
+    );
+    paint_icon(painter, icon, tab.icon(), Tint::Normal);
+    painter.text(
+        egui::pos2(rect.left() + 38.0, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        tab.label(),
+        egui::TextStyle::Body.resolve(ui.style()),
+        if selected {
+            theme::TEXT_PRIMARY
+        } else {
+            theme::TEXT_SECONDARY
+        },
+    );
+    if tab.is_soon() {
+        let tag = egui::pos2(rect.right() - 8.0, rect.center().y);
+        painter.text(
+            tag,
+            egui::Align2::RIGHT_CENTER,
+            "SOON",
+            egui::TextStyle::Small.resolve(ui.style()),
+            theme::ACCENT.gamma_multiply(0.8),
+        );
+    }
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Big icon, title and one-line description of the open page.
+fn page_header(ui: &mut egui::Ui, tab: SettingsTab) {
+    ui.horizontal(|ui| {
+        let (rect, _) = ui.allocate_exact_size(Vec2::splat(36.0), Sense::hover());
+        paint_icon(ui.painter(), rect, tab.icon(), Tint::Normal);
+        ui.add_space(6.0);
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = 2.0;
+            ui.label(
+                RichText::new(tab.label())
+                    .font(theme::font(2))
+                    .color(theme::TEXT_PRIMARY),
+            );
+            ui.label(RichText::new(tab.description()).color(theme::TEXT_SECONDARY));
+        });
+    });
+    ui.add_space(4.0);
+    ui.separator();
 }
 
 /// Section heading used on every settings page.
 fn section(ui: &mut egui::Ui, title: &str) {
-    ui.add_space(6.0);
+    ui.add_space(8.0);
     ui.label(
         RichText::new(title.to_uppercase())
             .small()
             .strong()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::ACCENT),
     );
     ui.add_space(2.0);
 }

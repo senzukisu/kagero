@@ -19,7 +19,7 @@ timeline and onion skin, and export PNGs, GIFs and sprite sheets for your game �
 program that runs offline, with no account and no installer.
 
 {% hint style="info" %}
-**Current version: 0.3.7 Beta** · Windows 10/11 x64 ·
+**Current version: 0.3.8 Beta** · Windows 10/11 x64 ·
 [Download the latest release](https://github.com/senzukisu/kagero/releases/latest)
 {% endhint %}
 

@@ -266,3 +266,42 @@ fn damaged_palette_settings_are_repaired() {
         .iter()
         .all(|p| !p.colors.is_empty() && !p.name.is_empty()));
 }
+
+#[test]
+fn the_pixel_font_switch_moves_to_experimental() {
+    let dir = temp_dir("experimental");
+    let path = dir.join("config.json");
+    // Kagero 0.3.6–0.3.7 kept the switch under "ui".
+    std::fs::write(&path, r#"{ "ui": { "pixel_font": true } }"#).unwrap();
+    let cfg = Config::load(&path);
+    assert!(cfg.experimental.pixel_font);
+    assert!(
+        !cfg.experimental.pixel_perfect && !cfg.experimental.tiled_view,
+        "new features start off"
+    );
+    cfg.save(&path).expect("save");
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains("\"experimental\""));
+    assert!(Config::load(&path).experimental.pixel_font);
+}
+
+#[test]
+fn shortcut_changes_round_trip_and_bad_files_are_bounded() {
+    let dir = temp_dir("shortcuts");
+    let path = dir.join("config.json");
+    let mut cfg = Config::default();
+    cfg.shortcuts.insert("tool.pencil".into(), "P".into());
+    cfg.save(&path).expect("save");
+    assert_eq!(
+        Config::load(&path)
+            .shortcuts
+            .get("tool.pencil")
+            .map(String::as_str),
+        Some("P")
+    );
+    let huge: std::collections::BTreeMap<String, String> = (0..1000)
+        .map(|i| (format!("x{i}"), "P".to_owned()))
+        .collect();
+    std::fs::write(&path, serde_json::json!({ "shortcuts": huge }).to_string()).unwrap();
+    assert!(Config::load(&path).shortcuts.is_empty());
+}

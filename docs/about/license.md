@@ -17,6 +17,10 @@ Kagero is built on open-source Rust crates such as **egui/eframe**, **image**, *
 permissive licenses (MIT, Apache-2.0, BSD, Zlib, ISC, BSL-1.0, Unicode). The complete
 list with versions is in
 [THIRD_PARTY_LICENSES.md](https://github.com/senzukisu/kagero/blob/main/THIRD_PARTY_LICENSES.md).
+Both texts are also built into Kagero: **Help → Licenses…** (or **Licenses** in the
+About window).
+
+<figure><img src="../images/licenses.png" alt="The Licenses window with tabs for Kagero's MIT license and the third-party components" width="640"><figcaption></figcaption></figure>
 
 * egui bundles the Ubuntu-Light, Hack, Noto Emoji and emoji-icon fonts (Ubuntu Font
   Licence 1.0, MIT, SIL OFL 1.1).

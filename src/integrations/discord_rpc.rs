@@ -32,6 +32,8 @@ pub enum AppMode {
     AnimationDocument,
     /// Animation preview is playing.
     Previewing,
+    /// The Export dialog is open.
+    Exporting,
 }
 
 /// Activity text and asset keys sent to Discord.
@@ -45,7 +47,15 @@ pub struct ActivityData {
     pub large_text: &'static str,
     pub small_image: &'static str,
     pub small_text: &'static str,
+    /// Label and link of the profile-card button, if shown.
+    pub button: Option<(&'static str, &'static str)>,
 }
+
+/// The profile-card button: where to get Kagero (public, nothing personal).
+pub const GET_KAGERO: (&str, &str) = (
+    "Get Kagero",
+    "https://github.com/senzukisu/kagero/releases/latest",
+);
 
 /// The presence Kagero wants Discord to show.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +78,8 @@ pub mod assets {
         "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/animation.png";
     pub const WORKSHOP: &str =
         "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/workshop.png";
+    pub const EXPORT: &str =
+        "https://raw.githubusercontent.com/senzukisu/kagero/main/docs/images/discord/export.png";
 }
 
 /// Keeps only a short, printable file stem.
@@ -121,6 +133,12 @@ pub fn build_presence(
             assets::ANIMATION,
             "Animation preview",
         ),
+        AppMode::Exporting => (
+            "Exporting Sprites",
+            "Getting game-ready",
+            assets::EXPORT,
+            "Export",
+        ),
     };
     let (details, mut state) = if settings.show_mode {
         (details.to_owned(), state.to_owned())
@@ -140,6 +158,7 @@ pub fn build_presence(
         large_text: "Kagero by Onibi Lab",
         small_image,
         small_text,
+        button: settings.show_button.then_some(GET_KAGERO),
     })
 }
 
@@ -339,12 +358,19 @@ fn short_reason(error: &str) -> String {
 
 /// The real IPC connection to the Discord desktop client.
 pub struct IpcTransport {
+    application_id: String,
     client: discord_rich_presence::DiscordIpcClient,
 }
+
+/// How long to wait for Discord's handshake. Discord sometimes stalls it for half a
+/// minute or more (e.g. right after several quick reconnects); the client then
+/// retries with back-off instead of hanging.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(8);
 
 impl IpcTransport {
     pub fn new(application_id: &str) -> Self {
         Self {
+            application_id: application_id.to_owned(),
             client: discord_rich_presence::DiscordIpcClient::new(application_id),
         }
     }
@@ -353,7 +379,26 @@ impl IpcTransport {
 impl RpcTransport for IpcTransport {
     fn connect(&mut self) -> Result<(), String> {
         use discord_rich_presence::DiscordIpc;
-        self.client.connect().map_err(|e| e.to_string())
+        // The handshake runs on its own thread so a stalled Discord can't block us; a
+        // late answer is simply dropped with that thread.
+        let (tx, rx) = mpsc::channel();
+        let id = self.application_id.clone();
+        std::thread::Builder::new()
+            .name("kagero-discord-connect".into())
+            .spawn(move || {
+                let mut client = discord_rich_presence::DiscordIpcClient::new(&id);
+                let result = client.connect().map(|_| client).map_err(|e| e.to_string());
+                let _ = tx.send(result);
+            })
+            .map_err(|e| e.to_string())?;
+        match rx.recv_timeout(CONNECT_TIMEOUT) {
+            Ok(Ok(client)) => {
+                self.client = client;
+                Ok(())
+            }
+            Ok(Err(e)) => Err(e),
+            Err(_) => Err("Discord didn't answer in time".to_owned()),
+        }
     }
 
     fn set_activity(&mut self, a: &ActivityData) -> Result<(), String> {
@@ -369,6 +414,9 @@ impl RpcTransport for IpcTransport {
             .assets(assets);
         if let Some(start) = a.start {
             payload = payload.timestamps(activity::Timestamps::new().start(start));
+        }
+        if let Some((label, url)) = a.button {
+            payload = payload.buttons(vec![activity::Button::new(label, url)]);
         }
         self.client.set_activity(payload).map_err(|e| e.to_string())
     }
@@ -404,7 +452,14 @@ pub struct DiscordPresence {
 impl DiscordPresence {
     /// Starts the service, or a no-op service when no application ID is configured.
     pub fn start(application_id: &str) -> Self {
-        let state = Arc::new(Mutex::new(ConnectionState::NotConfigured));
+        // "Connecting" until the worker's first report, so a configured build never
+        // shows "not configured" for that first moment.
+        let first = if application_id.trim().is_empty() {
+            ConnectionState::NotConfigured
+        } else {
+            ConnectionState::Connecting
+        };
+        let state = Arc::new(Mutex::new(first));
         if application_id.trim().is_empty() {
             return Self {
                 sender: None,
@@ -506,8 +561,16 @@ impl Drop for DiscordPresence {
         if let Some(tx) = self.sender.take() {
             let _ = tx.send(Message::Shutdown);
         }
+        // Wait briefly for the worker to clear the status; if it's stuck waiting on
+        // Discord, let Kagero exit anyway instead of hanging.
         if let Some(handle) = self.worker.take() {
-            let _ = handle.join();
+            let deadline = Instant::now() + Duration::from_millis(1500);
+            while !handle.is_finished() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            if handle.is_finished() {
+                let _ = handle.join();
+            }
         }
     }
 }

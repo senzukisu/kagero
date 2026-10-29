@@ -19,6 +19,9 @@ pub fn show(
     let mut changed = toggle(ui, &mut d.enabled, "Enable Discord Rich Presence");
 
     section(ui, "Connection");
+    // The connection runs in the background: keep its status fresh while visible.
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_millis(500));
     if !view.discord_configured {
         status_line(ui, theme::TEXT_SECONDARY, "Not configured in this build");
     } else {
@@ -69,6 +72,7 @@ pub fn show(
          anything from the image.",
     );
     changed |= toggle(ui, &mut d.show_timer, "Show elapsed time");
+    changed |= toggle(ui, &mut d.show_button, "Show a “Get Kagero” button");
 
     section(ui, "Behavior");
     changed |= toggle(

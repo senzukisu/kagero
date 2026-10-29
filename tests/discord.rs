@@ -92,6 +92,11 @@ fn statuses_for_every_mode() {
         ),
         (AppMode::AnimationDocument, "Animating Sprites", "Animating"),
         (AppMode::Previewing, "Previewing Animation", "Animating"),
+        (
+            AppMode::Exporting,
+            "Exporting Sprites",
+            "Getting game-ready",
+        ),
     ];
     for (mode, details, state) in cases {
         match show(mode) {
@@ -284,4 +289,26 @@ fn user_disconnect_stays_off_until_retry() {
     client.retry(t0 + Duration::from_secs(61));
     client.step(t0 + Duration::from_secs(61), &show(AppMode::Home), on());
     assert_eq!(client.state(), &ConnectionState::Connected);
+}
+
+#[test]
+fn the_get_kagero_button_links_to_releases_and_can_be_hidden() {
+    let Desired::Show(a) = build_presence(AppMode::Home, None, 0, &DiscordSettings::default())
+    else {
+        panic!("shown");
+    };
+    let (label, url) = a.button.expect("button on by default");
+    assert!(
+        label.len() <= 32,
+        "Discord limits button labels to 32 characters"
+    );
+    assert!(url.starts_with("https://github.com/senzukisu/kagero/releases"));
+    let off = DiscordSettings {
+        show_button: false,
+        ..DiscordSettings::default()
+    };
+    let Desired::Show(a) = build_presence(AppMode::Home, None, 0, &off) else {
+        panic!("shown");
+    };
+    assert_eq!(a.button, None);
 }

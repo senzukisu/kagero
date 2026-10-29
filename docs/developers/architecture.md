@@ -94,8 +94,9 @@ cancel flag and progress. Every output size is checked against 16 384 px per sid
 
 * `KageroApp` owns the config, `Editor`, `CanvasView`, `Timeline`, `Player`, the dialogs,
   `UpdateManager` and `DiscordPresence`. Panels return `ui::Command`s; the app executes
-  them. Shortcuts are collected in `ui/shortcuts.rs` and never steal keys from text
-  fields.
+  them. Shortcuts are collected in `ui/shortcuts.rs` from the user's keymap
+  (`ui/keymap.rs`: every `Action`, its default key, and the overrides stored in the
+  settings) and never steal keys from text fields.
 * `title_bar.rs` — Kagero's own window frame (the system frame is off): menus, title,
   window buttons, drag/double-click, edge resizing. The window is maximized on the
   first frame, which is reliable on Windows with display scaling.

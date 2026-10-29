@@ -38,7 +38,25 @@ pub struct Config {
     pub updates: UpdateSettings,
     pub discord: DiscordSettings,
     pub export: ExportSettings,
+    /// Shortcut changes: action id → key text (`""` = no key). See `ui::keymap`.
+    pub shortcuts: std::collections::BTreeMap<String, String>,
+    pub experimental: ExperimentalSettings,
 }
+
+/// Features that are switched on only in Settings → Experimental.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ExperimentalSettings {
+    /// Kagero Pixel as the interface font.
+    pub pixel_font: bool,
+    /// 1-px Pencil and Eraser strokes skip the doubled pixel in "L" corners.
+    pub pixel_perfect: bool,
+    /// Show the image repeated around itself (for seamless tiles).
+    pub tiled_view: bool,
+}
+
+/// Most shortcut changes kept (there are fewer actions; this only bounds bad files).
+const MAX_SHORTCUT_OVERRIDES: usize = 256;
 
 impl Default for Config {
     fn default() -> Self {
@@ -57,6 +75,8 @@ impl Default for Config {
             updates: UpdateSettings::default(),
             discord: DiscordSettings::default(),
             export: ExportSettings::default(),
+            shortcuts: Default::default(),
+            experimental: ExperimentalSettings::default(),
         }
     }
 }
@@ -72,7 +92,8 @@ pub struct UiSettings {
     pub reduce_motion: bool,
     /// Open the main window maximized (remembered from the last session).
     pub window_maximized: bool,
-    /// Use the experimental Kagero Pixel interface font instead of the classic one.
+    /// Kagero 0.3.6–0.3.7 kept the pixel-font switch here; moved to `experimental`.
+    #[serde(default, skip_serializing)]
     pub pixel_font: bool,
 }
 
@@ -157,6 +178,8 @@ pub struct DiscordSettings {
     pub show_timer: bool,
     pub auto_reconnect: bool,
     pub clear_on_disable: bool,
+    /// A "Get Kagero" button on the profile card, linking to the releases page.
+    pub show_button: bool,
 }
 
 impl Default for DiscordSettings {
@@ -168,6 +191,7 @@ impl Default for DiscordSettings {
             show_timer: true,
             auto_reconnect: true,
             clear_on_disable: true,
+            show_button: true,
         }
     }
 }
@@ -216,6 +240,12 @@ impl Config {
     }
 
     fn sanitize(&mut self) {
+        if std::mem::take(&mut self.ui.pixel_font) {
+            self.experimental.pixel_font = true;
+        }
+        if self.shortcuts.len() > MAX_SHORTCUT_OVERRIDES {
+            self.shortcuts.clear();
+        }
         self.recent_files.truncate(MAX_RECENT);
         // Kagero 0.1–0.2 kept one palette: keep a customized one as "My Palette".
         let legacy = std::mem::take(&mut self.palette);

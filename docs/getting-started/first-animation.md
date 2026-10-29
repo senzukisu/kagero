@@ -13,9 +13,9 @@ every core feature once: drawing, frames, onion skin, preview, saving and export
 ### Create an image
 
 Click **Create New** on the start screen (or press <kbd>Ctrl</kbd>+<kbd>N</kbd>). Pick
-the **32×32** preset, keep the **Transparent** background and click **Create**.
+the **Sprite 32×32** preset, keep the **Transparent** background and click **Create**.
 
-<figure><img src="../images/new-image.png" alt="The New Image dialog with size, background and presets" width="420"><figcaption></figcaption></figure>
+<figure><img src="../images/new-image.png" alt="The New Image dialog with preset cards, size, background and preview"><figcaption></figcaption></figure>
 {% endstep %}
 
 {% step %}

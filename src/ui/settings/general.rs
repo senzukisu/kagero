@@ -19,11 +19,6 @@ pub fn show(ui: &mut egui::Ui, config: &mut Config, actions: &mut Vec<SettingsAc
         &mut config.show_grid,
         "Pixel grid when zoomed in (Ctrl+G)",
     );
-    changed |= toggle(ui, &mut config.ui.pixel_font, "Pixel font (experimental)");
-    hint(
-        ui,
-        "Kagero Pixel, Kagero's own bitmap font. Off: the classic font from 0.3.0.",
-    );
     changed |= toggle(ui, &mut config.ui.reduce_motion, "Reduce motion");
     hint(
         ui,

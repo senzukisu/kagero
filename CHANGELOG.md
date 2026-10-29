@@ -4,15 +4,54 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.8] Beta — 2026-10-29
+
+Settings, shortcuts and experiments.
+
+### Added
+
+- **Custom shortcuts** (Settings → Shortcuts): every shortcut can be changed — click a
+  key, press the new combination. A key that's already used moves over and the page
+  says where it came from; ↺ restores one default, *Reset all* every default; search by
+  action or key. Menus and tooltips show your keys. Ctrl+C/X/V, Esc, Space and the
+  arrow keys stay fixed and are listed.
+- **Settings → Experimental**, for features switched on only there:
+  - **Pixel font** (moved here from General),
+  - **Pixel-perfect pencil**: 1 px Pencil and Eraser strokes skip the doubled pixel in
+    "L" corners, so freehand lines stay one pixel thin,
+  - **Tiled view**: the image repeated around itself, dimmed, to check seamless tiles.
+- **Settings → Plugins** and **Themes**: "Coming soon" pages with what's planned.
+- **Help → Licenses…** (also in About): Kagero's MIT license and every third-party
+  license, built into the program.
+- Discord Rich Presence: an **Exporting Sprites** status while the Export dialog is
+  open, and a **Get Kagero** button on your profile card (can be turned off).
 
 ### Changed
 
+- **Redesigned Settings**: a side menu with icons in App / Integrations / Labs groups,
+  and a header for each page.
+- **Redesigned New Image**: named preset cards (Icon, Sprite, Character, Portrait,
+  Large, Tile strip, Screen, Wide screen) with shape previews, width ⇄ height swap,
+  background swatches and a live preview with the memory size.
+- **Clearer icons**: a real paint bucket for Fill, ⇄ arrows for Swap Colors, three
+  overlapping frames for Onion Skin, a frame with an arrow for Move Frame, and new
+  icons for the settings pages (keyboard, download, chat, flask, plug, palette).
+- The release package contains only `kagero.exe`, `kagero-updater.exe` and
+  `SHA256SUMS.txt` (checksums of both); the license texts are inside the program and
+  the readme and changelog are on GitHub. Updating from older versions works as before.
 - Documentation rewritten and reorganized (Getting started · Draw · Animate · Export ·
   Reference · Developers · About), with new screenshots of every screen. Updates and
   Discord moved into *Install & update* and *Settings*; the updater and Discord
   internals into *Services*; testing and releasing into *Contributing*. Old page
   addresses redirect to the new ones.
+
+### Fixed
+
+- Discord Rich Presence could wait half a minute or longer when Discord stalled the
+  connection handshake (it does after several quick reconnects). Connecting now gives
+  up after 8 seconds and retries with back-off, closing Kagero never waits on Discord,
+  and the status reads "Connecting…" instead of "Not configured" while it starts.
+- Settings → Discord refreshes its connection status on its own.
 
 ## [0.3.7] Beta — 2026-10-29
 

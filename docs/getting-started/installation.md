@@ -26,7 +26,9 @@ download `kagero-<version>-windows-x64.zip`.
 {% step %}
 ### Unpack to a folder you own
 
-Extract the zip, for example to `%LOCALAPPDATA%\Programs\Kagero`.
+Extract the zip, for example to `%LOCALAPPDATA%\Programs\Kagero`. It contains just
+`kagero.exe`, `kagero-updater.exe` (used for updates) and `SHA256SUMS.txt` with the
+checksums of both. The license texts are inside the program: **Help → Licenses…**.
 
 {% hint style="warning" %}
 Avoid `C:\Program Files`: Kagero updates itself in place, which needs a folder your

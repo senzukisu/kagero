@@ -6,7 +6,7 @@
 
 **A pixel-art and sprite-animation editor by Onibi Lab — from the first pixel to a game-ready sprite sheet.**
 
-Version 0.3.7 Beta · Windows 10/11 x64 · Written in Rust · MIT License
+Version 0.3.8 Beta · Windows 10/11 x64 · Written in Rust · MIT License
 
 [**Download**](https://github.com/senzukisu/kagero/releases/latest) ·
 [Documentation](https://kagero.gitbook.io/kagero-docs) ·
@@ -37,7 +37,15 @@ dark **Kagero Ember** style: a quiet workshop lit by amber light.
 </tr>
 </table>
 
-## What's new in 0.3.6–0.3.7
+## What's new in 0.3.8
+
+- **Your own shortcuts** — change any key in Settings → Shortcuts.
+- **Redesigned Settings and New Image**, and clearer icons.
+- **Experimental features**: a pixel font, a pixel-perfect pencil and a tiled view for
+  seamless textures — turn them on in Settings → Experimental.
+- **Discord**: an "Exporting" status and a "Get Kagero" button.
+
+### 0.3.6–0.3.7
 
 - **Kagero's own title bar** — flame, menus, document title and pixel-style window
   buttons in one bar. Drag to move, double-click to maximize, resize from the edges.
@@ -117,7 +125,7 @@ Everything works offline. Discord and GitHub are never required.
 
 ## Quick start
 
-1. Download `kagero-0.3.7-windows-x64.zip` from the
+1. Download `kagero-0.3.8-windows-x64.zip` from the
    [latest release](https://github.com/senzukisu/kagero/releases/latest).
 2. Extract it to a folder you own, for example `%LOCALAPPDATA%\Programs\Kagero`
    (so in-app updates can install).
@@ -138,7 +146,7 @@ SHA-256 sums are in `SHA256SUMS.txt` on each release. The package is signed with
 [`kagero.pub`](kagero.pub):
 
 ```
-rsign verify kagero-0.3.7-windows-x64.zip -p kagero.pub
+rsign verify kagero-0.3.8-windows-x64.zip -p kagero.pub
 ```
 
 </details>
@@ -162,7 +170,8 @@ A step-by-step walkthrough: [Your first animation](docs/getting-started/first-an
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> · <kbd>Ctrl</kbd>+<kbd>E</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | Save · export frame as PNG · Export dialog |
 | <kbd>F7</kbd> / <kbd>F8</kbd> · <kbd>Ctrl</kbd>+<kbd>,</kbd> | Timeline / side panel · Settings |
 
-All of them: [Keyboard shortcuts](docs/user-guide/keyboard-shortcuts.md).
+All of them: [Keyboard shortcuts](docs/user-guide/keyboard-shortcuts.md). Every
+shortcut can be changed in **Settings → Shortcuts**.
 
 ## Building from source
 
@@ -222,7 +231,7 @@ checks. More in [How Kagero is made](docs/about/ai-assistance.md).
 
 ## Beta notes
 
-Kagero 0.3.7 is a beta. Known limitations:
+Kagero 0.3.8 is a beta. Known limitations:
 
 - WebP export is lossless only, and animated WebP isn't available (use GIF).
 - Sprite sheets use equal cells; packed (bin-packing) layouts aren't available.

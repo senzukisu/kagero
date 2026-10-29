@@ -316,3 +316,58 @@ fn drawing_affects_only_the_active_layer() {
     e.select_layer(99);
     assert_eq!(e.document().active_index(), 0, "invalid index is ignored");
 }
+
+#[test]
+fn pixel_perfect_strokes_skip_doubled_corners() {
+    // A freehand stroke that moves right, then down, then right: (0,0)→(1,0)→(1,1)→(2,1).
+    // Normally (1,0) and (1,1) both get painted; pixel-perfect drops the corner (1,0).
+    let stair = [(0, 0), (1, 0), (1, 1), (2, 1), (2, 2), (3, 2)];
+    let mut plain = editor(6, 6);
+    drag(&mut plain, &stair);
+    assert_eq!(px(&plain, 1, 0), RED);
+
+    let mut pp = editor(6, 6);
+    pp.settings.pixel_perfect = true;
+    drag(&mut pp, &stair);
+    for (x, y) in [(0, 0), (1, 1), (2, 2), (3, 2)] {
+        assert_eq!(px(&pp, x, y), RED, "({x},{y}) is part of the line");
+    }
+    for (x, y) in [(1, 0), (2, 1)] {
+        assert_eq!(
+            px(&pp, x, y),
+            Rgba::TRANSPARENT,
+            "corner ({x},{y}) was dropped"
+        );
+    }
+    // Still one undo step, and straight lines are untouched.
+    pp.undo().expect("undo");
+    assert_eq!(px(&pp, 0, 0), Rgba::TRANSPARENT);
+    let mut line = editor(6, 6);
+    line.settings.pixel_perfect = true;
+    drag(&mut line, &[(0, 3), (5, 3)]);
+    assert!((0..6).all(|x| px(&line, x, 3) == RED));
+}
+
+#[test]
+fn pixel_perfect_keeps_the_original_color_under_dropped_pixels() {
+    let mut e = editor(4, 4);
+    e.primary = GREEN;
+    drag(&mut e, &[(1, 0), (1, 0)]);
+    e.primary = RED;
+    e.settings.pixel_perfect = true;
+    drag(&mut e, &[(0, 0), (1, 0), (1, 1)]);
+    assert_eq!(
+        px(&e, 1, 0),
+        GREEN,
+        "the dropped corner shows what was there before"
+    );
+}
+
+#[test]
+fn pixel_perfect_is_only_for_one_pixel_brushes() {
+    let mut e = editor(8, 8);
+    e.settings.pixel_perfect = true;
+    e.settings.brush_size = 2;
+    drag(&mut e, &[(1, 1), (2, 1), (2, 2)]);
+    assert_eq!(px(&e, 2, 1), RED);
+}

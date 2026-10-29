@@ -51,8 +51,13 @@ enum Pending {
 enum Dialog {
     NewDocument(NewDocumentState),
     Unsaved(Pending),
-    Error { title: String, message: String },
+    Error {
+        title: String,
+        message: String,
+    },
     About,
+    /// Kagero's and the third-party licenses; the open tab.
+    Licenses(u8),
     ConfirmDeleteFrame(usize),
 }
 
@@ -458,6 +463,7 @@ impl KageroApp {
             }
             Command::Exit => self.request(ctx, Pending::Exit),
             Command::About => self.dialog = Some(Dialog::About),
+            Command::Licenses => self.dialog = Some(Dialog::Licenses(0)),
             Command::ToggleGrid => {
                 self.config.show_grid = !self.config.show_grid;
                 self.schedule_config_save();
@@ -846,6 +852,7 @@ impl KageroApp {
     fn update_presence(&mut self) {
         let mode = match &self.editor {
             None => AppMode::Home,
+            Some(_) if self.export.open => AppMode::Exporting,
             Some(_) if self.player.is_playing() => AppMode::Previewing,
             Some(e) if e.document().frame_count() > 1 => AppMode::AnimationDocument,
             Some(_) => AppMode::StaticDocument,
@@ -871,7 +878,8 @@ impl KageroApp {
                 active_layer: e.document().active_index(),
                 has_selection: e.selection().is_some(),
             });
-        let (found, escape) = shortcuts::collect(ctx, keys);
+        let keymap = crate::ui::keymap::Keymap::from_overrides(&self.config.shortcuts);
+        let (found, escape) = shortcuts::collect(ctx, &keymap, keys);
         commands.extend(found);
         if escape {
             if self.player.is_playing() {
@@ -932,9 +940,14 @@ impl KageroApp {
                     self.dialog = Some(Dialog::Error { title, message });
                 }
             }
-            Dialog::About => {
-                if !dialogs::about(ctx) {
-                    self.dialog = Some(Dialog::About);
+            Dialog::About => match dialogs::about(ctx) {
+                dialogs::AboutChoice::Keep => self.dialog = Some(Dialog::About),
+                dialogs::AboutChoice::Licenses => self.dialog = Some(Dialog::Licenses(0)),
+                dialogs::AboutChoice::Close => {}
+            },
+            Dialog::Licenses(mut tab) => {
+                if dialogs::licenses(ctx, &mut tab) {
+                    self.dialog = Some(Dialog::Licenses(tab));
                 }
             }
             Dialog::ConfirmDeleteFrame(index) => {
@@ -1004,6 +1017,7 @@ impl KageroApp {
                 .inner_margin(Margin::symmetric(8, 4))
         };
         let playing = self.player.is_playing();
+        let keymap = crate::ui::keymap::Keymap::from_overrides(&self.config.shortcuts);
 
         crate::ui::title_bar::resize_edges(ctx);
         let title = self.window_title.clone();
@@ -1020,6 +1034,7 @@ impl KageroApp {
                     onion: self.config.onion.enabled,
                     timeline_visible: self.config.ui.timeline_visible,
                     side_panel_visible: self.config.ui.side_panel_visible,
+                    keymap: &keymap,
                 };
                 crate::ui::title_bar::show(ui, &title, |ui| menu::show(ui, &state, commands));
             });
@@ -1089,7 +1104,7 @@ impl KageroApp {
                 )
                 .resizable(false)
                 .exact_width(48.0)
-                .show(ctx, |ui| toolbar::show(ui, editor.tool, commands));
+                .show(ctx, |ui| toolbar::show(ui, editor.tool, &keymap, commands));
 
             if self.config.ui.side_panel_visible {
                 egui::SidePanel::right("side-panel")
@@ -1116,7 +1131,11 @@ impl KageroApp {
             onion: self.config.onion,
             playing,
             reduce_motion: self.config.ui.reduce_motion,
+            tiled: self.config.experimental.tiled_view,
         };
+        if let Some(editor) = &mut self.editor {
+            editor.settings.pixel_perfect = self.config.experimental.pixel_perfect;
+        }
         self.canvas.show_grid = self.config.show_grid;
         egui::CentralPanel::default()
             .frame(Frame::new().fill(theme::BACKGROUND))
@@ -1140,7 +1159,7 @@ fn capitalize(s: &str) -> String {
 
 impl eframe::App for KageroApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        theme::sync_fonts(ctx, self.config.ui.pixel_font);
+        theme::sync_fonts(ctx, self.config.experimental.pixel_font);
         self.remember_window_state(ctx);
         self.handle_close_request(ctx);
         self.poll_updates();
@@ -1150,7 +1169,8 @@ impl eframe::App for KageroApp {
         }
 
         let mut commands = Vec::new();
-        if self.dialog.is_none() {
+        // No shortcuts while a dialog is open or a shortcut waits for its new key.
+        if self.dialog.is_none() && !self.settings.is_capturing() {
             self.collect_shortcuts(ctx, &mut commands);
         }
         self.panels(ctx, &mut commands);

@@ -8,6 +8,22 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.3.8 Beta — settings, shortcuts and experiments (2026-10-29)
+
+* **Custom shortcuts** in Settings → Shortcuts: click a key, press the new one.
+* **Redesigned Settings** with a side menu, and new **Experimental**, **Plugins** and
+  **Themes** pages (the last two: coming soon).
+* **Experimental features:** pixel font, pixel-perfect pencil, tiled view.
+* **Redesigned New Image** with named presets, size swap, background swatches and a
+  preview.
+* **Clearer icons** for Fill, Swap Colors, Onion Skin and Move Frame, plus new
+  settings icons.
+* **Help → Licenses**; the download now contains just the program.
+* **Discord:** an Exporting status, a Get Kagero button, and no more long waits when
+  Discord stalls.
+
+[Download 0.3.8](https://github.com/senzukisu/kagero/releases/tag/v0.3.8)
+
 ## 0.3.7 Beta — hotfix (2026-10-29)
 
 * **Fix**: the Export dialog could be taller than a 1080p screen, with its Export

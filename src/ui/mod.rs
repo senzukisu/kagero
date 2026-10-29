@@ -9,6 +9,7 @@ pub mod dialogs;
 pub mod export_dialog;
 pub mod home;
 pub mod icons;
+pub mod keymap;
 pub mod layers;
 pub mod menu;
 pub mod palette;
@@ -61,6 +62,8 @@ pub enum Command {
     BeginRenameLayer(usize),
     RenameLayer(usize, String),
     About,
+    /// Help → Licenses: Kagero's and the third-party licenses.
+    Licenses,
     // Animation
     TogglePlayback,
     StopPlayback,

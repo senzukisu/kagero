@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use egui::Button;
 
+use super::keymap::{Action, Keymap};
 use super::settings::SettingsTab;
 use super::Command;
 use crate::editor::{Editor, ToolKind, Transform};
@@ -18,16 +19,32 @@ pub struct MenuState<'a> {
     pub onion: bool,
     pub timeline_visible: bool,
     pub side_panel_visible: bool,
+    pub keymap: &'a Keymap,
 }
 
 pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command>) {
     let editor = state.editor;
     let has_doc = editor.is_some();
     let editable = has_doc && !state.playing;
+    let keys = |a: Action| state.keymap.label(a);
     egui::menu::bar(ui, |ui| {
         ui.menu_button("File", |ui| {
-            item(ui, commands, "New…", "Ctrl+N", true, Command::NewDocument);
-            item(ui, commands, "Open…", "Ctrl+O", true, Command::Open);
+            item(
+                ui,
+                commands,
+                "New…",
+                &keys(Action::NewDocument),
+                true,
+                Command::NewDocument,
+            );
+            item(
+                ui,
+                commands,
+                "Open…",
+                &keys(Action::Open),
+                true,
+                Command::Open,
+            );
             ui.add_enabled_ui(!state.recent.is_empty(), |ui| {
                 ui.menu_button("Open Recent", |ui| {
                     for path in state.recent {
@@ -40,12 +57,19 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 });
             });
             ui.separator();
-            item(ui, commands, "Save", "Ctrl+S", has_doc, Command::Save);
+            item(
+                ui,
+                commands,
+                "Save",
+                &keys(Action::Save),
+                has_doc,
+                Command::Save,
+            );
             item(
                 ui,
                 commands,
                 "Save As…",
-                "Ctrl+Shift+S",
+                &keys(Action::SaveAs),
                 has_doc,
                 Command::SaveAs,
             );
@@ -53,7 +77,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Export Current Frame as PNG…",
-                "Ctrl+E",
+                &keys(Action::ExportFrame),
                 has_doc,
                 Command::ExportPng,
             );
@@ -61,7 +85,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Export…",
-                "Ctrl+Shift+E",
+                &keys(Action::Export),
                 has_doc,
                 Command::OpenExport(ExportKind::Image),
             );
@@ -86,7 +110,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Settings…",
-                "Ctrl+,",
+                &keys(Action::Settings),
                 true,
                 Command::OpenSettings(SettingsTab::General),
             );
@@ -95,7 +119,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Close Document",
-                "Ctrl+W",
+                &keys(Action::Close),
                 has_doc,
                 Command::CloseDocument,
             );
@@ -112,7 +136,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 &undo_text,
-                "Ctrl+Z",
+                &keys(Action::Undo),
                 undo.is_some(),
                 Command::Undo,
             );
@@ -120,7 +144,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 &redo_text,
-                "Ctrl+Y",
+                &keys(Action::Redo),
                 redo.is_some(),
                 Command::Redo,
             );
@@ -143,7 +167,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Delete Selection",
-                "Delete",
+                &keys(Action::DeleteSelection),
                 sel_edit,
                 Command::DeleteSelection,
             );
@@ -151,7 +175,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Duplicate Selection",
-                "Ctrl+D",
+                &keys(Action::Duplicate),
                 sel_edit,
                 Command::DuplicateSelection,
             );
@@ -160,7 +184,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Select All",
-                "Ctrl+A",
+                &keys(Action::SelectAll),
                 editable,
                 Command::SelectAll,
             );
@@ -177,7 +201,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Swap Colors",
-                "X",
+                &keys(Action::SwapColors),
                 has_doc,
                 Command::SwapColors,
             );
@@ -194,22 +218,35 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                     .small()
                     .weak(),
             );
-            for (text, shortcut, kind) in [
-                ("Flip Horizontal", "Shift+H", Transform::FlipHorizontal),
-                ("Flip Vertical", "Shift+V", Transform::FlipVertical),
-                ("Rotate 90° Clockwise", "Ctrl+R", Transform::Rotate90),
-                ("Rotate 180°", "", Transform::Rotate180),
+            for (text, action, kind) in [
+                (
+                    "Flip Horizontal",
+                    Some(Action::FlipHorizontal),
+                    Transform::FlipHorizontal,
+                ),
+                (
+                    "Flip Vertical",
+                    Some(Action::FlipVertical),
+                    Transform::FlipVertical,
+                ),
+                (
+                    "Rotate 90° Clockwise",
+                    Some(Action::RotateCw),
+                    Transform::Rotate90,
+                ),
+                ("Rotate 180°", None, Transform::Rotate180),
                 (
                     "Rotate 90° Counterclockwise",
-                    "Ctrl+Shift+R",
+                    Some(Action::RotateCcw),
                     Transform::Rotate270,
                 ),
             ] {
+                let shortcut = action.map(keys).unwrap_or_default();
                 item(
                     ui,
                     commands,
                     text,
-                    shortcut,
+                    &shortcut,
                     editable,
                     Command::Transform(kind),
                 );
@@ -219,7 +256,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
         ui.menu_button("Tools", |ui| {
             let current = editor.map(|e| e.tool);
             for tool in ToolKind::ALL {
-                let mut b = Button::new(tool.name()).shortcut_text(tool.shortcut());
+                let mut b = Button::new(tool.name()).shortcut_text(keys(Action::for_tool(tool)));
                 if current == Some(tool) {
                     b = b.selected(true);
                 }
@@ -235,7 +272,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Pixel Grid",
-                "Ctrl+G",
+                &keys(Action::Grid),
                 true,
                 state.show_grid,
                 Command::ToggleGrid,
@@ -244,7 +281,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Timeline",
-                "F7",
+                &keys(Action::Timeline),
                 true,
                 state.timeline_visible,
                 Command::ToggleTimeline,
@@ -253,7 +290,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Colors & Layers Panel",
-                "F8",
+                &keys(Action::SidePanel),
                 true,
                 state.side_panel_visible,
                 Command::ToggleSidePanel,
@@ -265,7 +302,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Actual Size (100%)",
-                "1",
+                &keys(Action::ActualSize),
                 has_doc,
                 Command::ZoomActual,
             );
@@ -273,7 +310,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Fit to Window",
-                "0",
+                &keys(Action::Fit),
                 has_doc,
                 Command::FitCanvas,
             );
@@ -281,7 +318,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Center Canvas",
-                "Home",
+                &keys(Action::Center),
                 has_doc,
                 Command::CenterCanvas,
             );
@@ -296,7 +333,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "New Layer",
-                "Ctrl+Shift+N",
+                &keys(Action::NewLayer),
                 can_add && editable,
                 Command::AddLayer,
             );
@@ -312,7 +349,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Rename Layer…",
-                "F2",
+                &keys(Action::RenameLayer),
                 editable,
                 Command::BeginRenameLayer(active),
             );
@@ -329,7 +366,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Move Up",
-                "Ctrl+]",
+                &keys(Action::LayerUp),
                 editable && active + 1 < count,
                 Command::LayerUp,
             );
@@ -337,7 +374,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Move Down",
-                "Ctrl+[",
+                &keys(Action::LayerDown),
                 editable && active > 0,
                 Command::LayerDown,
             );
@@ -361,7 +398,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 play_label,
-                "Enter",
+                &keys(Action::Play),
                 has_doc && (count > 1 || state.playing),
                 Command::TogglePlayback,
             );
@@ -369,7 +406,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "First Frame",
-                "Ctrl+Home",
+                &keys(Action::FirstFrame),
                 has_doc,
                 Command::FirstFrame,
             );
@@ -377,7 +414,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Previous Frame",
-                ",",
+                &keys(Action::PrevFrame),
                 has_doc,
                 Command::PrevFrame,
             );
@@ -387,7 +424,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "New Frame",
-                "Alt+N",
+                &keys(Action::NewFrame),
                 editable && can_add,
                 Command::AddFrame,
             );
@@ -395,7 +432,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Duplicate Frame",
-                "Alt+D",
+                &keys(Action::DuplicateFrame),
                 editable && can_add,
                 Command::DuplicateFrame,
             );
@@ -428,7 +465,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 ui,
                 commands,
                 "Onion Skin",
-                "O",
+                &keys(Action::OnionSkin),
                 has_doc,
                 state.onion,
                 Command::ToggleOnionSkin,
@@ -453,6 +490,7 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 Command::OpenSettings(SettingsTab::Discord),
             );
             ui.separator();
+            item(ui, commands, "Licenses…", "", true, Command::Licenses);
             item(ui, commands, "About Kagero", "", true, Command::About);
         });
     });

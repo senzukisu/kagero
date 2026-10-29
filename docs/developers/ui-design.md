@@ -45,11 +45,23 @@ the document title centered on the window, and 46 px minimize / maximize / close
 buttons drawn as 10×10 pixel glyphs (close turns red on hover). See
 [The workspace](../getting-started/interface-tour.md#the-title-bar).
 
+## Settings window
+
+A side menu of pages with 16 px icons, grouped under **App**, **Integrations** and
+**Labs**; the open page has an ember fill and a 3 px amber bar, planned pages carry a
+"SOON" tag. Each page starts with a 2× icon, its title and a one-line description;
+section titles are small amber capitals.
+
+<figure><img src="../images/settings-experimental.png" alt="The Settings window on the Experimental page" width="640"><figcaption></figcaption></figure>
+
 ## Icons
 
 All icons are original 16×16 bitmaps in `src/ui/icons.rs`, colored from a small fixed
 palette with dark outlines and two-tone shading — 2× in the toolbar, 1× in compact rows,
-faded to gray when disabled. They are drawn as one mesh of whole device pixels, so they
+faded to gray when disabled. Each icon shows the thing itself: a paint bucket for Fill,
+⇄ for Swap Colors, overlapping warm/current/cool frames for Onion Skin, a frame with an
+arrow for Move Frame, a keyboard, download tray, chat bubble, flask, plug and palette
+for the settings pages. They are drawn as one mesh of whole device pixels, so they
 stay crisp at any display scale. The window icon is the 16×16 flame scaled ×4.
 
 <figure><img src="../images/tool-icons.png" alt="The tool icons"><figcaption></figcaption></figure>

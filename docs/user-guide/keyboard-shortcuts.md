@@ -5,6 +5,10 @@ icon: keyboard
 
 # Keyboard shortcuts
 
+These are the defaults. **Every shortcut can be changed** in Settings → Shortcuts — see
+[Changing shortcuts](settings.md#changing-shortcuts); menus and tooltips then show your
+keys.
+
 {% hint style="info" %}
 While you type in a text field (a layer name, a duration, an export file name),
 letters, arrows, <kbd>Delete</kbd> and <kbd>Ctrl</kbd>+<kbd>A</kbd>/<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd>/<kbd>Z</kbd>

@@ -7,11 +7,18 @@ icon: floppy-disk
 
 ## New image
 
-<kbd>Ctrl</kbd>+<kbd>N</kbd> (or **Create New** on the start screen) asks for the size —
-any size from 1×1 to 2048×2048, or a preset — and the background: transparent, white
-or black.
+<kbd>Ctrl</kbd>+<kbd>N</kbd> (or **Create New** on the start screen) opens **New Image**:
 
-<figure><img src="../images/new-image.png" alt="The New Image dialog: width, height, background and size presets" width="420"><figcaption></figcaption></figure>
+* **Presets** — Icon 16×16, Sprite 32×32, Character 64×64, Portrait 128×128, Large
+  256×256, Tile strip 128×32, Screen 320×180, Wide screen 640×360. Each card shows the
+  shape.
+* **Size** — any width and height from 1 to 2048 px; **⇄** swaps them.
+* **Background** — transparent, white or black.
+* **Preview** — the canvas shape with its background, and its memory per frame and layer.
+
+<kbd>Enter</kbd> creates, <kbd>Esc</kbd> cancels. Kagero remembers the last size.
+
+<figure><img src="../images/new-image.png" alt="The New Image dialog: preset cards, width and height with a swap button, background swatches and a preview"><figcaption></figcaption></figure>
 
 ## Projects (`.kgr`)
 

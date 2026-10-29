@@ -22,6 +22,8 @@ icon: pencil
 * **Left** button = primary color, **right** button = secondary color.
 * Pencil, Eraser, Line and Rectangle use a square brush from **1 to 32 px** (tool
   options bar). An amber outline on the canvas shows exactly which pixels will change.
+* Want cleaner 1 px freehand lines? Turn on **Pixel-perfect pencil** in
+  [Settings → Experimental](settings.md#experimental-features).
 * One stroke — from mouse down to mouse up — is **one undo step**. Shapes preview
   while you drag, and <kbd>Esc</kbd> cancels them.
 * Drawing outside the image is ignored; the stroke continues when you come back in.

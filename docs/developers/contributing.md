@@ -106,8 +106,9 @@ versions), `APP_CHANNEL` in `src/lib.rs` if needed, and `CHANGELOG.md`. Run the 
 powershell -ExecutionPolicy Bypass -File scripts\package-release.ps1
 ```
 
-Builds with `KAGERO_OFFICIAL_BUILD=1`, creates `dist\kagero-X.Y.Z-windows-x64.zip`,
-signs and verifies it, and writes `SHA256SUMS.txt`.
+Builds with `KAGERO_OFFICIAL_BUILD=1`, creates `dist\kagero-X.Y.Z-windows-x64.zip`
+(the two executables and their `SHA256SUMS.txt`), signs and verifies it, and writes the
+release's own `SHA256SUMS.txt` for the zip and its signature.
 {% endstep %}
 
 {% step %}

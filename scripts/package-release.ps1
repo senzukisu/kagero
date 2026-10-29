@@ -4,7 +4,9 @@
 
 .DESCRIPTION
   Produces in dist\:
-    kagero-<version>-windows-x64.zip           flat package (see docs/developers/services.md)
+    kagero-<version>-windows-x64.zip           flat package: kagero.exe, kagero-updater.exe and
+                                               SHA256SUMS.txt for the two executables
+                                               (see docs/developers/services.md)
     kagero-<version>-windows-x64.zip.minisig   minisign signature of the zip
     SHA256SUMS.txt                             checksums of both files
 
@@ -46,7 +48,13 @@ $dist = Join-Path $root "dist"
 $stage = Join-Path $dist $name
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force $stage | Out-Null
-Copy-Item target\release\kagero.exe, target\release\kagero-updater.exe, README.md, LICENSE, THIRD_PARTY_LICENSES.md, CHANGELOG.md -Destination $stage
+# Only the program: the license texts are built into Kagero (Help -> Licenses), and the
+# readme and changelog live on GitHub. SHA256SUMS.txt lists the two executables.
+Copy-Item target\release\kagero.exe, target\release\kagero-updater.exe -Destination $stage
+$exeSums = foreach ($f in @("kagero.exe", "kagero-updater.exe")) {
+    "{0}  {1}" -f (Get-FileHash (Join-Path $stage $f) -Algorithm SHA256).Hash.ToLowerInvariant(), $f
+}
+[IO.File]::WriteAllText((Join-Path $stage "SHA256SUMS.txt"), ($exeSums -join "`n") + "`n")
 
 $zip = Join-Path $dist "$name.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
