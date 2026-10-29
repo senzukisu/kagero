@@ -1,5 +1,5 @@
 ---
-description: "Download, unpack and run Kagero — and keep it up to date."
+description: Download, unpack and run Kagero — and keep it up to date.
 icon: download
 ---
 
@@ -19,8 +19,7 @@ No installer, runtime or account is needed.
 {% step %}
 ### Download
 
-Open the [latest release](https://github.com/senzukisu/kagero/releases/latest) and
-download `kagero-<version>-windows-x64.zip`.
+Open the [latest release](https://github.com/senzukisu/kagero/releases/latest) and download `kagero-<version>-windows-x64.zip`.
 {% endstep %}
 
 {% step %}
@@ -29,60 +28,47 @@ download `kagero-<version>-windows-x64.zip`.
 Extract the zip, for example to `%LOCALAPPDATA%\Programs\Kagero`.
 
 {% hint style="warning" %}
-Avoid `C:\Program Files`: Kagero updates itself in place, which needs a folder your
-user account can write to.
+Avoid `C:\Program Files`: Kagero updates itself in place, which needs a folder your user account can write to.
 {% endhint %}
 {% endstep %}
 
 {% step %}
 ### Run
 
-Start `kagero.exe` and pin it to the taskbar if you like. Kagero opens maximized on the
-start screen.
+Start `kagero.exe` and pin it to the taskbar if you like. Kagero opens maximized on the start screen.
 
-Windows SmartScreen may say the app is unrecognized, because the executable isn't
-signed with a paid certificate. Choose **More info → Run anyway**. The package itself
-is signed — see [Verify the download](#verify-the-download).
+Windows SmartScreen may say the app is unrecognized, because the executable isn't signed with a paid certificate. Choose **More info → Run anyway**. The package itself is signed — see [Verify the download](installation.md#verify-the-download).
 {% endstep %}
 {% endstepper %}
 
-<figure><img src="../images/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
 
 ## Update
 
-Kagero updates itself from the official
-[GitHub Releases](https://github.com/senzukisu/kagero/releases).
+Kagero updates itself from the official [GitHub Releases](https://github.com/senzukisu/kagero/releases).
 
 * **Help → Check for Updates…** or **Settings → Updates → Check for Updates**.
-* By default Kagero also checks at startup and once a day while it runs (6, 12, 24 or
-  72 hours, or off).
-* **Download Update** shows progress and can be canceled. Kagero then checks the size,
-  the SHA-256 checksum and the package's **digital signature**; a package that fails
-  any check is deleted and never installed.
-* **Install and Restart** asks you to save unsaved work, closes Kagero, replaces its
-  files (keeping a backup of the previous version) and starts it again — usually within
-  a few seconds.
+* By default Kagero also checks at startup and once a day while it runs (6, 12, 24 or 72 hours, or off).
+* **Download Update** shows progress and can be canceled. Kagero then checks the size, the SHA-256 checksum and the package's **digital signature**; a package that fails any check is deleted and never installed.
+* **Install and Restart** asks you to save unsaved work, closes Kagero, replaces its files (keeping a backup of the previous version) and starts it again — usually within a few seconds.
 
-<figure><img src="../images/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
 
 {% hint style="info" %}
-**Install and Restart** needs an official build in a folder you can write to. Builds
-made from source, or copies in `C:\Program Files`, can still check and download —
-install those updates by hand from the release page.
+**Install and Restart** needs an official build in a folder you can write to. Builds made from source, or copies in `C:\Program Files`, can still check and download — install those updates by hand from the release page.
 {% endhint %}
 
 ### If an update goes wrong
 
 * A failed installation **rolls back automatically** to the previous version.
-* **Settings → Updates → Restore Previous Version** brings back the version you had
-  before the last update.
+* **Settings → Updates → Restore Previous Version** brings back the version you had before the last update.
 * Details are logged in `<install folder>\.kagero-backup\update.log`.
 
-| Message | Meaning |
-|---------|---------|
-| *couldn't reach GitHub* | No internet, a proxy or a firewall. Kagero keeps working; try later. |
-| *request limit was reached* | GitHub allows about 60 checks per hour per network. Wait an hour. |
-| *signature is missing or invalid* | Not an official package — it won't be installed. |
+| Message                           | Meaning                                                              |
+| --------------------------------- | -------------------------------------------------------------------- |
+| _couldn't reach GitHub_           | No internet, a proxy or a firewall. Kagero keeps working; try later. |
+| _request limit was reached_       | GitHub allows about 60 checks per hour per network. Wait an hour.    |
+| _signature is missing or invalid_ | Not an official package — it won't be installed.                     |
 
 ## Verify the download
 
@@ -108,13 +94,12 @@ The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blo
 
 ## Where Kagero keeps its files
 
-| What | Where |
-|------|-------|
-| Settings | `%APPDATA%\OnibiLab\Kagero\config.json` |
-| Log file | `%APPDATA%\OnibiLab\Kagero\kagero.log` |
-| Previous version after an update | `<install folder>\.kagero-backup\` |
+| What                             | Where                                   |
+| -------------------------------- | --------------------------------------- |
+| Settings                         | `%APPDATA%\OnibiLab\Kagero\config.json` |
+| Log file                         | `%APPDATA%\OnibiLab\Kagero\kagero.log`  |
+| Previous version after an update | `<install folder>\.kagero-backup\`      |
 
-**Uninstall:** delete the Kagero folder, and `%APPDATA%\OnibiLab\Kagero` to remove the
-settings too. Your `.kgr` projects stay wherever you saved them.
+**Uninstall:** delete the Kagero folder, and `%APPDATA%\OnibiLab\Kagero` to remove the settings too. Your `.kgr` projects stay wherever you saved them.
 
 To build Kagero yourself, see [Contributing](../developers/contributing.md).
