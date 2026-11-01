@@ -496,30 +496,11 @@ fn rejects_future_format_versions() {
 }
 
 #[test]
-fn export_current_and_all_frames() {
+fn export_png_writes_the_current_frame() {
     let dir = temp_dir("export-frames");
     let doc = animated_document();
     let current = dir.join("current.png");
     export_png(&doc, &current).expect("export current");
     let img = image::open(&current).expect("decodes").into_rgba8();
     assert_eq!(img.as_raw(), doc.composite().expect("valid").as_bytes());
-
-    let paths = file_io::export_frames(&doc, &dir, "walk: cycle").expect("export all");
-    assert_eq!(paths.len(), 3);
-    assert_eq!(
-        paths[0].file_name().and_then(|n| n.to_str()),
-        Some("walk_ cycle_0001.png"),
-        "unsafe characters are replaced"
-    );
-    for (i, path) in paths.iter().enumerate() {
-        let img = image::open(path).expect("decodes").into_rgba8();
-        assert_eq!(
-            img.as_raw(),
-            doc.composite_frame(i).expect("valid").as_bytes()
-        );
-    }
-    assert_eq!(
-        file_io::frame_export_paths(&doc, &dir, "walk: cycle"),
-        paths
-    );
 }

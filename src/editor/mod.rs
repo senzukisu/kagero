@@ -8,10 +8,9 @@ mod paint_ops;
 mod selection_ops;
 mod tools;
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-pub use history::{Applied, Change, Dirty, History, PixelChange};
+pub use history::{Applied, Change, Dirty, History, PixelChange, PixelRun};
 pub use paint_ops::{CustomBrush, PaletteScope, MAX_BRUSH_SIDE};
 pub use selection_ops::{Clipboard, Transform};
 pub use tools::{SampleSource, ToolKind, ToolSettings, BRUSH_SIZE_RANGE};
@@ -60,7 +59,7 @@ struct Stroke {
     /// Whether the stroke has painted at least once.
     drawn: bool,
     /// Original color of every pixel touched during the stroke.
-    before: HashMap<u32, Rgba>,
+    before: crate::core::hash::FastMap<u32, Rgba>,
     /// Last painted pixels of a pixel-perfect stroke (newest last).
     trail: Vec<(i32, i32)>,
     /// Polygon: the corners clicked so far.
@@ -254,7 +253,7 @@ impl Editor {
                     start: pos,
                     last: pos,
                     drawn: false,
-                    before: HashMap::new(),
+                    before: Default::default(),
                     trail: Vec::new(),
                     corners: vec![pos],
                 });
@@ -388,20 +387,20 @@ impl Editor {
 
     /// Where a stamp at `(x, y)` lands with symmetry on: the point itself and its
     /// mirror images, with whether the tip is flipped horizontally / vertically.
-    fn mirrored(&self, x: i32, y: i32) -> Vec<(i32, i32, bool, bool)> {
+    fn mirrored(&self, x: i32, y: i32) -> impl Iterator<Item = (i32, i32, bool, bool)> {
+        // A fixed array (no allocation per stamp), filtered by the symmetry settings.
         let (w, h) = (self.doc.width() as i32, self.doc.height() as i32);
-        let s = self.settings;
-        let mut out = vec![(x, y, false, false)];
-        if s.mirror_x {
-            out.push((w - 1 - x, y, true, false));
-        }
-        if s.mirror_y {
-            out.push((x, h - 1 - y, false, true));
-        }
-        if s.mirror_x && s.mirror_y {
-            out.push((w - 1 - x, h - 1 - y, true, true));
-        }
-        out
+        let (mx, my) = (self.settings.mirror_x, self.settings.mirror_y);
+        // Saturating: points far outside the image (which are ignored) can't overflow.
+        let (rx, ry) = ((w - 1).saturating_sub(x), (h - 1).saturating_sub(y));
+        [
+            (true, (x, y, false, false)),
+            (mx, (rx, y, true, false)),
+            (my, (x, ry, false, true)),
+            (mx && my, (rx, ry, true, true)),
+        ]
+        .into_iter()
+        .filter_map(|(on, c)| on.then_some(c))
     }
 
     /// Paints the brush `tip` centered at `(x, y)` (and its mirror images), skipping
@@ -409,12 +408,15 @@ impl Editor {
     fn stamp(&mut self, stroke: &mut Stroke, x: i32, y: i32, tip: &[(i32, i32)]) {
         let alpha_lock = self.doc.layer(stroke.layer).is_some_and(|l| l.alpha_lock);
         let dither = self.settings.dither;
-        let centers = self.mirrored(x, y);
+        let centers: [Option<(i32, i32, bool, bool)>; 4] = {
+            let mut it = self.mirrored(x, y);
+            [it.next(), it.next(), it.next(), it.next()]
+        };
         let Some(cel) = self.doc.cel_by_id_mut(stroke.frame, stroke.layer) else {
             return;
         };
         let mut dirty: Option<Dirty> = None;
-        let pixels = centers.iter().flat_map(|&(cx, cy, fx, fy)| {
+        let pixels = centers.iter().flatten().flat_map(|&(cx, cy, fx, fy)| {
             tip.iter().map(move |&(dx, dy)| {
                 let dx = if fx { -dx } else { dx };
                 let dy = if fy { -dy } else { dy };
@@ -900,10 +902,6 @@ impl Editor {
             self.end_stroke();
         }
         self.read_only = read_only;
-    }
-
-    pub fn is_read_only(&self) -> bool {
-        self.read_only
     }
 
     /// Shows another frame on the canvas (not an undo step).

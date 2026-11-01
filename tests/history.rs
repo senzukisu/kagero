@@ -71,3 +71,44 @@ fn push_clears_redo_and_frees_its_memory() {
     assert_eq!(history.undo_len(), 2);
     assert_eq!(history.bytes(), full / 3 * 2);
 }
+
+#[test]
+fn big_edits_are_stored_compactly_and_undo_exactly() {
+    use kagero::editor::{ColorSlot, Editor, ToolKind};
+    let doc = Document::new(512, 512, Rgba::TRANSPARENT).expect("valid");
+    let mut e = Editor::new(doc, None, "runs".into());
+    // A fill of the whole layer: 262 144 pixels, one color change.
+    e.fill((3, 3), Rgba::opaque(10, 200, 30)).expect("fill");
+    assert!(
+        e.history().bytes() < 4096,
+        "a uniform fill is stored as runs, not per pixel: {} bytes",
+        e.history().bytes()
+    );
+    // A stroke over it, then a pixel-varied change (each pixel a different color).
+    e.set_tool(ToolKind::Pencil);
+    e.settings.brush_size = 6;
+    e.primary = Rgba::new(250, 20, 20, 200);
+    e.begin_stroke((0, 0), ColorSlot::Primary).expect("stroke");
+    for i in 0..200 {
+        e.update_stroke(((i * 5) % 512, (i * 3) % 512));
+    }
+    e.end_stroke();
+    let after_stroke = e.document().active_cel().clone();
+    let colors: Vec<Rgba> = (0..64)
+        .map(|i| Rgba::opaque(i * 4, 255 - i * 4, i))
+        .collect();
+    e.convert_to_palette(&colors, kagero::editor::PaletteScope::LayerFrame)
+        .expect("convert");
+    let converted = e.document().active_cel().clone();
+    // Undo all three, then redo: every pixel must match each state exactly.
+    e.undo().expect("undo convert");
+    assert_eq!(e.document().active_cel(), &after_stroke);
+    e.undo().expect("undo stroke");
+    e.undo().expect("undo fill");
+    assert!(e.document().active_cel().as_bytes().iter().all(|b| *b == 0));
+    e.redo().expect("redo");
+    e.redo().expect("redo");
+    assert_eq!(e.document().active_cel(), &after_stroke);
+    e.redo().expect("redo");
+    assert_eq!(e.document().active_cel(), &converted);
+}

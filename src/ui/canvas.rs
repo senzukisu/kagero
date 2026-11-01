@@ -149,6 +149,10 @@ pub struct CanvasView {
     /// Crop tool: what the current drag adjusts.
     crop_drag: Option<CropDrag>,
     panning: bool,
+    /// Mouse wheel notches not yet turned into zoom steps (high-resolution wheels).
+    wheel_steps: f32,
+    /// Pinch zoom gathered since the last zoom step.
+    pinch: f32,
     needs_fit: bool,
     viewport: Rect,
     /// Device pixels per egui point (Windows display scale).
@@ -173,6 +177,8 @@ impl CanvasView {
             outline_cache: None,
             crop_drag: None,
             panning: false,
+            wheel_steps: 0.0,
+            pinch: 1.0,
             needs_fit: true,
             viewport: Rect::NOTHING,
             ppp: 1.0,
@@ -393,29 +399,38 @@ impl CanvasView {
 
         let mut error = None;
         let typing = ctx.wants_keyboard_input();
-        let (space, pointer_pos, scroll, zoom_delta) = ctx.input(|i| {
+        let (space, pointer_pos, wheel, zoom_delta) = ctx.input(|i| {
             (
                 !typing && i.key_down(egui::Key::Space),
                 i.pointer.latest_pos(),
-                i.raw_scroll_delta.y,
+                wheel_input(&i.events),
                 i.zoom_delta(),
             )
         });
 
-        // ---- zoom (wheel or pinch/ctrl+wheel) around the cursor
-        if response.hovered() {
-            if let Some(pos) = pointer_pos {
-                let steps = if scroll > 0.0 || zoom_delta > 1.0 {
-                    1
-                } else if scroll < 0.0 || zoom_delta < 1.0 {
-                    -1
-                } else {
-                    0
-                };
-                if steps != 0 {
-                    self.zoom_at(pos, size, steps);
-                }
+        // ---- wheel, touchpad and pinch
+        if let (true, Some(pos)) = (response.hovered(), pointer_pos) {
+            // Two-finger swipe on a touchpad (precise scrolling) moves the view.
+            self.pan += wheel.pan;
+            // Mouse wheel notches zoom one level each; partial notches add up.
+            self.wheel_steps += wheel.lines;
+            let mut steps = self.wheel_steps.trunc() as i32;
+            self.wheel_steps -= steps as f32;
+            // Pinch (or Ctrl+wheel) zooms one level per ~20 % of pinching.
+            self.pinch *= zoom_delta;
+            if self.pinch >= PINCH_STEP {
+                steps += 1;
+                self.pinch = 1.0;
+            } else if self.pinch <= 1.0 / PINCH_STEP {
+                steps -= 1;
+                self.pinch = 1.0;
             }
+            if steps != 0 {
+                self.zoom_at(pos, size, steps);
+            }
+        } else {
+            self.wheel_steps = 0.0;
+            self.pinch = 1.0;
         }
 
         // ---- panning: middle drag, Space + drag, or the Pan tool
@@ -1114,6 +1129,44 @@ const MAX_LASSO_POINTS: usize = 20_000;
 /// Selection outlines with more edges than this are drawn as their bounds.
 const MAX_OUTLINE_SEGMENTS: usize = 60_000;
 
+/// How much pinching (zoom factor) makes one zoom step.
+const PINCH_STEP: f32 = 1.2;
+
+/// Scrolling this frame, split by device.
+#[derive(Debug, Default, PartialEq)]
+struct WheelInput {
+    /// Mouse wheel notches (line or page units); positive = away from the user.
+    lines: f32,
+    /// Touchpad scrolling in points (precise units), to move the view by.
+    pan: Vec2,
+}
+
+/// Sorts this frame's scroll events: mouse wheels report lines (or pages), touchpads
+/// report exact points. Ctrl/Cmd+scroll is left out: egui turns it into zoom.
+fn wheel_input(events: &[egui::Event]) -> WheelInput {
+    let mut out = WheelInput::default();
+    for event in events {
+        if let egui::Event::MouseWheel {
+            unit,
+            delta,
+            modifiers,
+        } = event
+        {
+            if modifiers.ctrl || modifiers.command {
+                continue;
+            }
+            match unit {
+                egui::MouseWheelUnit::Point => out.pan += *delta,
+                egui::MouseWheelUnit::Line | egui::MouseWheelUnit::Page => {
+                    // Shift+wheel scrolls sideways on many mice; zoom either way.
+                    out.lines += if delta.y != 0.0 { delta.y } else { delta.x };
+                }
+            }
+        }
+    }
+    out
+}
+
 /// A selection drag in progress (Select tool).
 enum SelectDrag {
     /// Dragging out a new rectangle from `start`, combined with the selection by `mode`.
@@ -1237,6 +1290,30 @@ mod tests {
         );
         let edge = t.pixel_to_screen(1.0, 0.0).x * 1.25;
         assert!((edge - edge.round()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn wheel_and_touchpad_scrolling_are_told_apart() {
+        let wheel = |unit, x: f32, y: f32, ctrl: bool| egui::Event::MouseWheel {
+            unit,
+            delta: Vec2::new(x, y),
+            modifiers: egui::Modifiers {
+                ctrl,
+                ..egui::Modifiers::NONE
+            },
+        };
+        let input = wheel_input(&[
+            wheel(egui::MouseWheelUnit::Line, 0.0, 1.0, false),
+            wheel(egui::MouseWheelUnit::Line, 0.0, 0.5, false),
+            wheel(egui::MouseWheelUnit::Point, 12.0, -30.0, false),
+            wheel(egui::MouseWheelUnit::Point, 1.0, 2.0, false),
+            // Ctrl+scroll is pinch/zoom, handled through egui's zoom factor.
+            wheel(egui::MouseWheelUnit::Line, 0.0, 3.0, true),
+            wheel(egui::MouseWheelUnit::Point, 50.0, 50.0, true),
+        ]);
+        assert_eq!(input.lines, 1.5);
+        assert_eq!(input.pan, Vec2::new(13.0, -28.0));
+        assert_eq!(wheel_input(&[]), WheelInput::default());
     }
 
     #[test]

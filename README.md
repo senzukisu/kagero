@@ -6,7 +6,7 @@
 
 **A pixel-art and sprite-animation editor by Onibi Lab — from the first pixel to a game-ready sprite sheet.**
 
-Version 0.4.0 Beta · Windows 10/11 x64 · Written in Rust · MIT License
+Version 0.4.1 Beta · Windows 10/11 x64 · Written in Rust · MIT License
 
 [**Download**](https://github.com/senzukisu/kagero/releases/latest) ·
 [Documentation](https://kagero.gitbook.io/kagero-docs) ·
@@ -36,6 +36,17 @@ dark **Kagero Ember** style: a quiet workshop lit by amber light.
 <td align="center"><sub>Sprite sheet export with a live preview</sub></td>
 </tr>
 </table>
+
+## What's new in 0.4.1
+
+- **Exports you can see:** small sprites are enlarged to at least 512 px by default
+  (Auto size), still pixel-sharp.
+- **Touchpads:** two-finger swipe moves the view, pinch zooms smoothly.
+- **Faster:** animated GIF export 4–5×, canvas compositing 2–3×, saving and opening
+  projects up to about 3.7×; big fills use almost no undo memory.
+- **Cleaner code** and a fix for a stretched Settings window.
+
+0.4.1 is also the first published release with everything from 0.4.0:
 
 ## What's new in 0.4.0
 
@@ -130,11 +141,11 @@ Everything works offline. Discord and GitHub are never required.
 
 ## Quick start
 
-1. Download `kagero-0.4.0-setup.exe` from the
+1. Download `kagero-0.4.1-setup.exe` from the
    [latest release](https://github.com/senzukisu/kagero/releases/latest) and run it.
    It installs for your user account (no administrator rights) with a Start menu
    shortcut and, if you like, a desktop shortcut. Prefer a portable copy? Extract
-   `kagero-0.4.0-windows-x64.zip` to a folder you own instead.
+   `kagero-0.4.1-windows-x64.zip` to a folder you own instead.
 2. Start Kagero → **Create New** → pick a size → draw.
 3. <kbd>Alt</kbd>+<kbd>N</kbd> adds a frame, <kbd>O</kbd> shows onion skin,
    <kbd>Enter</kbd> plays the animation.
@@ -153,7 +164,7 @@ SHA-256 sums are in `SHA256SUMS.txt` on each release. The installer and the zip 
 [`kagero.pub`](kagero.pub):
 
 ```
-rsign verify kagero-0.4.0-setup.exe -p kagero.pub
+rsign verify kagero-0.4.1-setup.exe -p kagero.pub
 ```
 
 </details>
@@ -169,7 +180,8 @@ A step-by-step walkthrough: [Your first animation](docs/getting-started/first-an
 | <kbd>M</kbd> <kbd>Q</kbd> <kbd>W</kbd> · <kbd>C</kbd> | Rectangle Select, Lasso, Magic Wand · Crop |
 | <kbd>H</kbd> or <kbd>Space</kbd>+drag | Pan |
 | <kbd>X</kbd> | Swap primary and secondary colors |
-| Wheel, <kbd>+</kbd> / <kbd>−</kbd> · <kbd>0</kbd> / <kbd>1</kbd> | Zoom · Fit / 100 % |
+| Wheel or pinch, <kbd>+</kbd> / <kbd>−</kbd> · <kbd>0</kbd> / <kbd>1</kbd> | Zoom · Fit / 100 % |
+| Two-finger swipe (touchpad), <kbd>Space</kbd>+drag | Move the view |
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> | Undo / Redo |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>Ctrl</kbd>+<kbd>X</kbd> <kbd>Ctrl</kbd>+<kbd>V</kbd> · <kbd>Delete</kbd> | Copy, cut, paste · clear the selection |
 | <kbd>Shift</kbd>+<kbd>H</kbd> / <kbd>Shift</kbd>+<kbd>V</kbd> · <kbd>Ctrl</kbd>+<kbd>R</kbd> | Flip · rotate 90° |
@@ -245,7 +257,7 @@ checks. More in [How Kagero is made](docs/about/ai-assistance.md).
 
 ## Beta notes
 
-Kagero 0.4.0 is a beta. Known limitations:
+Kagero 0.4.1 is a beta. Known limitations:
 
 - Pencil and the shape tools don't stay inside the selection (Fill does).
 - Lasso and Magic Wand can't drag the selected pixels; use Rectangle Select or the

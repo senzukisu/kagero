@@ -1,7 +1,5 @@
 //! Raster algorithms on the integer pixel grid.
 
-use super::PixelBuffer;
-
 /// Calls `plot` for every pixel of a Bresenham line from `a` to `b`, both ends included.
 pub fn line(a: (i32, i32), b: (i32, i32), mut plot: impl FnMut(i32, i32)) {
     let (mut x0, mut y0) = (i64::from(a.0), i64::from(a.1));
@@ -205,41 +203,6 @@ pub fn brush_offsets(size: u32) -> impl Iterator<Item = (i32, i32)> {
     let start = -(size - 1) / 2;
     let end = start + size;
     (start..end).flat_map(move |dy| (start..end).map(move |dx| (dx, dy)))
-}
-
-/// Indices of all pixels 4-connected to `(x, y)` that have exactly the same color.
-///
-/// Returns an empty list if the seed is outside the buffer.
-pub fn flood_region(buf: &PixelBuffer, x: i32, y: i32) -> Vec<u32> {
-    let Some(seed) = buf.index_of(x, y) else {
-        return Vec::new();
-    };
-    let Some(target) = buf.get_index(seed) else {
-        return Vec::new();
-    };
-    let w = buf.width() as i32;
-    let h = buf.height() as i32;
-    let mut visited = vec![false; (w * h) as usize];
-    let mut region = Vec::new();
-    let mut stack = vec![(x, y)];
-    visited[seed as usize] = true;
-    while let Some((cx, cy)) = stack.pop() {
-        region.push((cy * w + cx) as u32);
-        for (nx, ny) in [(cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)] {
-            if nx < 0 || ny < 0 || nx >= w || ny >= h {
-                continue;
-            }
-            let ni = (ny * w + nx) as usize;
-            if visited[ni] {
-                continue;
-            }
-            if buf.get_index(ni as u32) == Some(target) {
-                visited[ni] = true;
-                stack.push((nx, ny));
-            }
-        }
-    }
-    region
 }
 
 #[cfg(test)]

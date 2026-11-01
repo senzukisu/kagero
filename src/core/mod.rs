@@ -7,6 +7,7 @@ mod buffer;
 mod color;
 pub mod dither;
 mod document;
+pub mod hash;
 pub mod onion_skin;
 pub mod palette;
 pub mod raster;

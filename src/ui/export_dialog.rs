@@ -406,20 +406,48 @@ impl ExportDialog {
         });
 
         section(ui, "Scale");
-        let scale = s.scale_mut();
-        ui.horizontal(|ui| {
-            for v in [1u32, 2, 3, 4, 8] {
-                if ui
-                    .selectable_label(*scale == v, format!("{}%", v * 100))
-                    .clicked()
-                {
-                    *scale = v;
+        if s.kind != ExportKind::SpriteSheet {
+            let size = self
+                .preview
+                .as_ref()
+                .and_then(|p| p.frames.first())
+                .map(|f| f.image.dimensions());
+            let label = match size {
+                Some((w, h)) => {
+                    let k = crate::export::auto_scale_for(w, h);
+                    format!(
+                        "Auto size: at least {} px (×{k} → {}×{})",
+                        crate::export::AUTO_SCALE_TARGET,
+                        w * k,
+                        h * k
+                    )
                 }
-            }
-            ui.add(egui::DragValue::new(scale).range(1..=MAX_SCALE).prefix("×"))
-                .on_hover_text(
-                    "Any whole number. Pixels are enlarged as sharp blocks (nearest neighbor).",
-                );
+                None => format!(
+                    "Auto size: at least {} px",
+                    crate::export::AUTO_SCALE_TARGET
+                ),
+            };
+            ui.checkbox(&mut s.auto_scale, label).on_hover_text(
+                "Small sprites are enlarged by a whole number so they're easy to see and share. Turn off to choose the scale yourself (100 % = original pixels).",
+            );
+        }
+        let auto = s.uses_auto_scale();
+        let scale = s.scale_mut();
+        ui.add_enabled_ui(!auto, |ui| {
+            ui.horizontal(|ui| {
+                for v in [1u32, 2, 3, 4, 8] {
+                    if ui
+                        .selectable_label(*scale == v, format!("{}%", v * 100))
+                        .clicked()
+                    {
+                        *scale = v;
+                    }
+                }
+                ui.add(egui::DragValue::new(scale).range(1..=MAX_SCALE).prefix("×"))
+                    .on_hover_text(
+                        "Any whole number. Pixels are enlarged as sharp blocks (nearest neighbor).",
+                    );
+            })
         });
         match s.kind {
             ExportKind::Image => self.image_options(ui, s),
@@ -677,7 +705,7 @@ impl ExportDialog {
             .first()
             .ok_or_else(|| "Nothing to export".to_owned())?;
         let (w, h) = first.image.dimensions();
-        let scale = s.scale();
+        let scale = s.effective_scale(w, h);
         match s.kind {
             ExportKind::Image | ExportKind::Animation => {
                 let (sw, sh) = scaled_size(w, h, scale).map_err(|e| e.to_string())?;
@@ -860,9 +888,13 @@ impl ExportDialog {
                     .then(|| dir.join(format!("{base}.json"))),
             },
         };
+        let scale = p
+            .frames
+            .first()
+            .map_or(1, |f| s.effective_scale(f.image.width(), f.image.height()));
         Ok(ExportRequest {
             frames: p.frames.clone(),
-            scale: s.scale(),
+            scale,
             jpeg: s.jpeg,
             gif: s.gif,
             sheet: s.sheet,

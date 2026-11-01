@@ -448,21 +448,6 @@ impl Document {
         })
     }
 
-    /// The layer at `index` (properties and every frame's pixels), copied.
-    pub fn layer_data(&self, index: usize) -> Result<LayerData, CoreError> {
-        let info = self
-            .layers
-            .get(index)
-            .ok_or(CoreError::LayerIndex(index))?
-            .clone();
-        let cels = self
-            .frames
-            .iter()
-            .map(|f| (f.id, f.cels[index].clone()))
-            .collect();
-        Ok(LayerData { info, cels })
-    }
-
     /// Swaps the layer at `index` with `data` (properties and pixels of every frame).
     /// Swapping twice restores the original, which makes this an exact undo step.
     pub fn swap_layer_data(&mut self, index: usize, data: &mut LayerData) -> Result<(), CoreError> {
@@ -887,14 +872,6 @@ impl Document {
         std::mem::swap(&mut self.tags, tags);
     }
 
-    /// The first tag containing frame `index`.
-    pub fn tag_at(&self, index: usize) -> Option<(usize, &FrameTag)> {
-        self.tags
-            .iter()
-            .enumerate()
-            .find(|(_, t)| t.contains(index))
-    }
-
     // ------------------------------------------------------------ cels
 
     /// Image of layer `layer` in frame `frame` (indices).
@@ -907,11 +884,6 @@ impl Document {
         let frame = self.active_frame();
         // Every frame has one cel per layer and `active_layer` is kept in range.
         &frame.cels[self.active_layer.min(frame.cels.len() - 1)]
-    }
-
-    /// Image of layer `layer` in the active frame.
-    pub fn active_frame_cel(&self, layer: usize) -> Option<&PixelBuffer> {
-        self.active_frame().cel(layer)
     }
 
     pub fn cel_by_id(&self, frame: FrameId, layer: LayerId) -> Option<&PixelBuffer> {
@@ -971,26 +943,35 @@ impl Document {
         let frame = self.frames.get(frame)?;
         let w = w.min(self.width - x);
         let h = h.min(self.height - y);
-        let mut out = vec![0u8; w as usize * h as usize * 4];
-        let visible: Vec<(u8, &PixelBuffer)> = self
+        let (rw, img_w) = (w as usize * 4, self.width as usize * 4);
+        let mut out = vec![0u8; rw * h as usize];
+        let visible: Vec<(u8, &[u8])> = self
             .layers
             .iter()
             .zip(&frame.cels)
             .filter(|(info, _)| info.visible && info.opacity > 0)
-            .map(|(info, cel)| (info.opacity, cel))
+            .map(|(info, cel)| (info.opacity, cel.as_bytes()))
             .collect();
-        for row in 0..h {
-            let src_row = (y + row) as usize * self.width as usize;
-            for col in 0..w {
-                let src_index = src_row + (x + col) as usize;
-                let mut px = Rgba::TRANSPARENT;
-                for (opacity, cel) in &visible {
-                    if let Some(c) = cel.get_index(src_index as u32) {
-                        px = with_opacity(c, *opacity).over(px);
+        // Row by row, bottom layer first; the same "over" math as compositing one pixel
+        // at a time, without bounds checks or per-pixel layer lookups.
+        for (row, dst_row) in out.chunks_exact_mut(rw).enumerate() {
+            let start = (y as usize + row) * img_w + x as usize * 4;
+            for (i, (opacity, bytes)) in visible.iter().enumerate() {
+                let src_row = &bytes[start..start + rw];
+                for (d, s) in dst_row.chunks_exact_mut(4).zip(src_row.chunks_exact(4)) {
+                    let a = s[3];
+                    if a == 0 {
+                        continue;
                     }
+                    if a == 255 && *opacity == 255 || (i == 0 && *opacity == 255) {
+                        // Opaque, or nothing below yet: "over" returns the source.
+                        d.copy_from_slice(s);
+                        continue;
+                    }
+                    let src = with_opacity(Rgba([s[0], s[1], s[2], a]), *opacity);
+                    let dst = Rgba([d[0], d[1], d[2], d[3]]);
+                    d.copy_from_slice(&src.over(dst).0);
                 }
-                let dst = (row as usize * w as usize + col as usize) * 4;
-                out[dst..dst + 4].copy_from_slice(&px.0);
             }
         }
         Some(((x, y, w, h), out))

@@ -562,12 +562,6 @@ impl UpdateManager {
         }
     }
 
-    /// Where packages are downloaded (overridable for tests).
-    pub fn with_download_dir(mut self, dir: PathBuf) -> Self {
-        self.download_dir = dir;
-        self
-    }
-
     fn lock(shared: &Mutex<Shared>) -> MutexGuard<'_, Shared> {
         // A panic while holding the lock leaves plain data behind; keep using it.
         shared.lock().unwrap_or_else(|e| e.into_inner())

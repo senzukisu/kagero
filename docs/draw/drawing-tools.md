@@ -71,7 +71,8 @@ pattern. Undo restores every pixel's own color.
 
 | Action | How |
 |--------|-----|
-| Zoom at the cursor | Mouse wheel |
+| Zoom at the cursor | Mouse wheel (one level per notch), or pinch on a touchpad |
+| Move the view | Two-finger swipe on a touchpad (any direction) |
 | Zoom in / out | <kbd>+</kbd> / <kbd>−</kbd> |
 | Actual size · fit to window | <kbd>1</kbd> · <kbd>0</kbd> |
 | Center the image | <kbd>Home</kbd> |

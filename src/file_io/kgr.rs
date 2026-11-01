@@ -197,10 +197,27 @@ pub fn write_kgr<W: Write + Seek>(doc: &Document, writer: W) -> Result<W, FileEr
     zip.start_file(DOCUMENT, json_opts)?;
     serde_json::to_writer_pretty(&mut zip, &document)?;
 
-    for (fi, frame) in doc.frames().iter().enumerate() {
-        for (li, cel) in frame.cels().iter().enumerate() {
-            zip.start_file(cel_file(fi, li), png_opts)?;
-            encode_png(cel, &mut zip)?;
+    // Encode a batch of cels in parallel, then write them in order.
+    let cels: Vec<(String, &crate::core::PixelBuffer)> = doc
+        .frames()
+        .iter()
+        .enumerate()
+        .flat_map(|(fi, frame)| {
+            frame
+                .cels()
+                .iter()
+                .enumerate()
+                .map(move |(li, cel)| (cel_file(fi, li), cel))
+        })
+        .collect();
+    for batch in cels.chunks(super::CEL_BATCH) {
+        let encoded = super::parallel_map(batch, |(_, cel)| {
+            let mut png = Vec::new();
+            encode_png(cel, &mut png).map(|()| png)
+        });
+        for ((name, _), png) in batch.iter().zip(encoded) {
+            zip.start_file(name.as_str(), png_opts)?;
+            zip.write_all(&png?)?;
         }
     }
     Ok(zip.finish()?)
@@ -305,7 +322,12 @@ fn read_cel<R: Read + Seek>(
     height: u32,
 ) -> Result<PixelBuffer, FileError> {
     let bytes = read_entry(zip, file, MAX_LAYER_PNG_BYTES)?;
-    let pixels = decode_png(&bytes)?;
+    decode_cel(file, &bytes, width, height)
+}
+
+/// Decodes one cel and checks that it has the document's size.
+fn decode_cel(file: &str, bytes: &[u8], width: u32, height: u32) -> Result<PixelBuffer, FileError> {
+    let pixels = decode_png(bytes)?;
     if pixels.width() != width || pixels.height() != height {
         return Err(FileError::Invalid(format!(
             "\"{file}\" is {}×{} but the image is {width}×{height}",
@@ -393,15 +415,21 @@ fn read_v2<R: Read + Seek>(zip: &mut ZipArchive<R>, json: &[u8]) -> Result<Docum
                 doc.layers.len()
             )));
         }
-        let mut cels = Vec::with_capacity(frame.cels.len());
+        // Read this frame's entries in order, then decode them in parallel.
+        let mut raw = Vec::with_capacity(frame.cels.len());
         for (li, file) in frame.cels.iter().enumerate() {
             if *file != cel_file(fi, li) {
                 return Err(FileError::Invalid(format!(
                     "unexpected layer file name \"{file}\""
                 )));
             }
-            cels.push(read_cel(zip, file, doc.width, doc.height)?);
+            raw.push((file.as_str(), read_entry(zip, file, MAX_LAYER_PNG_BYTES)?));
         }
+        let cels = super::parallel_map(&raw, |(file, bytes)| {
+            decode_cel(file, bytes, doc.width, doc.height)
+        })
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
         frames.push((frame.duration_ms, cels));
     }
     let mut document = Document::from_parts(

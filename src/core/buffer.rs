@@ -78,11 +78,6 @@ impl PixelBuffer {
         }
     }
 
-    /// Coordinates of a linear pixel index.
-    pub fn coords_of(&self, index: u32) -> (i32, i32) {
-        ((index % self.width) as i32, (index / self.width) as i32)
-    }
-
     pub fn get(&self, x: i32, y: i32) -> Option<Rgba> {
         self.index_of(x, y).and_then(|i| self.get_index(i))
     }

@@ -69,10 +69,6 @@ impl StillFormat {
             StillFormat::WebP => "webp",
         }
     }
-
-    pub fn keeps_transparency(self) -> bool {
-        !matches!(self, StillFormat::Jpeg)
-    }
 }
 
 /// JPEG options.
@@ -308,6 +304,23 @@ pub struct ExportSettings {
     pub naming: NamingOptions,
     pub last_dir: Option<PathBuf>,
     pub open_folder_after: bool,
+    /// Images and animations: pick the scale so the result is at least
+    /// [`AUTO_SCALE_TARGET`] px on its longest side (sprite sheets always use their
+    /// own scale).
+    pub auto_scale: bool,
+}
+
+/// Longest side, in pixels, that "Auto size" scales images and animations up to.
+pub const AUTO_SCALE_TARGET: u32 = 512;
+
+/// The smallest whole-number scale that makes a `width`×`height` image at least
+/// [`AUTO_SCALE_TARGET`] px on its longest side (1 for images that big already).
+pub fn auto_scale_for(width: u32, height: u32) -> u32 {
+    let side = width.max(height).max(1);
+    AUTO_SCALE_TARGET
+        .div_ceil(side)
+        .clamp(1, super::MAX_SCALE)
+        .min((super::MAX_OUTPUT_SIDE as u32 / side).max(1))
 }
 
 impl Default for ExportSettings {
@@ -330,11 +343,26 @@ impl Default for ExportSettings {
             naming: NamingOptions::default(),
             last_dir: None,
             open_folder_after: false,
+            auto_scale: true,
         }
     }
 }
 
 impl ExportSettings {
+    /// Whether "Auto size" decides the scale for the current kind.
+    pub fn uses_auto_scale(&self) -> bool {
+        self.auto_scale && self.kind != ExportKind::SpriteSheet
+    }
+
+    /// The scale used for frames of `width`×`height`: automatic or the remembered one.
+    pub fn effective_scale(&self, width: u32, height: u32) -> u32 {
+        if self.uses_auto_scale() {
+            auto_scale_for(width, height)
+        } else {
+            self.scale()
+        }
+    }
+
     /// The scale remembered for the current kind and format.
     pub fn scale(&self) -> u32 {
         match self.kind {
@@ -384,5 +412,38 @@ impl ExportSettings {
         if s.image_format == StillFormat::Jpeg {
             s.image_format = StillFormat::Png;
         }
+    }
+}
+
+#[cfg(test)]
+mod auto_scale_tests {
+    use super::*;
+
+    #[test]
+    fn small_images_are_enlarged_to_at_least_512_px() {
+        assert_eq!(auto_scale_for(10, 10), 52, "10×10 → 520×520");
+        assert_eq!(auto_scale_for(32, 32), 16);
+        assert_eq!(auto_scale_for(10, 300), 2, "the longest side counts");
+        assert_eq!(auto_scale_for(512, 64), 1);
+        assert_eq!(auto_scale_for(2048, 2048), 1);
+        assert_eq!(auto_scale_for(1, 1), 64, "capped at the largest scale");
+        let s = ExportSettings::default();
+        assert!(s.uses_auto_scale());
+        assert_eq!(s.effective_scale(10, 10), 52);
+        let manual = ExportSettings {
+            auto_scale: false,
+            scale_png: 3,
+            ..ExportSettings::default()
+        };
+        assert_eq!(manual.effective_scale(10, 10), 3);
+        let sheet = ExportSettings {
+            kind: ExportKind::SpriteSheet,
+            ..ExportSettings::default()
+        };
+        assert_eq!(
+            sheet.effective_scale(10, 10),
+            1,
+            "sheets keep their own scale"
+        );
     }
 }

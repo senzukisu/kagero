@@ -4,7 +4,82 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] Beta — 2026-11-01
+
+Performance, stability and code quality. This is also the first published release
+with everything from 0.4.0 (0.4.0 was not published on its own).
+
+### Changed
+
+- **Exported images are big enough to see.** Still images and animations now use
+  **Auto size** by default: the smallest whole-number scale that makes the result at
+  least 512 px on its longest side (a 10×10 sprite becomes 520×520, still pixel-sharp).
+  Turn it off in the Export dialog to pick the scale yourself; sprite sheets keep their
+  own scale. **Export Current Frame as PNG** (Ctrl+E) follows the same setting and says
+  which size it wrote.
+- **Touchpads:** a two-finger swipe moves the view (also sideways), and pinching zooms
+  smoothly around the fingers. Before, every tiny touchpad scroll event jumped a whole
+  zoom level. Mouse wheels still zoom one level per notch; high-resolution wheels add up
+  partial notches.
+
+### Performance
+
+Measured with the new `cargo run --release --example bench`, 0.4.0 and 0.4.1 built from
+the same benchmark and run alternately on the same machine. The ranges are the spread
+of the runs, which was large because the machine was busy.
+
+| Case | 0.4.0 | 0.4.1 |
+|------|-------|-------|
+| Animated GIF export, 120 frames ×4 | 2.6–5.8 s | 0.5–1.4 s (4–5× faster) |
+| Compositing 1024² × 1 layer | 10–13 ms | 3.4–4.2 ms |
+| Compositing 512² × 16 layers | 31–35 ms | 14–21 ms |
+| Save `.kgr` (56 MB, 320 images) | 517–521 ms | 138–304 ms |
+| Open `.kgr` (same project) | 575–605 ms | 153–357 ms |
+| Undo memory after filling 2048² | 50.3 MB | under 0.1 MB |
+
+- Compositing (canvas, preview, onion skin, thumbnails, export) works row by row on the
+  raw pixels instead of pixel by pixel through every layer, with fast paths for opaque
+  pixels. A test checks that every pixel matches the previous method exactly.
+- GIF frames are mapped to the palette and compressed on several threads, with a fast
+  color lookup and a cache for reduced palettes.
+- Projects are saved and opened on several threads (each layer image is encoded or
+  decoded on its own), in batches that keep the extra memory bounded.
+- The undo history stores big uniform changes (fills, long strokes) as runs instead of
+  one entry per pixel; undo and redo are unchanged.
+- Pencil strokes no longer allocate for every brush stamp. They measured about the same
+  as 0.4.0 within the noise.
+
+### Fixed
+
+- The Settings window grew to the width of the screen on the Themes page (found while
+  taking the documentation screenshots). The Settings test now checks the window's width.
+
+### Removed
+
+- The `anyhow` dependency (unused).
+- Unused code left over from older versions: the old flood fill (replaced by the 0.4
+  fill), `Block::copy_from` (replaced by shaped selections), the 0.1 "export all
+  frames" helpers (replaced by the Export dialog) and several unused accessors
+  (`APP_NAME`, `PixelBuffer::coords_of`, `Document::layer_data`, `Document::tag_at`,
+  `Document::active_frame_cel`, `History::can_undo`/`can_redo`, `Editor::is_read_only`,
+  `StillFormat::keeps_transparency`, `UpdateManager::with_download_dir`). Each was
+  checked for any use first.
+- 22 outdated images in `docs/images` that nothing referenced (the documentation uses
+  `docs/.gitbook/assets`).
+
+### Developers
+
+- `examples/bench.rs`: repeatable benchmarks of compositing, thumbnails, onion skin,
+  saving, opening, exporting, filling and drawing, including the undo history's memory.
+- `core::hash`: a fast hasher for pixel indices and colors (the GIF encoder and strokes
+  use it).
+- New tests: fast compositing against pixel-by-pixel compositing, compact undo history
+  (exact undo and redo), Auto size, telling mouse wheels and touchpads apart, and the
+  Settings window width.
+
 ## [0.4.0] Beta — 2026-10-30
+
+*Not published on its own; its features shipped with 0.4.1.*
 
 Everyday comfort and pixel-artist tools.
 

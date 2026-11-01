@@ -42,6 +42,7 @@ on the layers below it.
   goes through `composite_frame*`, which applies layer opacity.
 * `structure_revision` and per-frame `revision` change with pixels or layer
   order/visibility; thumbnail and texture caches key on them.
+* `hash`: a fast hasher for pixel indices and colors (stroke maps, GIF palettes).
 * `raster` (lines, rectangles, ellipses, square and round brushes), `region`
   (similar-color areas for Fill and the magic wand, polygon masks for the lasso),
   `dither` (ordered patterns), `onion_skin` (view-only overlay plan), `selection`
@@ -67,7 +68,8 @@ on the layers below it.
 * **Read-only mode** blocks pixel edits during the preview.
 * **Saved state** compares the top of the undo stack with the state at the last save.
 
-The history is bounded (256 entries, 256 MiB). Data moves between the document and a
+The history is bounded (256 entries, 256 MiB). Big uniform pixel changes are stored
+as runs (`PixelRuns`) when that is smaller. Data moves between the document and a
 `Change` instead of being copied; undoing a change on another frame switches to it.
 
 | Change | Stored data |

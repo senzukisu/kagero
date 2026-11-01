@@ -438,9 +438,36 @@ impl KageroApp {
         let Some(editor) = &self.editor else {
             return;
         };
-        match file_io::export_png(editor.document(), &path) {
-            Ok(()) => self.success(format!("Exported {}", path.display())),
-            Err(e) => self.error_dialog("The PNG was not exported", &e),
+        let doc = editor.document();
+        let png = crate::export::ExportSettings {
+            kind: crate::export::ExportKind::Image,
+            still_format: crate::export::StillFormat::Png,
+            ..self.config.export.clone()
+        };
+        let scale = png.effective_scale(doc.width(), doc.height());
+        let result = (|| -> Result<(u32, u32), String> {
+            let merged = doc.composite().map_err(|e| e.to_string())?;
+            let img = image::RgbaImage::from_raw(doc.width(), doc.height(), merged.into_bytes())
+                .ok_or("the image could not be prepared")?;
+            let img =
+                crate::export::render::scale_nearest(&img, scale).map_err(|e| e.to_string())?;
+            let size = img.dimensions();
+            let mut bytes = Vec::new();
+            crate::export::still::encode_png(&img, &mut bytes).map_err(|e| e.to_string())?;
+            file_io::write_atomic(&path, |w| {
+                std::io::Write::write_all(w, &bytes)?;
+                Ok(())
+            })
+            .map_err(|e| e.to_string())?;
+            Ok(size)
+        })();
+        match result {
+            Ok((w, h)) if scale > 1 => self.success(format!(
+                "Exported {} at {w}×{h} (×{scale}; change the size in File → Export…)",
+                path.display()
+            )),
+            Ok(_) => self.success(format!("Exported {}", path.display())),
+            Err(e) => self.status_error(format!("The PNG was not exported: {e}")),
         }
     }
 

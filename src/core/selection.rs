@@ -98,14 +98,6 @@ impl Block {
         Block { w, h, data }
     }
 
-    /// Copies the pixels of `rect` (already clipped to `buf`).
-    pub fn copy_from(buf: &PixelBuffer, rect: SelRect) -> Block {
-        Block::from_fn(rect.w, rect.h, |x, y| {
-            buf.get(rect.x + x as i32, rect.y + y as i32)
-                .unwrap_or_default()
-        })
-    }
-
     pub fn is_empty(&self) -> bool {
         self.data.chunks_exact(4).all(|p| p[3] == 0)
     }

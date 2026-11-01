@@ -11,8 +11,10 @@
 //!   with Floyd–Steinberg dithering (off by default — it adds noise to pixel art);
 //! * writes delays in GIF's 10 ms units, rounded to the nearest unit with a minimum of
 //!   20 ms, because browsers slow down shorter delays to 100 ms.
+//!
+//! Frames are mapped to palette indices and LZW-compressed on several threads in
+//! batches, then written in order.
 
-use std::collections::HashMap;
 use std::io::Write;
 
 use gif::{DisposalMethod, Encoder, Frame, Repeat};
@@ -47,6 +49,12 @@ pub struct GifReport {
     pub transparent: bool,
 }
 
+type ColorMap<V> = crate::core::hash::FastMap<u32, V>;
+
+fn key(c: [u8; 3]) -> u32 {
+    (u32::from(c[0]) << 16) | (u32::from(c[1]) << 8) | u32::from(c[2])
+}
+
 /// Makes a pixel GIF-ready: `None` = transparent, otherwise an opaque RGB color.
 fn resolve(px: [u8; 4], options: &GifOptions) -> Option<[u8; 3]> {
     if px[3] < options.alpha_threshold.max(1) {
@@ -66,7 +74,7 @@ fn resolve(px: [u8; 4], options: &GifOptions) -> Option<[u8; 3]> {
 
 /// Analyzes frames before encoding (also used by the dialog for warnings).
 pub fn analyze(frames: &[FrameImage], options: &GifOptions) -> GifReport {
-    let mut colors: HashMap<[u8; 3], ()> = HashMap::new();
+    let mut colors: ColorMap<()> = ColorMap::default();
     let mut report = GifReport::default();
     for f in frames {
         for px in f.image.pixels() {
@@ -78,7 +86,7 @@ pub fn analyze(frames: &[FrameImage], options: &GifOptions) -> GifReport {
                 None => report.transparent = true,
                 Some(c) => {
                     if colors.len() <= 256 {
-                        colors.insert(c, ());
+                        colors.insert(key(c), ());
                     }
                 }
             }
@@ -91,7 +99,7 @@ pub fn analyze(frames: &[FrameImage], options: &GifOptions) -> GifReport {
 
 /// The palette shared by all frames.
 enum Palette {
-    Exact(HashMap<[u8; 3], u8>, Vec<u8>),
+    Exact(ColorMap<u8>, Vec<u8>),
     Quantized(color_quant::NeuQuant, Vec<u8>),
 }
 
@@ -102,13 +110,14 @@ impl Palette {
         }
     }
 
-    /// Palette index (1..=255) of an opaque color.
-    fn index(&self, c: [u8; 3]) -> u8 {
+    /// Palette index (1..=255) of an opaque color. `memo` remembers quantized lookups
+    /// (pixel art repeats few colors, and the NeuQuant search is slow).
+    fn index(&self, c: [u8; 3], memo: &mut ColorMap<u8>) -> u8 {
         match self {
-            Palette::Exact(map, _) => map.get(&c).copied().unwrap_or(1),
-            Palette::Quantized(nq, _) => {
-                (nq.index_of(&[c[0], c[1], c[2], 255]) as u8).saturating_add(1)
-            }
+            Palette::Exact(map, _) => map.get(&key(c)).copied().unwrap_or(1),
+            Palette::Quantized(nq, _) => *memo
+                .entry(key(c))
+                .or_insert_with(|| (nq.index_of(&[c[0], c[1], c[2], 255]) as u8).saturating_add(1)),
         }
     }
 
@@ -120,18 +129,18 @@ impl Palette {
 }
 
 fn build_palette(frames: &[FrameImage], options: &GifOptions) -> Palette {
-    let mut map: HashMap<[u8; 3], u8> = HashMap::new();
+    let mut map: ColorMap<u8> = ColorMap::default();
     let mut table = vec![0u8; 3]; // index 0: transparent
     let mut overflow = false;
     'outer: for f in frames {
         for px in f.image.pixels() {
             if let Some(c) = resolve(px.0, options) {
-                if !map.contains_key(&c) {
+                if !map.contains_key(&key(c)) {
                     if map.len() == 255 {
                         overflow = true;
                         break 'outer;
                     }
-                    map.insert(c, map.len() as u8 + 1);
+                    map.insert(key(c), map.len() as u8 + 1);
                     table.extend_from_slice(&c);
                 }
             }
@@ -160,8 +169,14 @@ fn build_palette(frames: &[FrameImage], options: &GifOptions) -> Palette {
 }
 
 /// Maps one frame to palette indices (0 = transparent).
-fn index_frame(f: &FrameImage, palette: &Palette, options: &GifOptions) -> Vec<u8> {
+fn index_frame(
+    f: &FrameImage,
+    palette: &Palette,
+    options: &GifOptions,
+    memo: &mut ColorMap<u8>,
+) -> Vec<u8> {
     let (w, h) = (f.image.width() as usize, f.image.height() as usize);
+    let pixels = f.image.as_raw();
     let mut out = vec![0u8; w * h];
     let dither = options.dither && matches!(palette, Palette::Quantized(..));
     // Error buffers for Floyd–Steinberg (current and next row).
@@ -174,7 +189,8 @@ fn index_frame(f: &FrameImage, palette: &Palette, options: &GifOptions) -> Vec<u
             }
         }
         for x in 0..w {
-            let px = f.image.get_pixel(x as u32, y as u32).0;
+            let i = (y * w + x) * 4;
+            let px = [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
             let Some(c) = resolve(px, options) else {
                 continue;
             };
@@ -185,7 +201,7 @@ fn index_frame(f: &FrameImage, palette: &Palette, options: &GifOptions) -> Vec<u
                     (i32::from(c[1]) + e[1] / 16).clamp(0, 255) as u8,
                     (i32::from(c[2]) + e[2] / 16).clamp(0, 255) as u8,
                 ];
-                let idx = palette.index(adj);
+                let idx = palette.index(adj, memo);
                 let got = palette.color(idx);
                 let diff = [
                     i32::from(adj[0]) - got[0],
@@ -204,7 +220,7 @@ fn index_frame(f: &FrameImage, palette: &Palette, options: &GifOptions) -> Vec<u
                 }
                 idx
             } else {
-                palette.index(c)
+                palette.index(c, memo)
             };
             out[y * w + x] = idx;
         }
@@ -241,25 +257,57 @@ pub fn encode(
             .set_repeat(Repeat::Infinite)
             .map_err(|e| ExportError::encode("GIF", e))?;
     }
-    for (i, f) in frames.iter().enumerate() {
+    // Index and compress a batch of frames in parallel, then write them in order.
+    let threads = std::thread::available_parallelism().map_or(1, |n| n.get().min(8));
+    let mut done = 0;
+    for batch in frames.chunks(threads * 2) {
         if cancel() {
             return Err(ExportError::Canceled);
         }
-        let indices = index_frame(f, &palette, options);
-        let frame = Frame {
-            width: w as u16,
-            height: h as u16,
-            delay: delay_cs(f.duration_ms),
-            // Clear to transparent before the next frame so transparent areas stay clear.
-            dispose: DisposalMethod::Background,
-            transparent: Some(0),
-            buffer: std::borrow::Cow::Owned(indices),
-            ..Frame::default()
-        };
-        encoder
-            .write_frame(&frame)
-            .map_err(|e| ExportError::encode("GIF", e))?;
-        progress(i + 1);
+        let encoded: Vec<Frame<'static>> = std::thread::scope(|s| {
+            let workers: Vec<_> = batch
+                .chunks(batch.len().div_ceil(threads))
+                .map(|part| {
+                    let palette = &palette;
+                    s.spawn(move || {
+                        let mut memo = ColorMap::default();
+                        part.iter()
+                            .map(|f| {
+                                let mut frame = Frame {
+                                    width: w as u16,
+                                    height: h as u16,
+                                    delay: delay_cs(f.duration_ms),
+                                    // Clear to transparent before the next frame so
+                                    // transparent areas stay clear.
+                                    dispose: DisposalMethod::Background,
+                                    transparent: Some(0),
+                                    buffer: std::borrow::Cow::Owned(index_frame(
+                                        f, palette, options, &mut memo,
+                                    )),
+                                    ..Frame::default()
+                                };
+                                frame.make_lzw_pre_encoded();
+                                frame
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            workers
+                .into_iter()
+                .flat_map(|w| w.join().unwrap_or_default())
+                .collect()
+        });
+        if encoded.len() != batch.len() {
+            return Err(ExportError::encode("GIF", "a worker thread failed"));
+        }
+        for frame in &encoded {
+            encoder
+                .write_lzw_pre_encoded_frame(frame)
+                .map_err(|e| ExportError::encode("GIF", e))?;
+            done += 1;
+            progress(done);
+        }
     }
     drop(encoder);
     Ok(report)

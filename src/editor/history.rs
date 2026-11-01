@@ -24,6 +24,46 @@ pub struct PixelChange {
     pub after: Rgba,
 }
 
+/// Consecutive pixels (by index) that all changed from one color to one other color.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PixelRun {
+    pub start: u32,
+    pub len: u32,
+    pub before: Rgba,
+    pub after: Rgba,
+}
+
+/// Pixel changes as runs, if that takes less memory than one entry per pixel.
+fn to_runs(changes: &[PixelChange]) -> Option<Vec<PixelRun>> {
+    // Small changes aren't worth it.
+    if changes.len() < 64 {
+        return None;
+    }
+    let mut runs: Vec<PixelRun> = Vec::new();
+    for c in changes {
+        match runs.last_mut() {
+            Some(r)
+                if r.before == c.before
+                    && r.after == c.after
+                    && r.start.checked_add(r.len) == Some(c.index) =>
+            {
+                r.len += 1;
+            }
+            _ => runs.push(PixelRun {
+                start: c.index,
+                len: 1,
+                before: c.before,
+                after: c.after,
+            }),
+        }
+        // Stop as soon as runs can't win.
+        if runs.len() * std::mem::size_of::<PixelRun>() >= std::mem::size_of_val(changes) {
+            return None;
+        }
+    }
+    Some(runs)
+}
+
 /// Part of the image that needs to be redrawn after a change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dirty {
@@ -133,6 +173,13 @@ pub enum Change {
         label: &'static str,
         geometry: Geometry,
     },
+    /// Like `Pixels`, stored as runs to save memory (big fills, long strokes). The
+    /// history picks this form by itself when it is smaller.
+    PixelRuns {
+        frame: FrameId,
+        layer: LayerId,
+        runs: Vec<PixelRun>,
+    },
     /// Swaps the frame tags with `tags`; self-inverse.
     Tags {
         label: &'static str,
@@ -141,10 +188,33 @@ pub enum Change {
 }
 
 impl Change {
+    /// The same change in its most compact form (pixel changes as runs when smaller).
+    pub fn compacted(self) -> Change {
+        match self {
+            Change::Pixels {
+                frame,
+                layer,
+                changes,
+            } => match to_runs(&changes) {
+                Some(runs) => Change::PixelRuns { frame, layer, runs },
+                None => Change::Pixels {
+                    frame,
+                    layer,
+                    changes,
+                },
+            },
+            Change::Group { label, changes } => Change::Group {
+                label,
+                changes: changes.into_iter().map(Change::compacted).collect(),
+            },
+            other => other,
+        }
+    }
+
     /// Short user-facing description, used in menus and the status bar.
     pub fn label(&self) -> &'static str {
         match self {
-            Change::Pixels { .. } => "Draw",
+            Change::Pixels { .. } | Change::PixelRuns { .. } => "Draw",
             Change::AddLayer { .. } => "New Layer",
             Change::RemoveLayer { .. } => "Delete Layer",
             Change::MoveLayer { .. } => "Move Layer",
@@ -178,6 +248,7 @@ impl Change {
         let base = std::mem::size_of::<Change>();
         base + match self {
             Change::Pixels { changes, .. } => changes.len() * std::mem::size_of::<PixelChange>(),
+            Change::PixelRuns { runs, .. } => runs.len() * std::mem::size_of::<PixelRun>(),
             Change::AddLayer { layer, .. } | Change::RemoveLayer { layer, .. } => {
                 layer.as_ref().map_or(0, LayerData::byte_size)
             }
@@ -212,6 +283,24 @@ impl Change {
                     Some(acc.map_or(d, |a| a.union(d)))
                 })
             }
+            Change::PixelRuns { frame, runs, .. } => {
+                if doc.active_frame().id != *frame {
+                    return Some(Dirty::Full);
+                }
+                let w = doc.width();
+                runs.iter().fold(None, |acc: Option<Dirty>, r| {
+                    let end = r.start + r.len - 1;
+                    let (y0, y1) = (r.start / w, end / w);
+                    // A run that wraps rows covers whole rows in between.
+                    let (x0, x1) = if y0 == y1 {
+                        (r.start % w, end % w)
+                    } else {
+                        (0, w - 1)
+                    };
+                    let d = Dirty::pixel(x0, y0).union(Dirty::pixel(x1, y1));
+                    Some(acc.map_or(d, |a| a.union(d)))
+                })
+            }
             Change::RenameLayer { .. }
             | Change::SetFrameDuration { .. }
             | Change::SetSelection { .. }
@@ -243,6 +332,18 @@ impl Change {
                     .ok_or(CoreError::FrameMissing)?;
                 for c in changes.iter() {
                     cel.set_index(c.index, c.after);
+                }
+                Ok(())
+            }
+            Change::PixelRuns { frame, layer, runs } => {
+                focus_frame(doc, *frame);
+                let cel = doc
+                    .cel_by_id_mut(*frame, *layer)
+                    .ok_or(CoreError::FrameMissing)?;
+                for r in runs.iter() {
+                    for i in r.start..r.start + r.len {
+                        cel.set_index(i, r.after);
+                    }
                 }
                 Ok(())
             }
@@ -317,6 +418,18 @@ impl Change {
                     .ok_or(CoreError::FrameMissing)?;
                 for c in changes.iter().rev() {
                     cel.set_index(c.index, c.before);
+                }
+                Ok(())
+            }
+            Change::PixelRuns { frame, layer, runs } => {
+                focus_frame(doc, *frame);
+                let cel = doc
+                    .cel_by_id_mut(*frame, *layer)
+                    .ok_or(CoreError::FrameMissing)?;
+                for r in runs.iter().rev() {
+                    for i in r.start..r.start + r.len {
+                        cel.set_index(i, r.before);
+                    }
                 }
                 Ok(())
             }
@@ -490,6 +603,7 @@ impl History {
         for e in self.redo.drain(..) {
             self.bytes = self.bytes.saturating_sub(e.bytes);
         }
+        let change = change.compacted();
         let bytes = change.byte_size();
         let id = self.next_id;
         self.next_id += 1;
@@ -502,14 +616,6 @@ impl History {
                 self.bytes = self.bytes.saturating_sub(old.bytes);
             }
         }
-    }
-
-    pub fn can_undo(&self) -> bool {
-        !self.undo.is_empty()
-    }
-
-    pub fn can_redo(&self) -> bool {
-        !self.redo.is_empty()
     }
 
     pub fn undo_label(&self) -> Option<&'static str> {

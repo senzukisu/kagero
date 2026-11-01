@@ -9,7 +9,7 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 
 pub use kgr::{load_kgr, read_kgr, save_kgr, write_kgr, KGR_EXTENSION, KGR_FORMAT_VERSION};
-pub use png::{export_frames, export_png, frame_export_paths, import_png};
+pub use png::{export_png, import_png};
 
 /// Largest `.kgr` file Kagero will open.
 pub const MAX_KGR_FILE_BYTES: u64 = 1024 * 1024 * 1024;
@@ -89,4 +89,30 @@ pub fn write_atomic(
         }
     }
     result
+}
+
+/// Cels handled together when saving or opening projects: enough to keep every core
+/// busy, few enough to bound the extra memory of encoded images held at once.
+pub(crate) const CEL_BATCH: usize = 64;
+
+/// `f` applied to every item on several threads; results keep the items' order.
+pub(crate) fn parallel_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let threads = std::thread::available_parallelism().map_or(1, |n| n.get().min(8));
+    if threads == 1 || items.len() < 2 {
+        return items.iter().map(&f).collect();
+    }
+    let f = &f;
+    std::thread::scope(|s| {
+        let workers: Vec<_> = items
+            .chunks(items.len().div_ceil(threads))
+            .map(|part| s.spawn(move || part.iter().map(f).collect::<Vec<R>>()))
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|w| match w.join() {
+                Ok(v) => v,
+                Err(panic) => std::panic::resume_unwind(panic),
+            })
+            .collect()
+    })
 }

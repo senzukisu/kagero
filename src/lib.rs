@@ -20,8 +20,6 @@ pub mod theme;
 pub mod themes;
 pub mod ui;
 
-/// Human-readable application name.
-pub const APP_NAME: &str = "Kagero";
 /// Studio that develops Kagero.
 pub const STUDIO_NAME: &str = "Onibi Lab";
 /// Application version, taken from Cargo.toml.

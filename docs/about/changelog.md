@@ -8,6 +8,20 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.4.1 Beta — performance, stability and code quality (2026-11-01)
+
+The first published release with everything from 0.4.0 below.
+
+* **Bigger exports by default:** small sprites are enlarged to at least 512 px (Auto
+  size), still pixel-sharp. Ctrl+E follows the same setting.
+* **Touchpads:** two-finger swipe moves the view, pinch zooms smoothly.
+* **Faster:** animated GIF export 4–5×, compositing 2–3×, saving and opening projects up
+  to about 3.7×. Big fills use almost no undo memory.
+* **Fixed:** the Settings window no longer stretches on the Themes page.
+* **Cleaner code:** unused code, an unused library and old images removed.
+
+[Download 0.4.1](https://github.com/senzukisu/kagero/releases/tag/v0.4.1)
+
 ## 0.4.0 Beta — everyday comfort and pixel-artist tools (2026-10-30)
 
 * **Canvas:** Canvas Size with an anchor, a Crop tool, and Crop to Selection.
@@ -25,7 +39,7 @@ The complete, always up-to-date list is in
 
 See *Known limitations* in [CHANGELOG.md](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
-[Download 0.4.0](https://github.com/senzukisu/kagero/releases/tag/v0.4.0)
+*0.4.0 was not published on its own; download 0.4.1.*
 
 ## 0.3.8 Beta — settings, shortcuts and experiments (2026-10-29)
 

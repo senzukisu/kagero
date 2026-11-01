@@ -51,6 +51,17 @@ Before a release, also try the build by hand: draw, undo, layers, frames and pre
 save and reopen, every Export tab, selection, palettes, the title bar (drag, double-click,
 edge resize) and Settings.
 
+## Benchmarks
+
+```
+cargo run --release --example bench
+```
+
+Times compositing, timeline thumbnails, onion skin, saving and opening projects,
+exporting (PNG sheet, GIF, PNG files), filling and drawing, and shows the undo
+history's memory. To compare two versions, build the same `bench.rs` for both and run
+them alternately on an otherwise idle machine; report ranges, not single numbers.
+
 ## Rules
 
 * Read the [architecture](architecture.md) first. The UI never edits pixels directly:

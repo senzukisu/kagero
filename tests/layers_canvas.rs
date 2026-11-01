@@ -355,3 +355,61 @@ fn cropped_projects_round_trip() {
     assert_eq!(back.frame_count(), 2);
     assert_eq!(back.layer_count(), 2);
 }
+
+#[test]
+fn fast_compositing_matches_pixel_by_pixel_compositing() {
+    use kagero::core::PixelBuffer;
+    // Random layers with every kind of alpha, mixed opacities and a hidden layer.
+    let mut seed = 0x1234_5678u32;
+    let mut next = || {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        seed
+    };
+    let (w, h) = (37, 23);
+    let mut cels = Vec::new();
+    for _ in 0..5 {
+        let mut b = PixelBuffer::new(w, h).expect("buf");
+        for y in 0..h as i32 {
+            for x in 0..w as i32 {
+                let r = next();
+                let a = match r % 4 {
+                    0 => 0,
+                    1 => 255,
+                    _ => (r >> 8) as u8,
+                };
+                b.set(
+                    x,
+                    y,
+                    Rgba::new((r >> 16) as u8, (r >> 24) as u8, (r >> 4) as u8, a),
+                );
+            }
+        }
+        cels.push(b);
+    }
+    let names = (0..5).map(|i| (format!("L{i}"), i != 3)).collect();
+    let mut doc = Document::from_parts(w, h, names, vec![(100, cels)], 0, 0).expect("doc");
+    let ids: Vec<_> = doc.layers().iter().map(|l| l.id).collect();
+    for (id, opacity) in ids.iter().zip([255u8, 128, 0, 77, 255]) {
+        doc.layer_mut(*id).expect("layer").opacity = opacity;
+    }
+    for (x, y, rw, rh) in [
+        (0, 0, w, h),
+        (3, 5, 10, 7),
+        (30, 20, 50, 50),
+        (0, 22, 37, 1),
+    ] {
+        let ((cx, cy, cw, ch), bytes) = doc.composite_frame_rect(0, x, y, rw, rh).expect("rect");
+        for row in 0..ch {
+            for col in 0..cw {
+                let i = ((row * cw + col) * 4) as usize;
+                let fast = Rgba([bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]]);
+                let slow = doc
+                    .composite_frame_pixel(0, (cx + col) as i32, (cy + row) as i32)
+                    .expect("pixel");
+                assert_eq!(fast, slow, "pixel ({}, {})", cx + col, cy + row);
+            }
+        }
+    }
+}

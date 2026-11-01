@@ -7,7 +7,8 @@ icon: file-export
 
 Everything leaves Kagero through one **Export** dialog —
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> or **File → Export…**.
-(<kbd>Ctrl</kbd>+<kbd>E</kbd> still saves the current frame as a PNG in one step.)
+(<kbd>Ctrl</kbd>+<kbd>E</kbd> still saves the current frame as a PNG in one step, at the
+size the Image tab's **Auto size** or scale gives.)
 
 | Tab | Produces | Details |
 |-----|----------|---------|
@@ -28,9 +29,15 @@ drawing — or press **Cancel Export**.
   [Frame tags](../../animate/animation.md#frame-tags)).
 * **Layers:** *Visible layers (as shown)* or *Active layer only*. Hidden layers and the
   onion skin are never exported.
-* **Scale:** 100 / 200 / 300 / 400 / 800 % or any whole number up to ×64, always as
-  sharp square pixels (nearest neighbor). Outputs larger than 16 384 px per side or
-  512 MiB are refused before anything is written.
+* **Scale:**
+  * **Auto size** (on by default for images and animations) picks the smallest whole
+    number that makes the result at least **512 px** on its longest side. A 10×10
+    sprite becomes ×52 = 520×520, so small sprites are easy to see and share.
+  * Turn Auto size off to choose 100 / 200 / 300 / 400 / 800 % or any whole number up
+    to ×64. Sprite sheets always use their own scale (100 % by default, as game engines
+    expect).
+  * Pixels are always enlarged as sharp squares (nearest neighbor). Outputs larger than
+    16 384 px per side or 512 MiB are refused before anything is written.
 
 ## Formats
 
