@@ -23,14 +23,19 @@
 
 * [Projects & import](export/files-and-export.md)
 * [Export](export/export/README.md)
-  * [Animated GIF](export/export/animated-export.md)
+  * [Animations: GIF and WebP](export/export/animated-export.md)
   * [Sprite sheets](export/export/sprite-sheets.md)
 
 ## Reference
 
 * [Keyboard shortcuts](reference/keyboard-shortcuts.md)
 * [Settings](reference/settings.md)
+* [Themes](reference/themes.md)
 * [FAQ & troubleshooting](reference/faq.md)
+
+## Plugins
+
+* [Plugins](plugins/README.md)
 
 ## Developers
 

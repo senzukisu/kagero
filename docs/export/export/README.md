@@ -1,5 +1,5 @@
 ---
-description: "The Export dialog: PNG, JPEG and WebP images, frames, scale and file names."
+description: "The Export dialog: PNG, JPEG and WebP images, frames and tags, scale and file names."
 icon: file-export
 ---
 
@@ -12,7 +12,7 @@ Everything leaves Kagero through one **Export** dialog —
 | Tab | Produces | Details |
 |-----|----------|---------|
 | **Image** | One file per frame: PNG, JPEG or WebP | this page |
-| **Animation** | An animated GIF | [Animated GIF](animated-export.md) |
+| **Animation** | An animated GIF or animated WebP | [Animations: GIF and WebP](animated-export.md) |
 | **Sprite Sheet** | One image with all frames, plus optional JSON | [Sprite sheets](sprite-sheets.md) |
 
 <figure><img src="../../.gitbook/assets/export-image.png" alt="The Export dialog on the Image tab: PNG at 400%, all 8 frames, file names, a preview and the folder"><figcaption><p>The Image tab. Every tab has a live preview and shows the output size.</p></figcaption></figure>
@@ -24,7 +24,8 @@ drawing — or press **Cancel Export**.
 ## Frames, layers, scale
 
 * **Frames:** *Current*, *Selected* (<kbd>Ctrl</kbd>/<kbd>Shift</kbd>+click cards in the
-  timeline) or *All*.
+  timeline), *All*, or a **Tag** (pick it from the list; see
+  [Frame tags](../../animate/animation.md#frame-tags)).
 * **Layers:** *Visible layers (as shown)* or *Active layer only*. Hidden layers and the
   onion skin are never exported.
 * **Scale:** 100 / 200 / 300 / 400 / 800 % or any whole number up to ×64, always as
@@ -55,8 +56,8 @@ recommended for lossless game sprites.
 {% endtab %}
 
 {% tab title="WebP" %}
-Lossless with transparency. Lossy WebP and animated WebP are not available in this
-version — the dialog shows them as unavailable. Use GIF for animations.
+Lossless with transparency. Lossy WebP isn't available. For animated WebP, use the
+**Animation** tab.
 {% endtab %}
 {% endtabs %}
 

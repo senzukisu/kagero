@@ -15,9 +15,9 @@ use crate::editor::Editor;
 use crate::export::render::{scaled_size, snapshot, FrameImage};
 use crate::export::service::{ExportJob, ExportRequest, ExportTarget};
 use crate::export::{
-    check_output_size, gif, sequence, spritesheet, still, ExportKind, ExportSettings,
-    ExportSummary, FrameSelection, GifLoop, LayerSource, MetadataFormat, SheetLayout, StillFormat,
-    MAX_EXTRUDE, MAX_SCALE, MAX_SPACING,
+    check_output_size, gif, sequence, spritesheet, still, AnimationFormat, ExportKind,
+    ExportSettings, ExportSummary, FrameSelection, GifLoop, LayerSource, MetadataFormat,
+    SheetLayout, StillFormat, MAX_EXTRUDE, MAX_SCALE, MAX_SPACING,
 };
 use crate::services::dialogs as native;
 use crate::theme;
@@ -53,9 +53,28 @@ pub struct ExportDialog {
     message: Option<String>,
 }
 
-fn frames_for(selection: FrameSelection, editor: &Editor, selected: &[usize]) -> Vec<usize> {
+/// Options of the animated WebP format.
+fn webp_animation_options(ui: &mut egui::Ui, s: &mut ExportSettings) {
+    section(ui, "Animated WebP");
+    ui.horizontal(|ui| {
+        ui.label("Repeat");
+        ui.radio_value(&mut s.gif.looping, GifLoop::Forever, "Loop forever");
+        ui.radio_value(&mut s.gif.looping, GifLoop::Once, "Play once");
+    });
+    hint(
+        ui,
+        "Lossless: every color and soft transparency is kept, and frame durations are exact to the millisecond. Browsers and most engines play it; some older image viewers show only the first frame.",
+    );
+}
+
+fn frames_for(s: &ExportSettings, editor: &Editor, selected: &[usize]) -> Vec<usize> {
     let doc = editor.document();
-    match selection {
+    if let Some(name) = &s.tag {
+        if let Some(tag) = doc.tags().iter().find(|t| &t.name == name) {
+            return tag.frames(doc.frame_count()).collect();
+        }
+    }
+    match s.frames {
         FrameSelection::Current => vec![doc.active_frame_index()],
         FrameSelection::All => (0..doc.frame_count()).collect(),
         FrameSelection::Selected if selected.is_empty() => vec![doc.active_frame_index()],
@@ -159,7 +178,7 @@ impl ExportDialog {
             ui.label(
                 RichText::new(editor.name())
                     .strong()
-                    .color(theme::TEXT_PRIMARY),
+                    .color(theme::text_primary()),
             );
             ui.label(
                 RichText::new(format!(
@@ -169,7 +188,7 @@ impl ExportDialog {
                     doc.frame_count()
                 ))
                 .small()
-                .color(theme::TEXT_SECONDARY),
+                .color(theme::text_secondary()),
             );
         });
         ui.add_space(4.0);
@@ -183,9 +202,9 @@ impl ExportDialog {
                 ] {
                     let selected_tab = s.kind == kind;
                     let text = RichText::new(label).strong().color(if selected_tab {
-                        theme::ACCENT
+                        theme::accent()
                     } else {
-                        theme::TEXT_PRIMARY
+                        theme::text_primary()
                     });
                     if ui
                         .add_sized(
@@ -207,7 +226,14 @@ impl ExportDialog {
         if s.kind == ExportKind::Animation && s.frames == FrameSelection::Current {
             s.frames = FrameSelection::All;
         }
-        let frames = frames_for(s.frames, editor, selected);
+        // A remembered tag this document doesn't have falls back to the frame choice.
+        if s.tag
+            .as_ref()
+            .is_some_and(|name| !editor.document().tags().iter().any(|t| &t.name == name))
+        {
+            s.tag = None;
+        }
+        let frames = frames_for(s, editor, selected);
         self.refresh_preview(ui.ctx(), editor, &frames, s.layers);
 
         // Options and preview scroll together if the screen is too short for them,
@@ -239,7 +265,7 @@ impl ExportDialog {
                 ui.painter().vline(
                     divider_x,
                     rect.y_range(),
-                    egui::Stroke::new(1.0_f32, theme::BORDER),
+                    egui::Stroke::new(1.0_f32, theme::border()),
                 );
             });
         ui.separator();
@@ -298,9 +324,9 @@ impl ExportDialog {
             }
             ExportKind::Animation => {
                 ui.horizontal(|ui| {
-                    let _ = ui.radio(true, "GIF");
-                    ui.add_enabled(false, egui::RadioButton::new(false, "Animated WebP"))
-                        .on_disabled_hover_text("Animated WebP is not available in this version.");
+                    for f in [AnimationFormat::Gif, AnimationFormat::WebP] {
+                        ui.radio_value(&mut s.animation_format, f, f.label());
+                    }
                 });
             }
             ExportKind::SpriteSheet => {
@@ -332,10 +358,37 @@ impl ExportDialog {
                     FrameSelection::All => format!("All ({})", doc.frame_count()),
                     FrameSelection::Current => "Current".to_owned(),
                 };
-                ui.radio_value(&mut s.frames, f, label);
+                if ui.radio(s.tag.is_none() && s.frames == f, label).clicked() {
+                    s.frames = f;
+                    s.tag = None;
+                }
+            }
+            let tags = doc.tags();
+            let resp = ui
+                .add_enabled(
+                    !tags.is_empty(),
+                    egui::RadioButton::new(s.tag.is_some(), "Tag"),
+                )
+                .on_disabled_hover_text(
+                    "This document has no frame tags (right-click a frame → New Tag).",
+                );
+            if resp.clicked() && s.tag.is_none() {
+                s.tag = tags.first().map(|t| t.name.clone());
+            }
+            if let Some(current) = s.tag.clone() {
+                egui::ComboBox::from_id_salt("export-tag")
+                    .selected_text(&current)
+                    .show_ui(ui, |ui| {
+                        for t in tags {
+                            let label = format!("{}  ({}–{})", t.name, t.start + 1, t.end + 1);
+                            if ui.selectable_label(t.name == current, label).clicked() {
+                                s.tag = Some(t.name.clone());
+                            }
+                        }
+                    });
             }
         });
-        if s.frames == FrameSelection::Selected && selected.is_empty() {
+        if s.tag.is_none() && s.frames == FrameSelection::Selected && selected.is_empty() {
             hint(
                 ui,
                 "No frames selected in the timeline (Ctrl+click cards): the current frame is used.",
@@ -370,7 +423,10 @@ impl ExportDialog {
         });
         match s.kind {
             ExportKind::Image => self.image_options(ui, s),
-            ExportKind::Animation => self.gif_options(ui, s),
+            ExportKind::Animation => match s.animation_format {
+                AnimationFormat::Gif => self.gif_options(ui, s),
+                AnimationFormat::WebP => webp_animation_options(ui, s),
+            },
             ExportKind::SpriteSheet => self.sheet_options(ui, s, frames.len()),
         }
 
@@ -398,10 +454,13 @@ impl ExportDialog {
 
     fn image_options(&mut self, ui: &mut egui::Ui, s: &mut ExportSettings) {
         match s.still_format {
-            StillFormat::Png => hint(ui, "Lossless with full transparency — best for game sprites."),
+            StillFormat::Png => hint(
+                ui,
+                "Lossless with full transparency — best for game sprites.",
+            ),
             StillFormat::WebP => hint(
                 ui,
-                "Lossless WebP with transparency. Lossy quality and animated WebP aren't available in this version.",
+                "Lossless WebP with transparency. For animations, use the Animation tab.",
             ),
             StillFormat::Jpeg => {
                 section(ui, "JPEG");
@@ -416,8 +475,16 @@ impl ExportDialog {
                             s.jpeg.background = c;
                         }
                     }
-                    let mut rgb = [s.jpeg.background.r(), s.jpeg.background.g(), s.jpeg.background.b()];
-                    if ui.color_edit_button_srgb(&mut rgb).on_hover_text("Custom color").changed() {
+                    let mut rgb = [
+                        s.jpeg.background.r(),
+                        s.jpeg.background.g(),
+                        s.jpeg.background.b(),
+                    ];
+                    if ui
+                        .color_edit_button_srgb(&mut rgb)
+                        .on_hover_text("Custom color")
+                        .changed()
+                    {
                         s.jpeg.background = Rgba::opaque(rgb[0], rgb[1], rgb[2]);
                     }
                 });
@@ -493,13 +560,43 @@ impl ExportDialog {
         section(ui, "Layout");
         let o = &mut s.sheet;
         egui::ComboBox::from_id_salt("sheet-layout")
-            .selected_text(o.layout.label())
+            .selected_text(if o.packed {
+                "Packed (smallest sheet)"
+            } else {
+                o.layout.label()
+            })
             .show_ui(ui, |ui| {
                 for l in SheetLayout::ALL {
-                    ui.selectable_value(&mut o.layout, l, l.label());
+                    if ui
+                        .selectable_label(!o.packed && o.layout == l, l.label())
+                        .clicked()
+                    {
+                        o.layout = l;
+                        o.packed = false;
+                    }
+                }
+                if ui
+                    .selectable_label(o.packed, "Packed (smallest sheet)")
+                    .on_hover_text(
+                        "Trims every frame and fits them tightly; positions go into the metadata",
+                    )
+                    .clicked()
+                {
+                    o.packed = true;
                 }
             });
+        if o.packed {
+            ui.checkbox(&mut o.merge_duplicates, "Identical frames share one spot")
+                .on_hover_text("Frames with exactly the same pixels are stored once; the metadata points both at it");
+            if o.metadata == MetadataFormat::None {
+                warn(
+                    ui,
+                    "Packed sheets need metadata: without it, frame positions are unknown.",
+                );
+            }
+        }
         ui.horizontal(|ui| match o.layout {
+            _ if o.packed => {}
             SheetLayout::Columns => {
                 ui.label("Columns");
                 ui.add(egui::DragValue::new(&mut o.columns).range(1..=count.max(1) as u32));
@@ -535,10 +632,12 @@ impl ExportDialog {
                 .on_hover_text(
                     "Repeat edge pixels around each frame to stop texture bleeding in engines.",
                 );
-                ui.checkbox(&mut o.trim, "Trim empty borders")
-                    .on_hover_text(
-                        "Cut transparent borders per frame; offsets go into the metadata.",
-                    );
+                ui.add_enabled(
+                    !o.packed,
+                    egui::Checkbox::new(&mut o.trim, "Trim empty borders"),
+                )
+                .on_disabled_hover_text("Packed sheets always trim.")
+                .on_hover_text("Cut transparent borders per frame; offsets go into the metadata.");
                 ui.end_row();
             });
         ui.horizontal(|ui| {
@@ -591,21 +690,33 @@ impl ExportDialog {
                 Ok(format!("{w}×{h} → {sw}×{sh} px · {what}"))
             }
             ExportKind::SpriteSheet => {
-                let plan = spritesheet::plan(&p.frames, &s.sheet).map_err(|e| e.to_string())?;
-                let (sw, sh) = spritesheet::sheet_size(
-                    plan.cell_w * scale,
-                    plan.cell_h * scale,
-                    plan.columns,
-                    plan.rows,
-                    &s.sheet,
-                );
-                check_output_size(sw, sh).map_err(|e| e.to_string())?;
-                Ok(format!(
-                    "{} frames · {}×{} grid · {sw}×{sh} px",
-                    p.frames.len(),
-                    plan.columns,
-                    plan.rows
-                ))
+                let plan = spritesheet::plan_scaled(&p.frames, scale, &s.sheet)
+                    .map_err(|e| e.to_string())?;
+                let (sw, sh) = (plan.width, plan.height);
+                check_output_size(u64::from(sw), u64::from(sh)).map_err(|e| e.to_string())?;
+                if s.sheet.packed {
+                    let shared = plan
+                        .placements
+                        .iter()
+                        .filter(|p| p.duplicate_of.is_some())
+                        .count();
+                    let extra = if shared > 0 {
+                        format!(" · {shared} identical")
+                    } else {
+                        String::new()
+                    };
+                    Ok(format!(
+                        "{} frames · packed{extra} · {sw}×{sh} px",
+                        p.frames.len()
+                    ))
+                } else {
+                    Ok(format!(
+                        "{} frames · {}×{} grid · {sw}×{sh} px",
+                        p.frames.len(),
+                        plan.columns,
+                        plan.rows
+                    ))
+                }
             }
         }
     }
@@ -666,7 +777,7 @@ impl ExportDialog {
         let shown = size * fit;
         let (rect, _) = ui.allocate_exact_size(PREVIEW, egui::Sense::hover());
         let painter = ui.painter_at(rect);
-        painter.rect_filled(rect, 0.0, theme::BACKGROUND);
+        painter.rect_filled(rect, 0.0, theme::background());
         let img_rect = egui::Rect::from_center_size(rect.center(), shown);
         // Checkerboard behind transparency.
         let cell = 8.0;
@@ -677,9 +788,9 @@ impl ExportDialog {
         for cy in 0..rows {
             for cx in 0..cols {
                 let c = if (cx + cy) % 2 == 0 {
-                    theme::CHECKER_LIGHT
+                    theme::checker_light()
                 } else {
-                    theme::CHECKER_DARK
+                    theme::checker_dark()
                 };
                 let r = egui::Rect::from_min_size(
                     img_rect.min + Vec2::new(cx as f32 * cell, cy as f32 * cell),
@@ -701,10 +812,10 @@ impl ExportDialog {
         );
         match self.output_info(s) {
             Ok(info) => {
-                ui.label(RichText::new(info).small().color(theme::TEXT_PRIMARY));
+                ui.label(RichText::new(info).small().color(theme::text_primary()));
             }
             Err(e) => {
-                ui.label(RichText::new(e).small().color(theme::ERROR));
+                ui.label(RichText::new(e).small().color(theme::error()));
             }
         }
     }
@@ -735,8 +846,13 @@ impl ExportDialog {
                     paths: sequence::paths_in(&dir, &names),
                 }
             }
-            ExportKind::Animation => ExportTarget::Gif {
-                path: dir.join(format!("{base}.gif")),
+            ExportKind::Animation => match s.animation_format {
+                AnimationFormat::Gif => ExportTarget::Gif {
+                    path: dir.join(format!("{base}.gif")),
+                },
+                AnimationFormat::WebP => ExportTarget::WebPAnimation {
+                    path: dir.join(format!("{base}.webp")),
+                },
             },
             ExportKind::SpriteSheet => ExportTarget::Sheet {
                 image_path: dir.join(format!("{base}.{}", s.sheet.image_format.extension())),
@@ -752,6 +868,7 @@ impl ExportDialog {
             sheet: s.sheet,
             base_name: base,
             digits: s.naming.digits,
+            tags: editor.document().tags().to_vec(),
             target,
         })
     }
@@ -791,7 +908,7 @@ impl ExportDialog {
                 RichText::new(text)
                     .monospace()
                     .small()
-                    .color(theme::TEXT_SECONDARY),
+                    .color(theme::text_secondary()),
             );
             if ui
                 .add_enabled(!self.is_running(), egui::Button::new("Browse…"))
@@ -837,7 +954,7 @@ impl ExportDialog {
                     .map(|p| p.to_path_buf());
                 ui.label(
                     RichText::new(format!("Exported {} file(s).", summary.files.len()))
-                        .color(theme::SUCCESS),
+                        .color(theme::success()),
                 );
                 for note in &summary.notes {
                     hint(ui, note);
@@ -849,12 +966,12 @@ impl ExportDialog {
                 }
             }
             Some(Err(e)) => {
-                ui.label(RichText::new(e).color(theme::ERROR));
+                ui.label(RichText::new(e).color(theme::error()));
             }
             None => {}
         }
         if let Some(m) = &self.message {
-            ui.label(RichText::new(m).color(theme::ERROR));
+            ui.label(RichText::new(m).color(theme::error()));
         }
 
         ui.add_space(4.0);
@@ -897,16 +1014,16 @@ fn section(ui: &mut egui::Ui, title: &str) {
         RichText::new(title.to_uppercase())
             .small()
             .strong()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::text_secondary()),
     );
 }
 
 fn hint(ui: &mut egui::Ui, text: &str) {
-    ui.label(RichText::new(text).small().color(theme::TEXT_SECONDARY));
+    ui.label(RichText::new(text).small().color(theme::text_secondary()));
 }
 
 fn warn(ui: &mut egui::Ui, text: &str) {
-    ui.label(RichText::new(text).small().color(theme::ACCENT));
+    ui.label(RichText::new(text).small().color(theme::accent()));
 }
 
 /// Opens a folder in the system file manager.
@@ -988,6 +1105,61 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn animated_webp_and_packed_sheets_build_requests() {
+        let e = editor();
+        let dir = std::env::temp_dir().join("kagero-dialog-test");
+        let mut s = ExportSettings {
+            frames: FrameSelection::All,
+            animation_format: AnimationFormat::WebP,
+            ..ExportSettings::default()
+        };
+        let mut dialog = ExportDialog::default();
+        dialog.open_at(ExportKind::Animation, &mut s);
+        show(&mut dialog, &e, &mut s);
+        let req = dialog.build_request(&e, &s, dir.clone()).expect("request");
+        assert!(matches!(req.target, ExportTarget::WebPAnimation { .. }));
+        assert!(req.output_paths()[0].ends_with("Ember Spirit.webp"));
+
+        s.sheet.packed = true;
+        let mut dialog = ExportDialog::default();
+        dialog.open_at(ExportKind::SpriteSheet, &mut s);
+        show(&mut dialog, &e, &mut s);
+        let info = dialog.output_info(&s).expect("fits");
+        assert!(info.contains("packed"), "{info}");
+        let req = dialog.build_request(&e, &s, dir).expect("request");
+        assert!(req.sheet.packed);
+    }
+
+    #[test]
+    fn exporting_a_tag_uses_its_frames_and_forgets_missing_tags() {
+        let mut e = editor();
+        e.add_tag(1, 2).expect("tag");
+        let name = e.document().tags()[0].name.clone();
+        let mut s = ExportSettings {
+            kind: ExportKind::SpriteSheet,
+            tag: Some(name),
+            ..ExportSettings::default()
+        };
+        let mut dialog = ExportDialog::default();
+        dialog.open_at(ExportKind::SpriteSheet, &mut s);
+        show(&mut dialog, &e, &mut s);
+        let p = dialog.preview.as_ref().expect("preview");
+        let indices: Vec<usize> = p.frames.iter().map(|f| f.index).collect();
+        assert_eq!(indices, [1, 2]);
+        let req = dialog
+            .build_request(&e, &s, std::env::temp_dir())
+            .expect("request");
+        assert_eq!(req.tags.len(), 1, "tags reach the metadata");
+
+        // A remembered tag that this document doesn't have falls back to the frame choice.
+        s.tag = Some("gone".into());
+        s.frames = FrameSelection::All;
+        show(&mut dialog, &e, &mut s);
+        assert_eq!(s.tag, None);
+        assert_eq!(dialog.preview.as_ref().expect("preview").frames.len(), 3);
     }
 
     #[test]

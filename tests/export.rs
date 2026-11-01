@@ -62,6 +62,7 @@ fn request(frames: Vec<FrameImage>, scale: u32, target: ExportTarget) -> ExportR
         sheet: SheetOptions::default(),
         base_name: "walk".into(),
         digits: 4,
+        tags: Vec::new(),
         target,
     }
 }
@@ -639,4 +640,350 @@ fn export_requests_list_their_outputs() {
     );
     assert_eq!(req.output_paths().len(), 2);
     assert!(matches!(go(&req), Err(ExportError::NoFrames)));
+}
+
+#[test]
+fn sheet_metadata_lists_tags_as_sheet_positions() {
+    use kagero::core::FrameTag;
+    let dir = temp_dir("exp-sheet-tags");
+    let doc = animated();
+    let tags = vec![
+        FrameTag {
+            name: "walk".into(),
+            start: 0,
+            end: 1,
+            color: Rgba::opaque(0xE8, 0x6A, 0x33),
+        },
+        FrameTag {
+            name: "end".into(),
+            start: 2,
+            end: 2,
+            color: Rgba::opaque(0x4A, 0x8F, 0xD8),
+        },
+    ];
+    // Only frames 1 and 2 are exported: "walk" keeps frame 1 (sheet position 0) and
+    // "end" maps to sheet position 1.
+    let frames = snapshot(&doc, &[1, 2], LayerSource::Visible).expect("snapshot");
+    for (fmt, name) in [
+        (MetadataFormat::Kagero, "k"),
+        (MetadataFormat::JsonHash, "h"),
+    ] {
+        let json_path = dir.join(format!("{name}.json"));
+        let mut req = request(
+            frames.clone(),
+            1,
+            ExportTarget::Sheet {
+                image_path: dir.join(format!("{name}.png")),
+                json_path: Some(json_path.clone()),
+            },
+        );
+        req.tags = tags.clone();
+        req.sheet = SheetOptions {
+            metadata: fmt,
+            ..sheet(SheetLayout::Horizontal)
+        };
+        go(&req).expect("export");
+        let json: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&json_path).expect("json"))
+                .expect("parse");
+        let list = match fmt {
+            MetadataFormat::Kagero => json["tags"].clone(),
+            _ => json["meta"]["frameTags"].clone(),
+        };
+        let list = list.as_array().expect("tags").clone();
+        assert_eq!(list.len(), 2, "{json}");
+        assert_eq!(list[0]["name"], "walk");
+        assert_eq!(
+            (list[0]["from"].as_u64(), list[0]["to"].as_u64()),
+            (Some(0), Some(0))
+        );
+        assert_eq!(
+            (list[1]["from"].as_u64(), list[1]["to"].as_u64()),
+            (Some(1), Some(1))
+        );
+        match fmt {
+            MetadataFormat::Kagero => assert_eq!(list[1]["color"], "#4A8FD8"),
+            _ => {
+                assert_eq!(list[1]["color"], "#4a8fd8ff");
+                assert_eq!(list[1]["direction"], "forward");
+            }
+        }
+    }
+    // Without tags, neither format writes the field.
+    let json_path = dir.join("none.json");
+    let req = request(
+        frames,
+        1,
+        ExportTarget::Sheet {
+            image_path: dir.join("none.png"),
+            json_path: Some(json_path.clone()),
+        },
+    );
+    go(&req).expect("export");
+    let json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&json_path).expect("json")).expect("parse");
+    assert!(json.get("tags").is_none());
+}
+
+// ---------------------------------------------------------------- animated WebP
+
+/// Decodes an animated WebP with the image crate (an independent decoder).
+fn read_webp_animation(path: &std::path::Path) -> Vec<(RgbaImage, u32)> {
+    use image::AnimationDecoder;
+    let file = std::io::BufReader::new(std::fs::File::open(path).expect("open"));
+    let decoder = image::codecs::webp::WebPDecoder::new(file).expect("webp");
+    decoder
+        .into_frames()
+        .collect_frames()
+        .expect("frames")
+        .into_iter()
+        .map(|f| {
+            let (num, den) = f.delay().numer_denom_ms();
+            (f.into_buffer(), num / den.max(1))
+        })
+        .collect()
+}
+
+#[test]
+fn animated_webp_is_lossless_with_exact_durations_and_alpha() {
+    let dir = temp_dir("exp-webp-anim");
+    let doc = animated();
+    let path = dir.join("walk.webp");
+    let mut req = request(
+        all_frames(&doc),
+        2,
+        ExportTarget::WebPAnimation { path: path.clone() },
+    );
+    req.gif.looping = GifLoop::Forever;
+    let summary = go(&req).expect("export");
+    assert_eq!(summary.files, vec![path.clone()]);
+    let bytes = std::fs::read(&path).expect("read");
+    assert_eq!(&bytes[..4], b"RIFF");
+    assert_eq!(&bytes[8..16], b"WEBPVP8X");
+    assert_eq!(
+        u32::from_le_bytes(bytes[4..8].try_into().expect("4")) as usize,
+        bytes.len() - 8,
+        "RIFF size"
+    );
+    let frames = read_webp_animation(&path);
+    assert_eq!(frames.len(), 3);
+    let expected = all_frames(&doc);
+    for (i, ((img, ms), src)) in frames.iter().zip(&expected).enumerate() {
+        assert_eq!(*ms, 100 + 50 * i as u32, "frame {i} duration");
+        assert_eq!(img.dimensions(), (8, 6));
+        for y in 0..6 {
+            for x in 0..8 {
+                assert_eq!(
+                    img.get_pixel(x, y).0,
+                    src.image.get_pixel(x / 2, y / 2).0,
+                    "frame {i} pixel ({x},{y})"
+                );
+            }
+        }
+    }
+    // Semi-transparent pixels survive exactly (GIF can't do this).
+    assert_eq!(frames[0].0.get_pixel(6, 4).0, HALF_BLUE.0);
+    // Transparent areas of a later frame stay transparent (no blending with frame 0).
+    assert_eq!(frames[1].0.get_pixel(6, 4).0[3], 0);
+}
+
+#[test]
+fn animated_webp_loop_count_and_limits() {
+    let dir = temp_dir("exp-webp-loop");
+    let doc = animated();
+    let path = dir.join("once.webp");
+    let mut req = request(
+        all_frames(&doc),
+        1,
+        ExportTarget::WebPAnimation { path: path.clone() },
+    );
+    req.gif.looping = GifLoop::Once;
+    go(&req).expect("export");
+    let bytes = std::fs::read(&path).expect("read");
+    let anim = bytes
+        .windows(4)
+        .position(|w| w == b"ANIM")
+        .expect("ANIM chunk");
+    // Payload: 4 bytes background, then the loop count.
+    assert_eq!(u16::from_le_bytes([bytes[anim + 12], bytes[anim + 13]]), 1);
+    // Frames of different sizes are refused.
+    let mut frames = all_frames(&doc);
+    frames[1].image = RgbaImage::new(5, 3);
+    let bad = request(
+        frames,
+        1,
+        ExportTarget::WebPAnimation {
+            path: dir.join("bad.webp"),
+        },
+    );
+    assert!(matches!(go(&bad), Err(ExportError::Invalid(_))));
+    assert!(!dir.join("bad.webp").exists(), "nothing written on error");
+}
+
+// ---------------------------------------------------------------- packed sheets
+
+/// Frames of different content sizes, with frame 3 identical to frame 1.
+fn varied_frames() -> Vec<FrameImage> {
+    let mut out = Vec::new();
+    for (i, (w, h)) in [(5, 2), (2, 6), (7, 7), (2, 6), (1, 1)]
+        .into_iter()
+        .enumerate()
+    {
+        let mut img = RgbaImage::new(10, 10);
+        let shade = if i == 3 { 1 } else { i as u8 };
+        for y in 0..h {
+            for x in 0..w {
+                img.put_pixel(
+                    x + 1,
+                    y + 2,
+                    image::Rgba([40 * shade + 10, x as u8 * 20, y as u8 * 20, 255]),
+                );
+            }
+        }
+        out.push(FrameImage {
+            index: i,
+            duration_ms: 100,
+            image: img,
+        });
+    }
+    out
+}
+
+fn packed(spacing: u32, extrude: u32, padding: u32, merge: bool) -> SheetOptions {
+    SheetOptions {
+        packed: true,
+        merge_duplicates: merge,
+        spacing,
+        extrude,
+        padding,
+        ..SheetOptions::default()
+    }
+}
+
+#[test]
+fn packed_sheets_are_tight_deterministic_and_never_overlap() {
+    let frames = varied_frames();
+    for (spacing, extrude, padding) in [(0, 0, 0), (1, 0, 0), (2, 1, 3)] {
+        let o = packed(spacing, extrude, padding, false);
+        let p = plan(&frames, &o).expect("plan");
+        assert_eq!(
+            p,
+            plan(&frames, &o).expect("plan"),
+            "same input, same sheet"
+        );
+        assert_no_overlap(&p, extrude);
+        assert_eq!((p.columns, p.rows), (0, 0));
+        // Much smaller than a strip of the full frames with the same spacing.
+        let strip = plan(&frames, &SheetOptions { packed: false, ..o }).expect("strip");
+        let area =
+            |p: &kagero::export::spritesheet::SheetPlan| u64::from(p.width) * u64::from(p.height);
+        assert!(
+            area(&p) * 2 < area(&strip),
+            "{}×{} vs {}×{}",
+            p.width,
+            p.height,
+            strip.width,
+            strip.height
+        );
+        // At least `spacing` empty pixels between any two frames (with extrude).
+        let e = i64::from(extrude);
+        for (i, a) in p.placements.iter().enumerate() {
+            for b in &p.placements[i + 1..] {
+                let (ax0, ay0) = (i64::from(a.frame.x) - e, i64::from(a.frame.y) - e);
+                let (ax1, ay1) = (
+                    ax0 + i64::from(a.frame.w) + 2 * e,
+                    ay0 + i64::from(a.frame.h) + 2 * e,
+                );
+                let (bx0, by0) = (i64::from(b.frame.x) - e, i64::from(b.frame.y) - e);
+                let (bx1, by1) = (
+                    bx0 + i64::from(b.frame.w) + 2 * e,
+                    by0 + i64::from(b.frame.h) + 2 * e,
+                );
+                let gap = (bx0 - ax1).max(ax0 - bx1).max(by0 - ay1).max(ay0 - by1);
+                assert!(
+                    gap >= i64::from(spacing),
+                    "frames {} and {} are {gap} px apart",
+                    a.order,
+                    b.order
+                );
+            }
+            assert!(a.frame.x >= padding + extrude && a.frame.y >= padding + extrude);
+        }
+        // Every frame's trimmed pixels are on the sheet where the plan says.
+        let img = compose(&frames, &p, &o).expect("compose");
+        for (f, pl) in frames.iter().zip(&p.placements) {
+            assert!(pl.trimmed);
+            for y in 0..pl.frame.h {
+                for x in 0..pl.frame.w {
+                    assert_eq!(
+                        img.get_pixel(pl.frame.x + x, pl.frame.y + y),
+                        f.image.get_pixel(pl.source.x + x, pl.source.y + y)
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn packed_sheets_merge_identical_frames() {
+    let frames = varied_frames();
+    let merged = plan(&frames, &packed(0, 0, 0, true)).expect("plan");
+    let separate = plan(&frames, &packed(0, 0, 0, false)).expect("plan");
+    assert_eq!(merged.placements[3].duplicate_of, Some(1));
+    assert_eq!(merged.placements[3].frame, merged.placements[1].frame);
+    assert_eq!(
+        merged
+            .placements
+            .iter()
+            .filter(|p| p.duplicate_of.is_some())
+            .count(),
+        1
+    );
+    assert!(
+        u64::from(merged.width) * u64::from(merged.height)
+            <= u64::from(separate.width) * u64::from(separate.height)
+    );
+    // The metadata says which frame is shared.
+    let dir = temp_dir("exp-packed");
+    let json_path = dir.join("p.json");
+    let mut req = request(
+        frames,
+        1,
+        ExportTarget::Sheet {
+            image_path: dir.join("p.png"),
+            json_path: Some(json_path.clone()),
+        },
+    );
+    req.sheet = packed(0, 0, 0, true);
+    go(&req).expect("export");
+    let json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&json_path).expect("json")).expect("parse");
+    assert_eq!(json["layout"], "packed");
+    assert_eq!(json["frames"][3]["duplicateOf"], 1);
+    assert!(json["frames"][2].get("duplicateOf").is_none());
+}
+
+#[test]
+fn packed_sizes_match_after_scaling_and_respect_limits() {
+    use kagero::export::spritesheet::plan_scaled;
+    let frames = varied_frames();
+    let o = packed(1, 1, 2, true);
+    // The size shown before exporting equals the size of the scaled export.
+    let scaled: Vec<FrameImage> = frames
+        .iter()
+        .map(|f| FrameImage {
+            image: kagero::export::render::scale_nearest(&f.image, 3).expect("scale"),
+            ..f.clone()
+        })
+        .collect();
+    assert_eq!(
+        plan_scaled(&frames, 3, &o).expect("plan"),
+        plan(&scaled, &o).expect("plan")
+    );
+    // Too big for any sheet: refused before allocating.
+    assert!(matches!(
+        plan_scaled(&frames, 4000, &o),
+        Err(ExportError::TooLarge { .. })
+    ));
 }

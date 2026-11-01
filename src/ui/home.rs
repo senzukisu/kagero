@@ -20,8 +20,8 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
     ui.vertical_centered(|ui| {
         ui.set_max_width(card_width);
         Frame::new()
-            .fill(theme::PANEL)
-            .stroke(egui::Stroke::new(1.0_f32, theme::BORDER))
+            .fill(theme::panel())
+            .stroke(egui::Stroke::new(1.0_f32, theme::border()))
             .corner_radius(0)
             .shadow(egui::Shadow {
                 offset: [6, 6],
@@ -43,7 +43,7 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
                     // Fixed-height divider: `ui.separator()` would stretch to the window.
                     let (line, _) = ui
                         .allocate_exact_size(Vec2::new(1.0, CONTENT_HEIGHT), egui::Sense::hover());
-                    ui.painter().rect_filled(line, 0.0, theme::BORDER);
+                    ui.painter().rect_filled(line, 0.0, theme::border());
                     ui.add_space(16.0);
                     ui.allocate_ui_with_layout(
                         Vec2::new(ui.available_width(), CONTENT_HEIGHT),
@@ -61,7 +61,7 @@ pub fn show(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Command>) 
                 crate::APP_CHANNEL
             ))
             .small()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::text_secondary()),
         );
     });
 }
@@ -74,24 +74,28 @@ fn brand_column(ui: &mut egui::Ui, commands: &mut Vec<Command>) {
         RichText::new("Kagero")
             .font(theme::font(3))
             .strong()
-            .color(theme::TEXT_PRIMARY),
+            .color(theme::text_primary()),
     );
     ui.label(
         RichText::new("陽炎 · pixel art editor")
             .font(theme::font(1))
-            .color(theme::ACCENT),
+            .color(theme::accent()),
     );
     ui.label(
         RichText::new(format!("by {}", crate::STUDIO_NAME))
             .small()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::text_secondary()),
     );
     ui.add_space(24.0);
 
     let size = Vec2::new(220.0, 36.0);
-    let create = Button::new(RichText::new("Create New").strong().color(theme::ON_ACCENT))
-        .fill(theme::ACCENT)
-        .min_size(size);
+    let create = Button::new(
+        RichText::new("Create New")
+            .strong()
+            .color(theme::on_accent()),
+    )
+    .fill(theme::accent())
+    .min_size(size);
     if ui.add(create).on_hover_text("Ctrl+N").clicked() {
         commands.push(Command::NewDocument);
     }
@@ -111,13 +115,13 @@ fn recent_column(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Comma
         RichText::new("RECENT PROJECTS")
             .small()
             .strong()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::text_secondary()),
     );
     ui.add_space(6.0);
     if recent.is_empty() {
         ui.label(
             RichText::new("Projects you save or open will appear here.")
-                .color(theme::TEXT_SECONDARY),
+                .color(theme::text_secondary()),
         );
         return;
     }
@@ -137,9 +141,9 @@ fn recent_column(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Comma
                     .unwrap_or_default();
                 ui.horizontal(|ui| {
                     let title_color = if exists {
-                        theme::TEXT_PRIMARY
+                        theme::text_primary()
                     } else {
-                        theme::TEXT_SECONDARY
+                        theme::text_secondary()
                     };
                     let text = RichText::new(&name).color(title_color);
                     let resp = ui
@@ -164,7 +168,7 @@ fn recent_column(ui: &mut egui::Ui, recent: &[PathBuf], commands: &mut Vec<Comma
                 } else {
                     format!("Missing · {dir}")
                 };
-                ui.label(RichText::new(sub).small().color(theme::TEXT_SECONDARY));
+                ui.label(RichText::new(sub).small().color(theme::text_secondary()));
                 ui.add_space(6.0);
             }
         });

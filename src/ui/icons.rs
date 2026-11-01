@@ -52,10 +52,18 @@ pub enum Icon {
     Palette,
     Plug,
     Download,
+    Lock,
+    AlphaLock,
+    MergeDown,
+    Crop,
+    Lasso,
+    MagicWand,
+    Ellipse,
+    Polygon,
 }
 
 impl Icon {
-    pub const ALL: [Icon; 37] = [
+    pub const ALL: [Icon; 45] = [
         Icon::Pencil,
         Icon::Eraser,
         Icon::Fill,
@@ -93,6 +101,14 @@ impl Icon {
         Icon::Palette,
         Icon::Plug,
         Icon::Download,
+        Icon::Lock,
+        Icon::AlphaLock,
+        Icon::MergeDown,
+        Icon::Crop,
+        Icon::Lasso,
+        Icon::MagicWand,
+        Icon::Ellipse,
+        Icon::Polygon,
     ];
 
     pub fn for_tool(tool: ToolKind) -> Icon {
@@ -104,13 +120,162 @@ impl Icon {
             ToolKind::Line => Icon::Line,
             ToolKind::Rectangle => Icon::Rectangle,
             ToolKind::FilledRectangle => Icon::FilledRectangle,
+            ToolKind::Ellipse => Icon::Ellipse,
+            ToolKind::Polygon => Icon::Polygon,
             ToolKind::Pan => Icon::Pan,
             ToolKind::Select => Icon::Select,
+            ToolKind::Lasso => Icon::Lasso,
+            ToolKind::MagicWand => Icon::MagicWand,
+            ToolKind::Crop => Icon::Crop,
         }
     }
 
     pub fn bitmap(self) -> &'static [&'static str; 16] {
         match self {
+            Icon::Polygon => &[
+                "................",
+                ".......k........",
+                "......kokk......",
+                "....kk#k##k.....",
+                "...k##k.kk#kk...",
+                "..k#kk....k##k..",
+                ".kok.......kkok.",
+                ".k#k........k#k.",
+                "..k#k......k#k..",
+                "..k#k......k#k..",
+                "..k#k......k#k..",
+                "..k#k......k#k..",
+                "...k#kkkkkk#k...",
+                "...ko######ok...",
+                "....kkkkkkkk....",
+                "................",
+            ],
+            Icon::Ellipse => &[
+                "................",
+                "................",
+                ".....kkkkkk.....",
+                "...kk######kk...",
+                "..k###kkkk###k..",
+                ".k##kk....kk##k.",
+                ".k##k......k##k.",
+                ".k#k........k#k.",
+                ".k#k........k#k.",
+                ".k##k......k##k.",
+                ".k##kk....kk##k.",
+                "..k###kkkk###k..",
+                "...kk######kk...",
+                ".....kkkkkk.....",
+                "................",
+                "................",
+            ],
+            Icon::MagicWand => &[
+                ".......k...k....",
+                "......kyk.kyk...",
+                ".......k.kkykk..",
+                "........kyyoyyk.",
+                ".........kkykk..",
+                ".........kkyk...",
+                "........k#kk..k.",
+                ".......k##k..kyk",
+                "......k##k....k.",
+                ".....kd#k.......",
+                "....kddk........",
+                "...kddk.........",
+                "..kddk..........",
+                ".kddk...........",
+                "kddk............",
+                "kdk.............",
+            ],
+            Icon::Lasso => &[
+                ".......kk.......",
+                "....kkk##kkk....",
+                "..kk###kk###kk..",
+                ".k##kkk..kkk##k.",
+                ".k#k........k#k.",
+                "k##k........k##k",
+                "k##k........k##k",
+                ".k#k........k#k.",
+                ".k##kkk..kkk##k.",
+                "..kk###kk###kk..",
+                "....kwo##kkk....",
+                "....kwkkk.......",
+                "...kwk..........",
+                "...kwk..........",
+                "..kwk...........",
+                "...k............",
+            ],
+            Icon::Crop => &[
+                "..k##k..........",
+                "..k##k..........",
+                "kkk##kkkkkkk....",
+                "ooooooooooook...",
+                "ooooooooooook...",
+                "kkk##kkkkkook...",
+                "..k##k...kook...",
+                "..k##k...kook...",
+                "..k##k...kook...",
+                "..k##kkkkkookkkk",
+                "..k#######oo####",
+                "..k#######oo####",
+                "...kkkkkkkookkkk",
+                ".........kook...",
+                ".........kook...",
+                "..........kk....",
+            ],
+            Icon::MergeDown => &[
+                "...kkkkkkkkkk...",
+                "..kbbbbbbbbbbk..",
+                "..kbbbbbbbbbbk..",
+                "..kbbbbbbbbbbk..",
+                "...kkkkkkkkkk...",
+                "......kook......",
+                "......kook......",
+                ".....kkookk.....",
+                "....kooooook....",
+                ".....kooook.....",
+                "......kook......",
+                "..kkkkkkkkkkkk..",
+                ".k############k.",
+                ".k############k.",
+                ".kggggggggggggk.",
+                "..kkkkkkkkkkkk..",
+            ],
+            Icon::AlphaLock => &[
+                "................",
+                ".kkkkkkkkk......",
+                "kggddggddgk.....",
+                "kggddggddgk.....",
+                "kddggddggdk.....",
+                "kddggddggdk.....",
+                "kggddggddgkkkk..",
+                "kggddggddgggggk.",
+                "kddggddggdgkkgk.",
+                "kddggddggdgkkgk.",
+                "kggddggddooooook",
+                ".kkkkkkkkoorrook",
+                "........kooooook",
+                "........kooooook",
+                ".........kkkkkk.",
+                "................",
+            ],
+            Icon::Lock => &[
+                "................",
+                ".....kkkkkk.....",
+                "....kggggggk....",
+                "....kgkkkkgk....",
+                "....kgk..kgk....",
+                "....kgk..kgk....",
+                "....kgkkkkgk....",
+                "...kyyyyyyyyk...",
+                "...kooooooook...",
+                "...kooorroook...",
+                "...kooorroook...",
+                "...kooooooook...",
+                "...kppppppppk...",
+                "....kkkkkkkk....",
+                "................",
+                "................",
+            ],
             Icon::Pencil => &[
                 "............kk..",
                 "...........keek.",
@@ -902,9 +1067,9 @@ pub fn logo_rgba(scale: u32) -> (Vec<u8>, u32, u32) {
 pub fn bevel(painter: &egui::Painter, rect: Rect, raised: bool) {
     let px = 1.0 / painter.ctx().pixels_per_point();
     let (tl, br) = if raised {
-        (theme::BEVEL_LIGHT, theme::BEVEL_DARK)
+        (theme::bevel_light(), theme::bevel_dark())
     } else {
-        (theme::BEVEL_DARK, theme::BEVEL_LIGHT)
+        (theme::bevel_dark(), theme::bevel_light())
     };
     let r = rect;
     let mut mesh = egui::Mesh::default();
@@ -947,18 +1112,18 @@ pub fn icon_button(
         let pressed = enabled && response.is_pointer_button_down_on();
         let hovered = enabled && response.hovered();
         if selected || pressed {
-            painter.rect_filled(rect, 0.0, theme::EMBER_DEEP);
+            painter.rect_filled(rect, 0.0, theme::ember_deep());
             bevel(painter, rect, false);
             if selected {
                 painter.rect_stroke(
                     rect,
                     0.0,
-                    Stroke::new(1.0_f32, theme::ACCENT),
+                    Stroke::new(1.0_f32, theme::accent()),
                     StrokeKind::Inside,
                 );
             }
         } else if hovered {
-            painter.rect_filled(rect, 0.0, theme::SURFACE_HOVER);
+            painter.rect_filled(rect, 0.0, theme::surface_hover());
             bevel(painter, rect, true);
         }
         let tint = if enabled {

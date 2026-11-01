@@ -94,7 +94,32 @@ impl Default for JpegOptions {
     }
 }
 
-/// How a GIF repeats.
+/// File format of animations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum AnimationFormat {
+    #[default]
+    Gif,
+    /// Lossless animated WebP with full transparency.
+    WebP,
+}
+
+impl AnimationFormat {
+    pub fn label(self) -> &'static str {
+        match self {
+            AnimationFormat::Gif => "GIF",
+            AnimationFormat::WebP => "Animated WebP",
+        }
+    }
+
+    pub fn extension(self) -> &'static str {
+        match self {
+            AnimationFormat::Gif => "gif",
+            AnimationFormat::WebP => "webp",
+        }
+    }
+}
+
+/// How a GIF (or animated WebP) repeats.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GifLoop {
     Forever,
@@ -196,6 +221,11 @@ pub struct SheetOptions {
     pub background: Option<Rgba>,
     pub image_format: StillFormat,
     pub metadata: MetadataFormat,
+    /// Pack trimmed frames as tightly as possible instead of using `layout`'s grid.
+    /// (A separate switch, so settings stay readable by older Kagero versions.)
+    pub packed: bool,
+    /// Packed sheets: identical frames share one spot on the sheet.
+    pub merge_duplicates: bool,
 }
 
 impl Default for SheetOptions {
@@ -211,6 +241,8 @@ impl Default for SheetOptions {
             background: None,
             image_format: StillFormat::Png,
             metadata: MetadataFormat::Kagero,
+            packed: false,
+            merge_duplicates: true,
         }
     }
 }
@@ -258,6 +290,9 @@ pub struct ExportSettings {
     pub kind: ExportKind,
     pub still_format: StillFormat,
     pub frames: FrameSelection,
+    /// Export the frames of this tag instead of `frames` (kept separate from
+    /// `frames` so older Kagero versions still read these settings).
+    pub tag: Option<String>,
     pub layers: LayerSource,
     /// Scale per kind/format so e.g. GIF can stay at ×4 while PNG uses ×1.
     pub scale_png: u32,
@@ -267,6 +302,8 @@ pub struct ExportSettings {
     pub scale_sheet: u32,
     pub jpeg: JpegOptions,
     pub gif: GifOptions,
+    /// GIF or animated WebP (the Animation tab).
+    pub animation_format: AnimationFormat,
     pub sheet: SheetOptions,
     pub naming: NamingOptions,
     pub last_dir: Option<PathBuf>,
@@ -279,6 +316,7 @@ impl Default for ExportSettings {
             kind: ExportKind::Image,
             still_format: StillFormat::Png,
             frames: FrameSelection::Current,
+            tag: None,
             layers: LayerSource::Visible,
             scale_png: 1,
             scale_jpeg: 1,
@@ -287,6 +325,7 @@ impl Default for ExportSettings {
             scale_sheet: 1,
             jpeg: JpegOptions::default(),
             gif: GifOptions::default(),
+            animation_format: AnimationFormat::Gif,
             sheet: SheetOptions::default(),
             naming: NamingOptions::default(),
             last_dir: None,

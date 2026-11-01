@@ -4,6 +4,84 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] Beta — 2026-10-30
+
+Everyday comfort and pixel-artist tools.
+
+### Added
+
+- **Canvas Size** (Image → Canvas Size…, Ctrl+Alt+C): new width and height with a 3×3 anchor,
+  a preview, and a warning when pixels would be cut off. It works on all layers and frames
+  and is one undo step.
+- **Crop tool** (C): drag a frame, adjust it by its handles, Enter crops all layers and
+  frames, Esc cancels. Also **Crop to Selection**.
+- **Layer opacity** (slider in the Layers panel): affects the canvas, preview and every
+  export, never the layer's pixels. Dragging the slider is one undo step.
+- **Duplicate Layer** (Ctrl+Alt+D, "Layer copy") and **Merge Down** (Ctrl+Alt+M, keeps the
+  look including opacity, works on all frames, one undo step).
+- **Lock** and **Alpha Lock** per layer, and a right-click menu on layers.
+- **Autosave and crash recovery**: while there are unsaved changes, a copy is written every
+  2 minutes (1–60, Settings → General) to `%APPDATA%\OnibiLab\Kagero\recovery`. It is never
+  written next to or over your project. After a crash, the next start offers each copy
+  (Open Recovered · Open Original · Delete Copy), and **File → Recover Projects…** shows them
+  any time. Copies are written atomically; old ones are trimmed (10 copies, 512 MB).
+- **Frame tags**: named, colored frame ranges shown above the timeline. You can loop a
+  tag in the preview, jump between tags (Alt+, / Alt+.), export just a tag, and the tags
+  are written to sprite-sheet JSON (`tags` in Kagero JSON, Aseprite-style
+  `meta.frameTags` in JSON Hash). Tags follow frame insertions and deletions with exact
+  undo.
+- **Lasso** (Q) and **Magic Wand** (W, with tolerance, contiguous, and active layer or all
+  visible layers) selections, and selection modes **Add** (Shift), **Subtract** (Alt),
+  **Intersect** (Shift+Alt) and **Invert Selection** (Ctrl+Shift+I). Copy, cut, paste,
+  delete, move, duplicate, flip and rotate work on the exact selected shape.
+- **Animated WebP** export: lossless, with full transparency, millisecond durations, and
+  loop forever or play once.
+- **Packed sprite sheets**: frames are trimmed and packed tightly, deterministically and
+  without overlaps; identical frames can share one spot (`duplicateOf` in the metadata).
+- **Ellipse** (K) and **Polygon** (P) tools, outlined or filled.
+- **Symmetry** (mirror left↔right and/or top↔bottom), **dithering** (25%, checker 50%,
+  75%), **round brushes**, and **custom brushes** made from a selection (Ctrl+B).
+- **Fill** options: tolerance, contiguous on/off, active layer or all visible layers;
+  stays inside the selection.
+- **Exact color entry**: HEX (`#RGB`, `#RRGGBB`, `#RRGGBBAA`) and R, G, B, A fields.
+- **Convert to Palette** (Image menu): maps every color to the nearest color of the
+  current palette, with a before/after preview, for the active layer, its frames, or all
+  unlocked layers.
+- **Themes** (Settings → Themes): Kagero Ember, Night Sakura, Misty Forest and Paper
+  (light), live preview with Keep/Revert, and import, export or delete of your own themes
+  (versioned JSON; unreadable color combinations are refused).
+- **Plugins** (Settings → Plugins, Plugins menu): Lua 5.4 scripts that change the active
+  layer, run in a sandbox (no files, network or programs; memory and time limits) on a
+  background thread, as one undo step. New plugins start turned off. Includes an
+  installable example plugin and documentation of the API (version 1).
+- **Program icon** for `kagero.exe` (Explorer, taskbar, shortcuts) and version information.
+- **Installer** `kagero-<version>-setup.exe`: per user (no administrator rights) in
+  `%LOCALAPPDATA%\Programs\Kagero`, with a Start menu shortcut, an optional desktop
+  shortcut and an "Installed apps" entry. Updates keep working. Uninstalling keeps your
+  projects, settings, themes, plugins and autosave copies.
+
+### Changed
+
+- `.kgr` projects are written as format version 3 only when a layer has opacity below
+  100%; otherwise they stay version 2, readable by Kagero 0.3. Frame tags are an optional
+  addition that older versions ignore. Kagero 0.4 opens all earlier projects.
+- New settings are stored so that going back to an older Kagero (Settings → Updates →
+  Restore Previous Version) still reads your settings.
+- The tool strip switches to two columns when the window is too short for one.
+- The minimum timeline height grew a little to fit the tag row.
+
+### Known limitations
+
+- Pencil, shapes and other drawing tools don't stay inside the selection (Fill does).
+- Lasso and Magic Wand can't drag the selected pixels; use Rectangle Select (M) or the
+  arrow keys.
+- Custom brushes are kept until Kagero closes; they aren't saved.
+- Filling the largest canvas (2048×2048) takes about a tenth of a second.
+- The plugin API covers the active layer, the selection and the colors; there's no access
+  to other layers, frames or new tools yet.
+- The installer and Kagero aren't signed with a paid certificate, so Windows SmartScreen
+  may warn on first start. The release files are signed with minisign.
+
 ## [0.3.8] Beta — 2026-10-29
 
 Settings, shortcuts and experiments.

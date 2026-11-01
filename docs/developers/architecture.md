@@ -5,8 +5,9 @@ icon: sitemap
 
 # Architecture
 
-Kagero is one Rust crate with a library and two binaries: `kagero` (the editor) and
-`kagero-updater` (the install helper). The code is split into layers; each depends only
+Kagero is one Rust crate with a library and three binaries: `kagero` (the editor),
+`kagero-updater` (the update helper) and `kagero-setup` (the installer, also used as
+`uninstall.exe`). The code is split into layers; each depends only
 on the layers below it.
 
 ```
@@ -22,9 +23,10 @@ on the layers below it.
 │ I/O          file_io/*         .kgr, PNG, palette files, atomic writes│
 │              export/*          snapshot → prepare → encode          │
 └───────────────────────────────────────────────────────────────────┘
-  services/      updater, update installer, native dialogs, logging
+  services/      updater, update installer, setup/uninstall, recovery, dialogs, logging
   integrations/  Discord Rich Presence
-  config.rs  settings · theme.rs  Kagero Ember style · release.rs  public IDs/keys
+  config.rs  settings · theme.rs  pixel style and current colors · themes.rs  theme files
+  plugins.rs  Lua plugins · release.rs  public IDs/keys
 ```
 
 ## Pixel engine — `src/core`
@@ -32,14 +34,20 @@ on the layers below it.
 * `Rgba` — straight-alpha 8-bit color with integer "source over" compositing.
 * `PixelBuffer` — `width × height × 4` bytes, bounds-checked, size validated
   (1–2048 per side) before allocation.
-* `Document` — layers (`LayerInfo`: id, name, visibility) shared by all frames, and
-  `Frame`s (id, duration, one cel per layer, revision). At least one layer and frame;
-  active indices always in range. `LayerId`/`FrameId` stay stable across reordering.
-  The current selection lives here in memory only.
+* `Document` — layers (`LayerInfo`: id, name, visibility, opacity, locks) shared by all
+  frames, `Frame`s (id, duration, one cel per layer, revision) and frame tags (`tags.rs`:
+  name, first/last frame position, color). At least one layer and frame; active
+  indices always in range. `LayerId`/`FrameId` stay stable across reordering. The
+  current selection lives here in memory only. Compositing (canvas, preview, export)
+  goes through `composite_frame*`, which applies layer opacity.
 * `structure_revision` and per-frame `revision` change with pixels or layer
   order/visibility; thumbnail and texture caches key on them.
-* `raster` (lines, rectangles, brushes, flood fill), `onion_skin` (view-only overlay
-  plan), `selection` (`SelRect`, `Block` with flips/rotations), `palette` (built-ins).
+* `raster` (lines, rectangles, ellipses, square and round brushes), `region`
+  (similar-color areas for Fill and the magic wand, polygon masks for the lasso),
+  `dither` (ordered patterns), `onion_skin` (view-only overlay plan), `selection`
+  (`SelRect`, `Selection` = bounds plus an optional shared mask with
+  combine/invert/outline, `Block` with flips/rotations), `palette` (built-ins,
+  nearest color).
 * Limits: 2048×2048, 64 layers, 1000 frames, all cels ≤ 512 MiB.
 
 ## Application — `src/editor`
@@ -52,6 +60,10 @@ on the layers below it.
 * **Selection operations** (`selection_ops.rs`) diff the active cel and record a
   `Change::Group` of the pixel change plus `SetSelection`, so undo restores pixels and
   the outline together.
+* **Tools** paint through one `stamp` that applies the brush tip, symmetry, dithering
+  and alpha lock. Polygons keep their corners in the stroke until they are closed.
+* **Frame edits that move tags** record a `Group` of the frame change plus a `Tags`
+  swap, so undo restores tags removed with their last frame.
 * **Read-only mode** blocks pixel edits during the preview.
 * **Saved state** compares the top of the undo stack with the state at the last save.
 
@@ -66,6 +78,8 @@ The history is bounded (256 entries, 256 MiB). Data moves between the document a
 | `AddFrame` / `RemoveFrame` / `MoveFrame` | index; the frame while removed; from/to |
 | `SetFrameDuration` | frame id, before/after |
 | `SetSelection` · `Group` | selection before/after · a labeled list of changes |
+| `SetLayerProps` | layer id, opacity and locks before/after |
+| `SwapLayer` · `Geometry` · `Tags` | self-inverse swaps: a whole layer (Merge Down), the canvas size with all cels (Canvas Size, Crop), the tag list |
 
 ## Files — `src/file_io`
 
@@ -112,8 +126,9 @@ cancel flag and progress. Every output size is checked against 16 384 px per sid
 
 ## Services and integrations
 
-The updater, the install helper and Discord Rich Presence are described in
-[Services](services.md). None of them is required: failures are shown quietly and
+The updater, the installer, autosave and Discord Rich Presence are described in
+[Services](services.md). Plugins are documented in [Plugins](../plugins/README.md) and
+themes in [Themes](../reference/themes.md). None of them is required: failures are shown quietly and
 editing continues.
 
 ## Error handling
@@ -129,4 +144,7 @@ editing continues.
   `icons.rs`, a shortcut.
 * **New undoable operation:** a `Change` variant with `apply`/`revert`/`byte_size`/`dirty`.
 * **New project format version:** bump `KGR_FORMAT_VERSION`, add a reader branch, keep
-  the older ones.
+  the older ones. Write the new version only when the file needs it (as version 3 does
+  for layer opacity), so older Kagero keeps opening ordinary projects.
+* **New settings:** add fields with `#[serde(default)]` and never add variants to enums
+  older versions read; a downgrade must still load the settings file.

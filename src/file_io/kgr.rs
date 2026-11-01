@@ -26,8 +26,14 @@ use crate::core::{
 pub const KGR_EXTENSION: &str = "kgr";
 /// Identifier stored in the manifest.
 pub const KGR_FORMAT_ID: &str = "kagero-project";
-/// Current (and highest readable) format version.
-pub const KGR_FORMAT_VERSION: u32 = 2;
+/// Highest readable format version.
+///
+/// Version 3 = version 2 plus layer opacity. It is written only when a layer actually
+/// uses opacity below 100 %, so every other project stays readable by Kagero 0.2–0.3.
+/// Layer locks and frame tags are optional fields that older versions safely ignore.
+pub const KGR_FORMAT_VERSION: u32 = 3;
+/// The version written for projects that don't need version 3.
+const KGR_BASE_VERSION: u32 = 2;
 
 const MANIFEST: &str = "manifest.json";
 const DOCUMENT: &str = "document.json";
@@ -82,6 +88,19 @@ struct DocumentV2 {
     layers: Vec<LayerV2>,
     /// Playback order.
     frames: Vec<FrameV2>,
+    /// Frame tags (added in Kagero 0.4; older versions ignore them).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<TagV2>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TagV2 {
+    name: String,
+    /// First and last frame position, 0-based and inclusive.
+    start: usize,
+    end: usize,
+    /// `#RRGGBB`.
+    color: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,6 +108,21 @@ struct LayerV2 {
     id: u64,
     name: String,
     visible: bool,
+    /// 0–255; version 3 when below 255.
+    #[serde(default = "full_opacity")]
+    opacity: u8,
+    #[serde(default, skip_serializing_if = "is_false")]
+    locked: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    alpha_lock: bool,
+}
+
+fn full_opacity() -> u8 {
+    255
+}
+
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -112,7 +146,11 @@ pub fn write_kgr<W: Write + Seek>(doc: &Document, writer: W) -> Result<W, FileEr
 
     let manifest = Manifest {
         format: KGR_FORMAT_ID.to_owned(),
-        format_version: KGR_FORMAT_VERSION,
+        format_version: if doc.layers().iter().any(|l| l.opacity < 255) {
+            KGR_FORMAT_VERSION
+        } else {
+            KGR_BASE_VERSION
+        },
         app_version: crate::APP_VERSION.to_owned(),
     };
     zip.start_file(MANIFEST, json_opts)?;
@@ -130,6 +168,9 @@ pub fn write_kgr<W: Write + Seek>(doc: &Document, writer: W) -> Result<W, FileEr
                 id: l.id.0,
                 name: l.name.clone(),
                 visible: l.visible,
+                opacity: l.opacity,
+                locked: l.locked,
+                alpha_lock: l.alpha_lock,
             })
             .collect(),
         frames: doc
@@ -140,6 +181,16 @@ pub fn write_kgr<W: Write + Seek>(doc: &Document, writer: W) -> Result<W, FileEr
                 id: f.id.0,
                 duration_ms: f.duration_ms(),
                 cels: (0..doc.layer_count()).map(|li| cel_file(fi, li)).collect(),
+            })
+            .collect(),
+        tags: doc
+            .tags()
+            .iter()
+            .map(|t| TagV2 {
+                name: t.name.clone(),
+                start: t.start,
+                end: t.end,
+                color: t.color.to_hex(),
             })
             .collect(),
     };
@@ -197,7 +248,8 @@ pub fn read_kgr<R: Read + Seek>(reader: R) -> Result<Document, FileError> {
             let doc_bytes = read_entry(&mut zip, DOCUMENT, MAX_JSON_BYTES)?;
             read_v1(&mut zip, &doc_bytes)
         }
-        2 => {
+        // Version 3 only adds layer opacity to version 2's layout.
+        2 | 3 => {
             let doc_bytes = read_entry(&mut zip, DOCUMENT, MAX_JSON_BYTES)?;
             read_v2(&mut zip, &doc_bytes)
         }
@@ -361,6 +413,31 @@ fn read_v2<R: Read + Seek>(zip: &mut ZipArchive<R>, json: &[u8]) -> Result<Docum
         doc.active_frame,
     )?;
     document.restore_ids(&layer_ids, &frame_ids)?;
+    for stored in &doc.layers {
+        if let Some(layer) = document.layer_mut(crate::core::LayerId(stored.id)) {
+            layer.opacity = stored.opacity;
+            layer.locked = stored.locked;
+            layer.alpha_lock = stored.alpha_lock;
+        }
+    }
+    if doc.tags.len() > crate::core::tags::MAX_TAGS {
+        return Err(FileError::Invalid("too many frame tags".to_owned()));
+    }
+    // Damaged tags (bad ranges, empty names) are dropped instead of refusing the file.
+    document.set_tags(
+        doc.tags
+            .iter()
+            .map(|t| crate::core::FrameTag {
+                name: t.name.clone(),
+                start: t.start,
+                end: t.end,
+                color: crate::core::Rgba::from_hex(&t.color)
+                    .map_or(crate::core::tags::TAG_COLORS[0], |c| {
+                        crate::core::Rgba::opaque(c.r(), c.g(), c.b())
+                    }),
+            })
+            .collect(),
+    );
     Ok(document)
 }
 

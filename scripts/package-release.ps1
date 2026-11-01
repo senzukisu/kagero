@@ -8,7 +8,10 @@
                                                SHA256SUMS.txt for the two executables
                                                (see docs/developers/services.md)
     kagero-<version>-windows-x64.zip.minisig   minisign signature of the zip
-    SHA256SUMS.txt                             checksums of both files
+    kagero-<version>-setup.exe                 installer (per user, no admin): the release zip
+                                               appended to kagero-setup.exe
+    kagero-<version>-setup.exe.minisig         minisign signature of the installer
+    SHA256SUMS.txt                             checksums of all four files
 
   The secret signing key is never stored in the repository. Pass its path with
   -SecretKey (default: %USERPROFILE%\.kagero-release\kagero.key).
@@ -70,8 +73,22 @@ if ($LASTEXITCODE -ne 0) { throw "signing failed" }
 rsign verify -p $PublicKey -x $sig $zip
 if ($LASTEXITCODE -ne 0) { throw "signature verification failed" }
 
+# The installer carries the signed release zip and checks its SHA256SUMS.txt.
+$setup = Join-Path $dist "kagero-$version-setup.exe"
+if (Test-Path $setup) { Remove-Item $setup -Force }
+& target\release\kagero-setup.exe --build-installer $zip $setup
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $setup)) { throw "building the installer failed" }
+$setupSig = "$setup.minisig"
+if (Test-Path $setupSig) { Remove-Item $setupSig -Force }
+$signArgs = @("sign", "-s", $SecretKey, "-x", $setupSig, "-t", "Kagero $version installer")
+if ($Passwordless) { $signArgs += "-W" }
+rsign @signArgs $setup
+if ($LASTEXITCODE -ne 0) { throw "signing the installer failed" }
+rsign verify -p $PublicKey -x $setupSig $setup
+if ($LASTEXITCODE -ne 0) { throw "installer signature verification failed" }
+
 $sums = Join-Path $dist "SHA256SUMS.txt"
-$lines = foreach ($f in @($zip, $sig)) {
+$lines = foreach ($f in @($zip, $sig, $setup, $setupSig)) {
     "{0}  {1}" -f (Get-FileHash $f -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $f -Leaf)
 }
 [IO.File]::WriteAllText($sums, ($lines -join "`n") + "`n")

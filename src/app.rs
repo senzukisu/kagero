@@ -58,6 +58,10 @@ enum Dialog {
     About,
     /// Kagero's and the third-party licenses; the open tab.
     Licenses(u8),
+    CanvasSize(dialogs::CanvasSizeState),
+    Recovery(dialogs::RecoveryState),
+    Tag(dialogs::TagState),
+    ConvertPalette(dialogs::ConvertPaletteState),
     ConfirmDeleteFrame(usize),
 }
 
@@ -83,6 +87,21 @@ pub struct KageroApp {
     notified_version: Option<semver::Version>,
     has_backup: bool,
     dialog: Option<Dialog>,
+    /// This session's autosave copy and the recovery folder.
+    recovery: crate::services::recovery::Recovery,
+    /// When the last autosave copy was started (or the document changed hands).
+    last_autosave: Instant,
+    /// Built-in and imported color themes.
+    themes: crate::themes::ThemeStore,
+    /// While a theme is previewed in Settings: the one being shown.
+    theme_preview: Option<String>,
+    plugins: crate::plugins::PluginStore,
+    /// A plugin command running in the background, with the layer it works on.
+    plugin_job: Option<(
+        crate::plugins::PluginJob,
+        crate::core::FrameId,
+        crate::core::LayerId,
+    )>,
     status: Option<StatusMessage>,
     rename: RenameState,
     allow_close: bool,
@@ -94,13 +113,30 @@ impl KageroApp {
         theme::apply(&cc.egui_ctx);
         let config_path = Config::default_path();
         let config = config_path.as_deref().map(Config::load).unwrap_or_default();
+        let recovery = crate::services::recovery::Recovery::start(
+            Config::default_dir()
+                .unwrap_or_else(std::env::temp_dir)
+                .join("recovery"),
+        );
+        let orphans = recovery.orphans();
+        // After a self-update, keep the version in "Apps & features" right.
+        if let Ok(dir) = crate::services::update_installer::install_dir() {
+            crate::services::setup::refresh_registration(&dir, crate::APP_VERSION);
+        }
+        let themes =
+            crate::themes::ThemeStore::load(Config::default_dir().map(|d| d.join("themes")));
+        let colors = themes
+            .find(&config.theme)
+            .map_or(crate::theme::EMBER, |t| t.colors);
+        crate::theme::set_colors(colors);
+        theme::apply(&cc.egui_ctx);
         let canvas = CanvasView::new(config.show_grid);
         let repaint_ctx = cc.egui_ctx.clone();
         let updater = UpdateManager::new(
             Arc::new(UreqClient::new()),
             Arc::new(move || repaint_ctx.request_repaint()),
         );
-        Self {
+        let mut app = Self {
             config,
             config_path,
             config_save_at: None,
@@ -120,11 +156,26 @@ impl KageroApp {
             notified_version: None,
             has_backup: false,
             dialog: None,
+            recovery,
+            last_autosave: Instant::now(),
+            themes,
+            theme_preview: None,
+            plugins: crate::plugins::PluginStore::load(
+                Config::default_dir().map(|d| d.join("plugins")),
+            ),
+            plugin_job: None,
             status: None,
             rename: None,
             allow_close: false,
             window_title: String::new(),
+        };
+        if !orphans.is_empty() {
+            app.dialog = Some(Dialog::Recovery(dialogs::RecoveryState {
+                entries: orphans,
+                errors: Default::default(),
+            }));
         }
+        app
     }
 
     /// Opens a `.kgr` or `.png` given on the command line.
@@ -250,6 +301,8 @@ impl KageroApp {
 
     fn exit(&mut self, ctx: &egui::Context) {
         self.stop_playback();
+        // Leaving on purpose: the work was saved or deliberately discarded.
+        self.recovery.discard();
         self.save_config();
         self.allow_close = true;
         ctx.send_viewport_cmd(ViewportCommand::Close);
@@ -258,6 +311,9 @@ impl KageroApp {
     /// Installs a new document, keeping the tool and colors of the previous one.
     fn set_document(&mut self, doc: Document, path: Option<PathBuf>, name: String) {
         self.player.reset();
+        // The previous document was saved or deliberately discarded by now.
+        self.recovery.discard();
+        self.last_autosave = Instant::now();
         let mut editor = Editor::new(doc, path, name);
         if let Some(old) = &self.editor {
             editor.tool = old.tool;
@@ -356,6 +412,7 @@ impl KageroApp {
         match file_io::save_kgr(editor.document(), &path) {
             Ok(()) => {
                 editor.mark_saved(path.clone());
+                self.recovery.discard();
                 self.config.add_recent(&path);
                 self.save_config();
                 self.success(format!("Saved {}", path.display()));
@@ -416,6 +473,7 @@ impl KageroApp {
             }
             Command::ExportAllFrames => {
                 self.config.export.frames = FrameSelection::All;
+                self.config.export.tag = None;
                 self.execute(ctx, Command::OpenExport(ExportKind::Image));
             }
             Command::OpenExport(kind) => {
@@ -463,6 +521,72 @@ impl KageroApp {
             }
             Command::Exit => self.request(ctx, Pending::Exit),
             Command::About => self.dialog = Some(Dialog::About),
+            Command::ManagePlugins => {
+                self.plugins.reload();
+                self.settings
+                    .open_at(crate::ui::settings::SettingsTab::Plugins);
+            }
+            Command::RunPlugin(plugin, command) => self.run_plugin(&plugin, &command),
+            Command::OpenConvertPalette => {
+                if let Some(editor) = &mut self.editor {
+                    self.player.stop(editor);
+                    editor.end_stroke();
+                    self.dialog = Some(Dialog::ConvertPalette(
+                        dialogs::ConvertPaletteState::default(),
+                    ));
+                }
+            }
+            Command::NewTag => {
+                if let Some(editor) = &mut self.editor {
+                    self.player.stop(editor);
+                    let doc = editor.document();
+                    let selected = self.timeline.selected_indices(doc);
+                    let (start, end) = match (selected.first(), selected.last()) {
+                        (Some(&a), Some(&b)) if selected.len() > 1 => (a, b),
+                        _ => (doc.active_frame_index(), doc.active_frame_index()),
+                    };
+                    let tag = editor.suggest_tag(start, end);
+                    let frame_count = editor.document().frame_count();
+                    self.dialog = Some(Dialog::Tag(dialogs::TagState {
+                        index: None,
+                        tag,
+                        frame_count,
+                    }));
+                }
+            }
+            Command::EditTag(i) => {
+                if let Some(editor) = &mut self.editor {
+                    self.player.stop(editor);
+                    let doc = editor.document();
+                    if let Some(tag) = doc.tags().get(i) {
+                        self.dialog = Some(Dialog::Tag(dialogs::TagState {
+                            index: Some(i),
+                            tag: tag.clone(),
+                            frame_count: doc.frame_count(),
+                        }));
+                    }
+                }
+            }
+            Command::OpenRecovery => {
+                let entries = self.recovery.orphans();
+                if entries.is_empty() {
+                    self.info("No autosaved copies to recover");
+                } else {
+                    self.dialog = Some(Dialog::Recovery(dialogs::RecoveryState {
+                        entries,
+                        errors: Default::default(),
+                    }));
+                }
+            }
+            Command::OpenCanvasSize => {
+                if let Some(editor) = &self.editor {
+                    let d = editor.document();
+                    self.dialog = Some(Dialog::CanvasSize(dialogs::CanvasSizeState::new(
+                        d.width(),
+                        d.height(),
+                    )));
+                }
+            }
             Command::Licenses => self.dialog = Some(Dialog::Licenses(0)),
             Command::ToggleGrid => {
                 self.config.show_grid = !self.config.show_grid;
@@ -707,8 +831,11 @@ impl KageroApp {
             Command::TogglePlayback => {
                 if self.player.is_playing() {
                     self.player.stop(editor);
+                } else if let Some(range) = self.timeline.loop_range(editor.document()) {
+                    self.player
+                        .start(editor, &self.config.playback, Some(range));
                 } else if editor.document().frame_count() > 1 {
-                    self.player.start(editor, &self.config.playback);
+                    self.player.start(editor, &self.config.playback, None);
                 } else {
                     self.info("Add a second frame to preview an animation");
                 }
@@ -737,6 +864,82 @@ impl KageroApp {
             Command::MoveFrameLeft(i) => editor.move_frame_left(i),
             Command::MoveFrameRight(i) => editor.move_frame_right(i),
             Command::SetFrameDuration(i, ms) => editor.set_frame_duration(i, ms),
+            Command::InsertTag(tag) => editor.insert_tag(tag).map(|i| {
+                let doc = editor.document();
+                if let Some(t) = doc.tags().get(i) {
+                    self.timeline.select_range(doc, t.frames(doc.frame_count()));
+                }
+            }),
+            Command::UpdateTag(i, tag) => editor.update_tag(i, tag),
+            Command::DeleteTag(i) => editor.remove_tag(i),
+            Command::PrevTag | Command::NextTag => {
+                let doc = editor.document();
+                let active = doc.active_frame_index();
+                let mut starts: Vec<usize> = doc.tags().iter().map(|t| t.start).collect();
+                starts.sort_unstable();
+                starts.dedup();
+                let target = if command == Command::NextTag {
+                    starts.into_iter().find(|&s| s > active)
+                } else {
+                    // The start of the tag we're in counts as "previous" only when we're
+                    // past it; otherwise go to the one before.
+                    starts.into_iter().rev().find(|&s| s < active)
+                };
+                match target {
+                    Some(s) => {
+                        editor.select_frame(s);
+                        Ok(())
+                    }
+                    None => {
+                        self.info(if command == Command::NextTag {
+                            "No tag after this frame"
+                        } else {
+                            "No tag before this frame"
+                        });
+                        Ok(())
+                    }
+                }
+            }
+            Command::DuplicateLayer => editor.duplicate_layer(editor.document().active_index()),
+            Command::MergeDown => editor.merge_down(editor.document().active_index()),
+            Command::SetLayerProps(i, props) => editor.set_layer_props(i, props),
+            Command::PreviewLayerOpacity(i, v) => {
+                editor.preview_layer_opacity(i, v);
+                Ok(())
+            }
+            Command::CommitLayerOpacity(i, before) => editor.commit_layer_opacity(i, before),
+            Command::ResizeCanvas(w, h, anchor) => {
+                let r = editor.resize_canvas(w, h, anchor);
+                if r.is_ok() {
+                    self.canvas.request_fit();
+                }
+                r
+            }
+            Command::ApplyCrop => match editor.crop_rect.take() {
+                Some(c) => {
+                    let r = editor.crop(c.x.max(0) as u32, c.y.max(0) as u32, c.w, c.h);
+                    if r.is_ok() {
+                        self.canvas.request_fit();
+                    }
+                    r
+                }
+                None => Ok(()),
+            },
+            Command::CancelCrop => {
+                editor.crop_rect = None;
+                Ok(())
+            }
+            Command::CropToSelection => match editor.selection() {
+                Some(s) => {
+                    let r = editor.crop(s.x.max(0) as u32, s.y.max(0) as u32, s.w, s.h);
+                    if r.is_ok() {
+                        editor.crop_rect = None;
+                        self.canvas.request_fit();
+                    }
+                    r
+                }
+                None => Err(crate::editor::EditError::NoSelection),
+            },
             Command::SelectAll => {
                 editor.set_tool(crate::editor::ToolKind::Select);
                 editor.select_all();
@@ -744,6 +947,37 @@ impl KageroApp {
             }
             Command::Deselect => {
                 editor.deselect();
+                Ok(())
+            }
+            Command::FinishPolygon => {
+                editor.end_stroke();
+                Ok(())
+            }
+            Command::BrushFromSelection => {
+                let r = editor.brush_from_selection();
+                if r.is_ok() {
+                    if !editor.tool.uses_brush_size() {
+                        editor.set_tool(crate::editor::ToolKind::Pencil);
+                    }
+                    self.info("The selection is now the brush (Brush: Custom)");
+                }
+                r
+            }
+            Command::ConvertToPalette(scope) => {
+                let colors = self.config.active_palette().colors.clone();
+                editor.convert_to_palette(&colors, scope).map(|n| {
+                    self.info(if n == 0 {
+                        "Every color is already in the palette".to_owned()
+                    } else {
+                        format!("Converted {n} pixels to the palette")
+                    });
+                })
+            }
+            Command::InvertSelection => {
+                editor.invert_selection();
+                if !editor.tool.selects() {
+                    editor.set_tool(crate::editor::ToolKind::Select);
+                }
                 Ok(())
             }
             Command::SetSelection(rect) => {
@@ -791,6 +1025,113 @@ impl KageroApp {
                 self.request(ctx, Pending::RestorePrevious);
             }
             SettingsAction::DiscordRetry => self.discord.retry(),
+            SettingsAction::PreviewTheme(name) => {
+                if name == self.config.theme {
+                    self.theme_preview = None;
+                } else {
+                    self.theme_preview = Some(name.clone());
+                }
+                self.show_theme(ctx, &name);
+            }
+            SettingsAction::KeepTheme => {
+                if let Some(name) = self.theme_preview.take() {
+                    self.config.theme = name;
+                    self.schedule_config_save();
+                }
+            }
+            SettingsAction::RevertTheme => {
+                self.theme_preview = None;
+                let saved = self.config.theme.clone();
+                self.show_theme(ctx, &saved);
+            }
+            SettingsAction::ImportTheme => {
+                let Some(path) = rfd::FileDialog::new()
+                    .set_title("Import Theme")
+                    .add_filter("Kagero theme", &["json"])
+                    .pick_file()
+                else {
+                    return;
+                };
+                match self.themes.import(&path) {
+                    Ok((theme, replaced)) => {
+                        self.success(if replaced {
+                            format!("Updated the theme \"{}\"", theme.name)
+                        } else {
+                            format!("Imported the theme \"{}\" — previewing it", theme.name)
+                        });
+                        self.execute_settings_action(ctx, SettingsAction::PreviewTheme(theme.name));
+                    }
+                    Err(e) => self.status_error(format!("Couldn't import the theme: {e}")),
+                }
+            }
+            SettingsAction::ExportTheme(name) => {
+                let Some(theme) = self.themes.find(&name) else {
+                    return;
+                };
+                let Some(path) = rfd::FileDialog::new()
+                    .set_title("Export Theme")
+                    .add_filter("Kagero theme", &["json"])
+                    .set_file_name(format!("{name}.json"))
+                    .save_file()
+                else {
+                    return;
+                };
+                let path = crate::services::dialogs::with_extension(path, "json");
+                let json = crate::themes::to_json(&theme);
+                let written = crate::file_io::write_atomic(&path, |w| {
+                    std::io::Write::write_all(w, json.as_bytes())?;
+                    Ok(())
+                });
+                match written {
+                    Ok(()) => self.success(format!("Exported the theme to {}", path.display())),
+                    Err(e) => self.status_error(format!("Couldn't export the theme: {e}")),
+                }
+            }
+            SettingsAction::DeleteTheme(name) => match self.themes.delete(&name) {
+                Ok(()) => {
+                    if self.config.theme == name {
+                        self.config.theme = crate::themes::DEFAULT_THEME.to_owned();
+                        self.schedule_config_save();
+                    }
+                    if self.theme_preview.as_deref() == Some(name.as_str())
+                        || self.theme_preview.is_none()
+                    {
+                        self.theme_preview = None;
+                        let saved = self.config.theme.clone();
+                        self.show_theme(ctx, &saved);
+                    }
+                    self.info(format!("Deleted the theme \"{name}\""));
+                }
+                Err(e) => self.status_error(format!("Couldn't delete the theme: {e}")),
+            },
+            SettingsAction::OpenThemesFolder => {
+                if let Some(dir) = self.themes.dir() {
+                    let _ = std::fs::create_dir_all(dir);
+                    crate::ui::export_dialog::open_folder(dir);
+                }
+            }
+            SettingsAction::ReloadThemes => {
+                self.themes.reload();
+                let shown = self
+                    .theme_preview
+                    .clone()
+                    .unwrap_or_else(|| self.config.theme.clone());
+                self.show_theme(ctx, &shown);
+            }
+            SettingsAction::OpenPluginsFolder => {
+                if let Some(dir) = self.plugins.dir() {
+                    let _ = std::fs::create_dir_all(dir);
+                    crate::ui::export_dialog::open_folder(dir);
+                }
+            }
+            SettingsAction::ReloadPlugins => self.plugins.reload(),
+            SettingsAction::InstallExamplePlugin => match self.plugins.install_example() {
+                Ok(_) => self.success("Installed \"Example Tools\" — turn it on below"),
+                Err(e) => self.status_error(format!("Couldn't install the example: {e}")),
+            },
+            SettingsAction::OpenRecoveryFolder => {
+                crate::ui::export_dialog::open_folder(self.recovery.dir());
+            }
             SettingsAction::DiscordDisconnect => self
                 .discord
                 .disconnect(self.config.discord.clear_on_disable),
@@ -877,17 +1218,24 @@ impl KageroApp {
             .map_or(KeyContext::default(), |e| KeyContext {
                 active_layer: e.document().active_index(),
                 has_selection: e.selection().is_some(),
+                cropping: e.crop_rect.is_some(),
+                polygon: e.is_drawing_polygon(),
             });
         let keymap = crate::ui::keymap::Keymap::from_overrides(&self.config.shortcuts);
         let (found, escape) = shortcuts::collect(ctx, &keymap, keys);
         commands.extend(found);
         if escape {
-            if self.player.is_playing() {
+            if let Some((job, _, _)) = &self.plugin_job {
+                job.cancel();
+                self.info("Stopping the plugin…");
+            } else if self.player.is_playing() {
                 self.stop_playback();
             } else if let Some(editor) = &mut self.editor {
                 if editor.is_stroking() {
                     editor.cancel_stroke();
                     self.info("Stroke canceled");
+                } else if editor.crop_rect.is_some() {
+                    editor.crop_rect = None;
                 } else if editor.selection().is_some() {
                     editor.deselect();
                 }
@@ -940,6 +1288,92 @@ impl KageroApp {
                     self.dialog = Some(Dialog::Error { title, message });
                 }
             }
+            Dialog::ConvertPalette(mut state) => {
+                let palette = self.config.active_palette().clone();
+                let result = match &self.editor {
+                    Some(editor) => dialogs::convert_palette(ctx, &mut state, editor, &palette),
+                    None => dialogs::ConvertPaletteResult::Cancel,
+                };
+                match result {
+                    dialogs::ConvertPaletteResult::Open => {
+                        self.dialog = Some(Dialog::ConvertPalette(state));
+                    }
+                    dialogs::ConvertPaletteResult::Cancel => {}
+                    dialogs::ConvertPaletteResult::Apply => {
+                        self.execute_on_document(Command::ConvertToPalette(state.scope));
+                    }
+                }
+            }
+            Dialog::Tag(mut state) => match dialogs::frame_tag(ctx, &mut state) {
+                dialogs::TagResult::Open => self.dialog = Some(Dialog::Tag(state)),
+                dialogs::TagResult::Cancel => {}
+                dialogs::TagResult::Apply => {
+                    let command = match state.index {
+                        Some(i) => Command::UpdateTag(i, state.tag),
+                        None => Command::InsertTag(state.tag),
+                    };
+                    self.execute_on_document(command);
+                }
+                dialogs::TagResult::Delete => {
+                    if let Some(i) = state.index {
+                        self.execute_on_document(Command::DeleteTag(i));
+                    }
+                }
+            },
+            Dialog::Recovery(mut state) => match dialogs::recovery(ctx, &state) {
+                dialogs::RecoveryChoice::Keep => self.dialog = Some(Dialog::Recovery(state)),
+                dialogs::RecoveryChoice::Close => {}
+                dialogs::RecoveryChoice::Delete(i) => {
+                    let entry = state.entries.remove(i);
+                    crate::services::recovery::delete(&entry);
+                    if !state.entries.is_empty() {
+                        self.dialog = Some(Dialog::Recovery(state));
+                    }
+                }
+                dialogs::RecoveryChoice::OpenOriginal(i) => {
+                    if self.editor.as_ref().is_some_and(Editor::is_modified) {
+                        self.status_error("Save or close the current image first");
+                        self.dialog = Some(Dialog::Recovery(state));
+                    } else if let Some(path) = state.entries[i].original.clone() {
+                        self.open_path(&path);
+                        self.dialog = Some(Dialog::Recovery(state));
+                    }
+                }
+                dialogs::RecoveryChoice::OpenRecovered(i) => {
+                    if self.editor.as_ref().is_some_and(Editor::is_modified) {
+                        self.status_error("Save or close the current image first");
+                        self.dialog = Some(Dialog::Recovery(state));
+                    } else {
+                        let entry = state.entries[i].clone();
+                        match entry.load() {
+                            Ok(doc) => {
+                                self.set_document(doc, None, format!("{} (recovered)", entry.name));
+                                if let Some(editor) = &mut self.editor {
+                                    editor.mark_unsaved();
+                                }
+                                self.recovery.adopt(entry);
+                                self.success("Recovered — save it to keep it");
+                                state.entries.remove(i);
+                                if !state.entries.is_empty() {
+                                    self.dialog = Some(Dialog::Recovery(state));
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("recovery copy {} unreadable: {e}", entry.id);
+                                state.errors.insert(entry.id.clone(), e.to_string());
+                                self.dialog = Some(Dialog::Recovery(state));
+                            }
+                        }
+                    }
+                }
+            },
+            Dialog::CanvasSize(mut state) => match dialogs::canvas_size(ctx, &mut state) {
+                dialogs::CanvasSizeResult::Open => self.dialog = Some(Dialog::CanvasSize(state)),
+                dialogs::CanvasSizeResult::Cancel => {}
+                dialogs::CanvasSizeResult::Apply => self.execute_on_document(
+                    Command::ResizeCanvas(state.width, state.height, state.anchor),
+                ),
+            },
             Dialog::About => match dialogs::about(ctx) {
                 dialogs::AboutChoice::Keep => self.dialog = Some(Dialog::About),
                 dialogs::AboutChoice::Licenses => self.dialog = Some(Dialog::Licenses(0)),
@@ -963,6 +1397,132 @@ impl KageroApp {
                     ConfirmChoice::Cancel => {}
                 }
             }
+        }
+    }
+
+    /// Starts a plugin command on the active layer in the background.
+    fn run_plugin(&mut self, plugin_id: &str, command: &str) {
+        if self.plugin_job.is_some() {
+            self.info("A plugin is still running — wait or press Esc to stop it");
+            return;
+        }
+        let Some(editor) = &mut self.editor else {
+            return;
+        };
+        self.player.stop(editor);
+        editor.end_stroke();
+        let enabled = self.config.plugins.enabled.iter().any(|e| e == plugin_id);
+        let Some(plugin) = self.plugins.find(plugin_id).filter(|_| enabled) else {
+            self.status_error("That plugin is turned off or no longer installed");
+            return;
+        };
+        let doc = editor.document();
+        let input = crate::plugins::PluginInput {
+            width: doc.width(),
+            height: doc.height(),
+            pixels: doc.active_cel().as_bytes().to_vec(),
+            selection: editor.selection_shape().cloned(),
+            primary: editor.primary,
+            secondary: editor.secondary,
+        };
+        let target = (doc.active_frame().id, doc.active_layer().id);
+        match crate::plugins::PluginJob::spawn(plugin, command, input, editor.history().state_id())
+        {
+            Ok(job) => {
+                self.info(format!("Running {}… (Esc stops it)", job.title));
+                self.plugin_job = Some((job, target.0, target.1));
+            }
+            Err(e) => self.status_error(format!("Couldn't start the plugin: {e}")),
+        }
+    }
+
+    /// Applies a finished plugin command (one undo step), if the image didn't change.
+    fn poll_plugin(&mut self, ctx: &egui::Context) {
+        let Some((job, frame, layer)) = &self.plugin_job else {
+            return;
+        };
+        let Some(result) = job.poll() else {
+            ctx.request_repaint_after(std::time::Duration::from_millis(50));
+            return;
+        };
+        let (job, frame, layer) = (job.title.clone(), *frame, *layer);
+        let state_id = self.plugin_job.as_ref().map(|j| j.0.state_id);
+        self.plugin_job = None;
+        let output = match result {
+            Ok(o) => o,
+            Err(e) => {
+                self.status_error(format!("{job}: {e}"));
+                return;
+            }
+        };
+        let Some(editor) = &mut self.editor else {
+            return;
+        };
+        let doc = editor.document();
+        let same = Some(editor.history().state_id()) == state_id
+            && doc.active_frame().id == frame
+            && doc.active_layer().id == layer;
+        if !same {
+            self.status_error(format!(
+                "{job}: the image changed while it ran, so nothing was applied"
+            ));
+            return;
+        }
+        if let Some(c) = output.primary {
+            editor.primary = c;
+        }
+        let applied = match output.pixels {
+            Some(px) => editor.replace_active_pixels("Plugin", px),
+            None => Ok(false),
+        };
+        let note = output.messages.join(" · ");
+        match applied {
+            Ok(true) if note.is_empty() => self.success(format!("{job}: done")),
+            Ok(_) if !note.is_empty() => self.success(format!("{job}: {note}")),
+            Ok(_) => self.info(format!("{job}: nothing changed")),
+            Err(e) => self.status_error(format!("{job}: {e}")),
+        }
+    }
+
+    /// Shows a theme on the whole window (the default theme if it no longer exists).
+    fn show_theme(&mut self, ctx: &egui::Context, name: &str) {
+        let colors = self
+            .themes
+            .find(name)
+            .map_or(crate::theme::EMBER, |t| t.colors);
+        crate::theme::set_colors(colors);
+        theme::apply(ctx);
+    }
+
+    /// Writes a recovery copy of a document with unsaved changes every few minutes.
+    fn autosave(&mut self, ctx: &egui::Context) {
+        if let Some(crate::services::recovery::WriteResult::Failed(e)) = self.recovery.poll() {
+            self.status_error(format!("Autosave failed: {e}"));
+        }
+        let settings = self.config.autosave;
+        let Some(editor) = &self.editor else {
+            return;
+        };
+        if !settings.enabled || !editor.is_modified() || editor.is_stroking() {
+            return;
+        }
+        let state = editor.history().state_id();
+        if !self.recovery.needs_copy(state) || self.recovery.is_writing() {
+            return;
+        }
+        let interval = Duration::from_secs(u64::from(settings.interval_minutes) * 60);
+        let elapsed = self.last_autosave.elapsed();
+        if elapsed < interval {
+            // Come back when it's due, even if nothing else happens.
+            ctx.request_repaint_after(interval - elapsed);
+            return;
+        }
+        let doc = editor.document().clone();
+        let name = editor.name().to_owned();
+        let original = editor.path().map(Path::to_path_buf);
+        if self.recovery.write(doc, state, &name, original.as_deref()) {
+            self.last_autosave = Instant::now();
+            ctx.request_repaint_after(Duration::from_millis(250));
         }
     }
 
@@ -1022,10 +1582,26 @@ impl KageroApp {
         crate::ui::title_bar::resize_edges(ctx);
         let title = self.window_title.clone();
         egui::TopBottomPanel::top("title-bar")
-            .frame(Frame::new().fill(theme::BACKGROUND))
+            .frame(Frame::new().fill(theme::background()))
             .exact_height(crate::ui::title_bar::HEIGHT)
             .show_separator_line(false)
             .show(ctx, |ui| {
+                let plugin_commands: Vec<(String, String, String)> = self
+                    .plugins
+                    .plugins
+                    .iter()
+                    .filter(|p| p.is_valid() && self.config.plugins.enabled.contains(&p.id()))
+                    .filter_map(|p| p.manifest.as_ref())
+                    .flat_map(|m| {
+                        m.commands.iter().map(move |c| {
+                            (
+                                m.id.clone(),
+                                c.id.clone(),
+                                format!("{}: {}", m.name, c.title),
+                            )
+                        })
+                    })
+                    .collect();
                 let state = MenuState {
                     editor: self.editor.as_ref(),
                     recent: &self.config.recent_files,
@@ -1035,13 +1611,15 @@ impl KageroApp {
                     timeline_visible: self.config.ui.timeline_visible,
                     side_panel_visible: self.config.ui.side_panel_visible,
                     keymap: &keymap,
+                    plugin_commands: &plugin_commands,
+                    plugin_running: self.plugin_job.is_some(),
                 };
                 crate::ui::title_bar::show(ui, &title, |ui| menu::show(ui, &state, commands));
             });
 
         if let Some(editor) = &mut self.editor {
             egui::TopBottomPanel::top("tool-options")
-                .frame(bar(theme::PANEL))
+                .frame(bar(theme::panel()))
                 .exact_height(36.0)
                 .show(ctx, |ui| {
                     tool_options::show(ui, editor, self.config.show_grid, commands);
@@ -1049,7 +1627,7 @@ impl KageroApp {
         }
 
         egui::TopBottomPanel::bottom("status-bar")
-            .frame(bar(theme::BACKGROUND))
+            .frame(bar(theme::background()))
             .exact_height(26.0)
             .show(ctx, |ui| {
                 status::show(
@@ -1065,7 +1643,7 @@ impl KageroApp {
         if let Some(editor) = &self.editor {
             let expanded = self.config.ui.timeline_visible;
             let frame = Frame::new()
-                .fill(theme::PANEL)
+                .fill(theme::panel())
                 .inner_margin(Margin::symmetric(10, 3));
             let panel = if expanded {
                 egui::TopBottomPanel::bottom("timeline-expanded")
@@ -1099,18 +1677,18 @@ impl KageroApp {
             egui::SidePanel::left("toolbar")
                 .frame(
                     Frame::new()
-                        .fill(theme::PANEL)
+                        .fill(theme::panel())
                         .inner_margin(Margin::same(6)),
                 )
                 .resizable(false)
-                .exact_width(48.0)
+                .exact_width(toolbar::panel_width(ctx))
                 .show(ctx, |ui| toolbar::show(ui, editor.tool, &keymap, commands));
 
             if self.config.ui.side_panel_visible {
                 egui::SidePanel::right("side-panel")
                     .frame(
                         Frame::new()
-                            .fill(theme::PANEL)
+                            .fill(theme::panel())
                             .inner_margin(Margin::same(10)),
                     )
                     .resizable(true)
@@ -1138,7 +1716,7 @@ impl KageroApp {
         }
         self.canvas.show_grid = self.config.show_grid;
         egui::CentralPanel::default()
-            .frame(Frame::new().fill(theme::BACKGROUND))
+            .frame(Frame::new().fill(theme::background()))
             .show(ctx, |ui| match &mut self.editor {
                 Some(editor) => canvas_error = self.canvas.show(ui, editor, options),
                 None => home::show(ui, &self.config.recent_files, commands),
@@ -1183,9 +1761,18 @@ impl eframe::App for KageroApp {
                 && release::is_official_build()
                 && !release::UPDATE_PUBLIC_KEY.is_empty(),
             has_backup: self.has_backup,
+            themes: self.themes.all(),
+            current_theme: self.config.theme.clone(),
+            theme_preview: self.theme_preview.clone(),
+            theme_problems: self.themes.problems.clone(),
+            plugins: self.plugins.plugins.clone(),
         };
         for action in self.settings.show(ctx, &mut self.config, &view) {
             self.execute_settings_action(ctx, action);
+        }
+        if !self.settings.open && self.theme_preview.is_some() {
+            // Settings closed without keeping the previewed theme.
+            self.execute_settings_action(ctx, SettingsAction::RevertTheme);
         }
 
         match &self.editor {
@@ -1211,6 +1798,8 @@ impl eframe::App for KageroApp {
         }
         self.update_presence();
         self.update_title(ctx);
+        self.autosave(ctx);
+        self.poll_plugin(ctx);
 
         if let Some(at) = self.config_save_at {
             let now = Instant::now();

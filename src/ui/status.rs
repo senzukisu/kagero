@@ -48,7 +48,7 @@ pub fn show(
     message: Option<&StatusMessage>,
 ) {
     ui.horizontal_centered(|ui| {
-        let secondary = |t: String| RichText::new(t).small().color(theme::TEXT_SECONDARY);
+        let secondary = |t: String| RichText::new(t).small().color(theme::text_secondary());
         if let Some(editor) = editor {
             let doc = editor.document();
             ui.label(secondary(editor.tool.name().to_owned()));
@@ -77,7 +77,7 @@ pub fn show(
                 ui.label(
                     RichText::new(format!("Previewing · {frame}"))
                         .small()
-                        .color(theme::ACCENT),
+                        .color(theme::accent()),
                 );
             } else {
                 ui.label(secondary(frame));
@@ -89,9 +89,9 @@ pub fn show(
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if let Some(editor) = editor {
                 let (color, text) = if editor.is_modified() {
-                    (theme::ACCENT, "Unsaved changes")
+                    (theme::accent(), "Unsaved changes")
                 } else {
-                    (theme::SUCCESS, "Saved")
+                    (theme::success(), "Saved")
                 };
                 ui.label(RichText::new(text).small().color(color));
                 let (rect, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
@@ -100,9 +100,9 @@ pub fn show(
             }
             if let Some(msg) = message.filter(|m| m.is_visible()) {
                 let color = match msg.kind {
-                    MessageKind::Info => theme::TEXT_PRIMARY,
-                    MessageKind::Success => theme::SUCCESS,
-                    MessageKind::Error => theme::ERROR,
+                    MessageKind::Info => theme::text_primary(),
+                    MessageKind::Success => theme::success(),
+                    MessageKind::Error => theme::error(),
                 };
                 ui.label(RichText::new(&msg.text).small().color(color));
             }

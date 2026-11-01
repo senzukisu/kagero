@@ -5,16 +5,22 @@
 pub mod animation;
 mod buffer;
 mod color;
+pub mod dither;
 mod document;
 pub mod onion_skin;
 pub mod palette;
 pub mod raster;
+pub mod region;
 pub mod selection;
+pub mod tags;
 
 pub use animation::{Frame, FrameId};
 pub use buffer::PixelBuffer;
 pub use color::Rgba;
-pub use document::{Document, LayerData, LayerId, LayerInfo, PixelRect};
+pub use document::{
+    with_opacity, Anchor, Document, Geometry, LayerData, LayerId, LayerInfo, LayerProps, PixelRect,
+};
+pub use tags::FrameTag;
 
 /// Largest allowed image side, in pixels.
 pub const MAX_CANVAS_SIZE: u32 = 2048;

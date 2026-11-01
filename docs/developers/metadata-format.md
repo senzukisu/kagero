@@ -63,9 +63,9 @@ spacing 2, padding 1, extrude 1, trim on.
 | `image` | File name of the sheet image, relative to the JSON file. |
 | `size` | Sheet size. |
 | `scale` | Integer export scale (`1` = 100 %). |
-| `layout` | `horizontal`, `vertical`, `columns` or `rows`. |
-| `cell` | Size of every cell, without extrude. |
-| `columns`, `rows` | Grid size. |
+| `layout` | `horizontal`, `vertical`, `columns`, `rows` or `packed`. |
+| `cell` | Size of every cell, without extrude (for `packed`: the largest frame). |
+| `columns`, `rows` | Grid size (`0` and `0` for `packed`). |
 | `spacing`, `padding`, `extrude` | As chosen in the dialog, in output pixels. |
 | `frameCount`, `totalDuration` | Number of frames and the sum of durations in ms. |
 | `frames` | Frames **in playback order**. |
@@ -76,6 +76,8 @@ spacing 2, padding 1, extrude 1, trim on.
 | `frames[].source` | Which part of the full frame `frame` holds; `x`/`y` is the trim offset. |
 | `frames[].sourceSize` | The full (scaled) frame size before trimming. |
 | `frames[].duration` | Frame duration in milliseconds. |
+| `frames[].duplicateOf` | Only on packed sheets with merged duplicates: the playback position of the identical frame whose pixels this one shares (its `frame` is the same). |
+| `tags` | Only when the document has [frame tags](../animate/animation.md#frame-tags): `[{ "name", "from", "to", "color" }]`. `from` and `to` are positions in `frames` (inclusive), and `color` is `#RRGGBB`. A tag with none of its frames on the sheet is left out. |
 
 To draw frame *n* at its original position: copy `frame` from the sheet to
 `(source.x, source.y)` inside a `sourceSize` box.
@@ -116,6 +118,9 @@ playback order).
 * `rotated` is always `false` — Kagero never rotates frames on the sheet.
 * `meta.scale` is a string, as in other tools that write this format.
 * `duration` (ms) is an extension that several engines read for animations.
+* With frame tags, `meta.frameTags` lists them as Aseprite writes them:
+  `{ "name", "from", "to", "direction": "forward", "color": "#rrggbbff" }`. Positions
+  count the frames in playback order, from 0.
 
 Implementation: `src/export/metadata.rs`. Round-trip tests: `tests/export.rs`
 (`sheet_with_json_metadata_round_trips`).

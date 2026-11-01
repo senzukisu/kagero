@@ -21,13 +21,13 @@ fn to_color32(c: Rgba) -> Color32 {
 pub fn paint_swatch(painter: &egui::Painter, rect: Rect, color: Rgba) {
     if color.a() < 255 {
         let half = rect.width() / 2.0;
-        painter.rect_filled(rect, 0.0, theme::CHECKER_LIGHT);
+        painter.rect_filled(rect, 0.0, theme::checker_light());
         for (dx, dy) in [(0.0, 0.0), (half, half)] {
             let r = Rect::from_min_size(
                 rect.min + Vec2::new(dx, dy),
                 Vec2::new(half, rect.height() / 2.0),
             );
-            painter.rect_filled(r, 0.0, theme::CHECKER_DARK);
+            painter.rect_filled(r, 0.0, theme::checker_dark());
         }
     }
     painter.rect_filled(rect, 0.0, to_color32(color));
@@ -47,7 +47,7 @@ pub fn show(
         RichText::new("COLORS")
             .small()
             .strong()
-            .color(theme::TEXT_SECONDARY),
+            .color(theme::text_secondary()),
     );
     ui.horizontal(|ui| {
         for (slot, label) in [
@@ -69,7 +69,7 @@ pub fn show(
                             RichText::new(&hex)
                                 .small()
                                 .monospace()
-                                .color(theme::TEXT_SECONDARY),
+                                .color(theme::text_secondary()),
                         )
                         .sense(Sense::click()),
                     )
@@ -84,26 +84,18 @@ pub fn show(
             commands.push(Command::SwapColors);
         }
     });
-    let p = editor.primary;
-    ui.label(
-        RichText::new(format!(
-            "R {}  G {}  B {}  A {}",
-            p.r(),
-            p.g(),
-            p.b(),
-            p.a()
-        ))
-        .small()
-        .monospace()
-        .color(theme::TEXT_SECONDARY),
-    );
+    color_input(ui, editor);
 
     // Recently used colors.
     if !config.recent_colors.is_empty() {
         ui.add_space(2.0);
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = Vec2::splat(2.0);
-            ui.label(RichText::new("Recent").small().color(theme::TEXT_SECONDARY));
+            ui.label(
+                RichText::new("Recent")
+                    .small()
+                    .color(theme::text_secondary()),
+            );
             for &c in &config.recent_colors {
                 swatch(ui, editor, c, None, commands);
             }
@@ -159,6 +151,12 @@ pub fn show(
                 }
             };
             item(ui, "Add Primary Color", true, Command::AddPaletteColor);
+            item(
+                ui,
+                "Convert Image to Palette…",
+                true,
+                Command::OpenConvertPalette,
+            );
             ui.separator();
             item(ui, "New Palette", true, Command::NewPalette);
             item(ui, "Duplicate Palette", true, Command::DuplicatePalette);
@@ -201,6 +199,57 @@ pub fn show(
     }
 }
 
+/// Exact entry of the primary color: a hex field and R, G, B, A values.
+fn color_input(ui: &mut egui::Ui, editor: &mut Editor) {
+    let id = ui.id().with("primary-hex");
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        // While typing, the text stays as typed; it's applied on Enter or leaving.
+        let stored: Option<String> = ui.data(|d| d.get_temp(id));
+        let mut text = stored.unwrap_or_else(|| editor.primary.to_hex());
+        let valid = Rgba::from_hex(&text).is_some();
+        let resp = ui
+            .add(
+                egui::TextEdit::singleline(&mut text)
+                    .desired_width(84.0)
+                    .char_limit(9)
+                    .font(egui::TextStyle::Monospace)
+                    .text_color(if valid {
+                        theme::text_primary()
+                    } else {
+                        theme::error()
+                    }),
+            )
+            .on_hover_text(
+                "Primary color as #RRGGBB or #RRGGBBAA (#RGB works too) — Enter applies",
+            );
+        if resp.has_focus() {
+            ui.data_mut(|d| d.insert_temp(id, text.clone()));
+        }
+        if resp.lost_focus() {
+            if let Some(c) = Rgba::from_hex(&text) {
+                editor.set_color(ColorSlot::Primary, c);
+            }
+            ui.data_mut(|d| d.remove::<String>(id));
+        }
+        let mut c = editor.primary.0;
+        let mut changed = false;
+        for (i, name) in ["R", "G", "B", "A"].into_iter().enumerate() {
+            changed |= ui
+                .add(
+                    egui::DragValue::new(&mut c[i])
+                        .range(0..=255)
+                        .prefix(format!("{name} ")),
+                )
+                .on_hover_text(format!("Primary color: {name} (0–255)"))
+                .changed();
+        }
+        if changed {
+            editor.set_color(ColorSlot::Primary, Rgba(c));
+        }
+    });
+}
+
 /// One clickable swatch. `index` is set for palette swatches (enables the menu).
 fn swatch(
     ui: &mut egui::Ui,
@@ -214,9 +263,9 @@ fn swatch(
     let selected = color == editor.primary;
     if selected || resp.hovered() {
         let stroke_color = if selected {
-            theme::ACCENT
+            theme::accent()
         } else {
-            theme::TEXT_PRIMARY
+            theme::text_primary()
         };
         ui.painter().rect_stroke(
             rect,

@@ -1,0 +1,14 @@
+{
+  "format": "kagero-plugin",
+  "api": 1,
+  "id": "kagero.example-tools",
+  "name": "Example Tools",
+  "version": "1.0.0",
+  "author": "Onibi Lab",
+  "description": "Invert, grayscale and outline: a small example of Kagero's plugin API. Works on the selection, or the whole layer without one.",
+  "commands": [
+    { "id": "invert", "title": "Invert Colors" },
+    { "id": "grayscale", "title": "Grayscale" },
+    { "id": "outline", "title": "Outline with Primary Color" }
+  ]
+}

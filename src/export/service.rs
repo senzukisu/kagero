@@ -10,10 +10,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use super::render::{scale_nearest, FrameImage};
-use super::{gif, metadata, spritesheet, still};
+use super::{gif, metadata, spritesheet, still, webp_anim};
 use super::{
     ExportError, ExportSummary, GifOptions, JpegOptions, MetadataFormat, SheetOptions, StillFormat,
 };
+use crate::core::FrameTag;
 use crate::file_io::write_atomic;
 
 /// Where and how to write.
@@ -26,6 +27,8 @@ pub enum ExportTarget {
     },
     /// One animated GIF.
     Gif { path: PathBuf },
+    /// One animated WebP.
+    WebPAnimation { path: PathBuf },
     /// One sprite sheet image, optionally with JSON next to it.
     Sheet {
         image_path: PathBuf,
@@ -45,6 +48,8 @@ pub struct ExportRequest {
     /// Base name and digits used for frame names in metadata.
     pub base_name: String,
     pub digits: u8,
+    /// The document's frame tags, written to sprite-sheet metadata.
+    pub tags: Vec<FrameTag>,
     pub target: ExportTarget,
 }
 
@@ -53,7 +58,7 @@ impl ExportRequest {
     pub fn output_paths(&self) -> Vec<PathBuf> {
         match &self.target {
             ExportTarget::Images { paths, .. } => paths.clone(),
-            ExportTarget::Gif { path } => vec![path.clone()],
+            ExportTarget::Gif { path } | ExportTarget::WebPAnimation { path } => vec![path.clone()],
             ExportTarget::Sheet {
                 image_path,
                 json_path,
@@ -66,7 +71,9 @@ impl ExportRequest {
     /// Steps reported by progress (frames to process + files to write).
     pub fn total_steps(&self) -> usize {
         match &self.target {
-            ExportTarget::Images { .. } | ExportTarget::Gif { .. } => self.frames.len(),
+            ExportTarget::Images { .. }
+            | ExportTarget::Gif { .. }
+            | ExportTarget::WebPAnimation { .. } => self.frames.len(),
             ExportTarget::Sheet { .. } => self.frames.len() + 1,
         }
     }
@@ -123,6 +130,28 @@ pub fn run(
                     "Transparent pixels were filled with the JPEG background color.".to_owned(),
                 );
             }
+        }
+        ExportTarget::WebPAnimation { path } => {
+            let mut frames = Vec::with_capacity(request.frames.len());
+            for f in &request.frames {
+                if canceled() {
+                    return Err(ExportError::Canceled);
+                }
+                frames.push(FrameImage {
+                    image: scale_nearest(&f.image, request.scale)?,
+                    ..f.clone()
+                });
+            }
+            let mut bytes = Vec::new();
+            webp_anim::encode(
+                &frames,
+                request.gif.looping,
+                &mut bytes,
+                &canceled,
+                &mut |done| progress(done, total),
+            )?;
+            write_bytes(path, &bytes)?;
+            summary.files.push(path.clone());
         }
         ExportTarget::Gif { path } => {
             let mut frames = Vec::with_capacity(request.frames.len());
@@ -191,6 +220,7 @@ pub fn run(
                     &request.base_name,
                     request.digits,
                     request.scale,
+                    &request.tags,
                 )),
                 (Some(_), MetadataFormat::JsonHash) => Some(metadata::json_hash(
                     &plan,
@@ -198,6 +228,7 @@ pub fn run(
                     &request.base_name,
                     request.digits,
                     request.scale,
+                    &request.tags,
                 )),
                 _ => None,
             }

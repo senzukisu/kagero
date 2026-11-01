@@ -3,7 +3,7 @@ description: "The updater, the install helper and Discord Rich Presence: how the
 icon: shield-halved
 ---
 
-# Services: updater & Discord
+# Services: updater, installer, autosave & Discord
 
 Both services are optional. Offline, with GitHub unreachable, with Discord closed or in
 a development build, Kagero keeps working normally. Their public configuration lives in
@@ -26,6 +26,8 @@ For version `X.Y.Z` the release tagged `vX.Y.Z` contains:
 |-------|---------|
 | `kagero-X.Y.Z-windows-x64.zip` | The package |
 | `kagero-X.Y.Z-windows-x64.zip.minisig` | minisign signature of the zip |
+| `kagero-X.Y.Z-setup.exe` | The installer: `kagero-setup.exe` with the zip appended |
+| `kagero-X.Y.Z-setup.exe.minisig` | minisign signature of the installer |
 | `SHA256SUMS.txt` | `sha256  filename` lines |
 
 The zip is **flat** and contains `kagero.exe`, `kagero-updater.exe` and
@@ -74,6 +76,52 @@ Kagero never overwrites its own running executable. **Install and Restart**:
 **Restore Previous Version** runs the same helper with `--restore`. Only official builds
 (`KAGERO_OFFICIAL_BUILD=1`) in a writable folder can install; Kagero never asks for
 administrator rights.
+
+## Installer and uninstaller
+
+`src/services/setup.rs`, `src/bin/kagero-setup.rs`.
+
+* **Payload.** The installer is `kagero-setup.exe` followed by the release zip and a
+  24-byte footer: the zip's length (u64, little-endian) and the marker
+  `KAGERO-SETUP-01\0`. `--build-installer <zip> <out>` writes it; the release script
+  calls that.
+* **Install** (per user, `%LOCALAPPDATA%\Programs\Kagero` by default, no admin):
+  1. The zip is extracted with the updater's allow-list and its `SHA256SUMS.txt` is
+     checked.
+  2. The files are installed with the updater's backup/rollback code, so an older
+     version becomes the "previous version". A first install leaves no backup.
+  3. The program without the payload is written as `uninstall.exe`.
+  4. A Start menu shortcut and an optional desktop shortcut are created (`mslnk`).
+  5. An entry is written under
+     `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Kagero` (`winreg`).
+     Kagero refreshes its `DisplayVersion` after self-updates.
+* **Uninstall.** `uninstall.exe` copies itself to `%TEMP%` and continues from there.
+  * It removes `kagero.exe`, `kagero-updater.exe`, `SHA256SUMS.txt`, `.kagero-backup`
+    and itself.
+  * It removes only the shortcuts that point into the folder, and the registry entry
+    only if it names that folder.
+  * It removes the folder only if it is empty.
+  * It refuses folders that don't contain Kagero.
+  * The temp copy deletes itself a few seconds later.
+  * User data in `%APPDATA%\OnibiLab\Kagero` is never touched.
+* **Silent:** `--silent [--dir <folder>] [--desktop-shortcut] [--no-start-menu]
+  [--no-register]`, and `uninstall.exe --uninstall --silent`.
+
+## Autosave and recovery
+
+`src/services/recovery.rs`. Each running Kagero is a *session*: it holds a lock file
+`session-<time>-<pid>-<n>.lock`, opened without sharing, so other instances can tell
+it is alive.
+
+* **Writing a copy.** A background thread writes the copy as `<session>.kgr`, then its
+  description `<session>.json` (format `kagero-recovery` 1), both atomically.
+* **When copies go away.** The copy is deleted after a successful save, when the
+  document is closed, and on a normal exit.
+* **At start.** Copies whose session isn't running are offered. Damaged ones are
+  skipped, and copies without their description are ignored.
+* **Opening a copy.** It opens as an unsaved document. The old copy is kept until the
+  new session has written its own.
+* **Trimming.** At most 10 copies and 512 MiB; the oldest crashed copies go first.
 
 ## Discord Rich Presence
 

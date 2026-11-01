@@ -20,6 +20,10 @@ pub struct MenuState<'a> {
     pub timeline_visible: bool,
     pub side_panel_visible: bool,
     pub keymap: &'a Keymap,
+    /// Commands of turned-on plugins: plugin id, command id, menu label.
+    pub plugin_commands: &'a [(String, String, String)],
+    /// A plugin command is running.
+    pub plugin_running: bool,
 }
 
 pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command>) {
@@ -73,6 +77,10 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 has_doc,
                 Command::SaveAs,
             );
+            if ui.button("Recover Projects…").clicked() {
+                commands.push(Command::OpenRecovery);
+                ui.close_menu();
+            }
             item(
                 ui,
                 commands,
@@ -196,6 +204,22 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 has_selection,
                 Command::Deselect,
             );
+            item(
+                ui,
+                commands,
+                "Invert Selection",
+                &keys(Action::InvertSelection),
+                editable,
+                Command::InvertSelection,
+            );
+            item(
+                ui,
+                commands,
+                "Use Selection as Brush",
+                &keys(Action::BrushFromSelection),
+                has_selection,
+                Command::BrushFromSelection,
+            );
             ui.separator();
             item(
                 ui,
@@ -208,6 +232,39 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
         });
 
         ui.menu_button("Image", |ui| {
+            item(
+                ui,
+                commands,
+                "Canvas Size…",
+                &keys(Action::CanvasSize),
+                editable,
+                Command::OpenCanvasSize,
+            );
+            item(
+                ui,
+                commands,
+                "Crop",
+                &keys(Action::Crop),
+                editable,
+                Command::SetTool(ToolKind::Crop),
+            );
+            item(
+                ui,
+                commands,
+                "Crop to Selection",
+                "",
+                editable && editor.is_some_and(|e| e.selection().is_some()),
+                Command::CropToSelection,
+            );
+            item(
+                ui,
+                commands,
+                "Convert to Palette…",
+                "",
+                editable,
+                Command::OpenConvertPalette,
+            );
+            ui.separator();
             let target = if editor.is_some_and(|e| e.selection().is_some()) {
                 "Selection"
             } else {
@@ -340,6 +397,22 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
             item(
                 ui,
                 commands,
+                "Duplicate Layer",
+                &keys(Action::DuplicateLayer),
+                can_add && editable,
+                Command::DuplicateLayer,
+            );
+            item(
+                ui,
+                commands,
+                "Merge Down",
+                &keys(Action::MergeDown),
+                editable && editor.is_some_and(|e| e.can_merge_down(active).is_ok()),
+                Command::MergeDown,
+            );
+            item(
+                ui,
+                commands,
                 "Delete Layer",
                 "",
                 count > 1 && editable,
@@ -361,6 +434,30 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 editable,
                 Command::ToggleLayerVisibility(active),
             );
+            if let Some(layer) = editor.and_then(|e| e.document().layers().get(active)) {
+                let mut lock = layer.props();
+                lock.locked = !lock.locked;
+                check(
+                    ui,
+                    commands,
+                    "Lock Layer",
+                    "",
+                    editable,
+                    layer.locked,
+                    Command::SetLayerProps(active, lock),
+                );
+                let mut alpha = layer.props();
+                alpha.alpha_lock = !alpha.alpha_lock;
+                check(
+                    ui,
+                    commands,
+                    "Alpha Lock",
+                    "",
+                    editable,
+                    layer.alpha_lock,
+                    Command::SetLayerProps(active, alpha),
+                );
+            }
             ui.separator();
             item(
                 ui,
@@ -461,6 +558,32 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 Command::MoveFrameRight(active),
             );
             ui.separator();
+            let has_tags = editor.is_some_and(|e| !e.document().tags().is_empty());
+            item(
+                ui,
+                commands,
+                "New Tag…",
+                &keys(Action::NewTag),
+                editable,
+                Command::NewTag,
+            );
+            item(
+                ui,
+                commands,
+                "Previous Tag",
+                &keys(Action::PrevTag),
+                has_tags,
+                Command::PrevTag,
+            );
+            item(
+                ui,
+                commands,
+                "Next Tag",
+                &keys(Action::NextTag),
+                has_tags,
+                Command::NextTag,
+            );
+            ui.separator();
             check(
                 ui,
                 commands,
@@ -469,6 +592,31 @@ pub fn show(ui: &mut egui::Ui, state: &MenuState<'_>, commands: &mut Vec<Command
                 has_doc,
                 state.onion,
                 Command::ToggleOnionSkin,
+            );
+        });
+
+        ui.menu_button("Plugins", |ui| {
+            if state.plugin_commands.is_empty() {
+                ui.add_enabled(false, egui::Button::new("No plugins turned on"));
+            }
+            for (plugin, command, label) in state.plugin_commands {
+                item(
+                    ui,
+                    commands,
+                    label,
+                    "",
+                    editable && !state.plugin_running,
+                    Command::RunPlugin(plugin.clone(), command.clone()),
+                );
+            }
+            ui.separator();
+            item(
+                ui,
+                commands,
+                "Manage Plugins…",
+                "",
+                true,
+                Command::ManagePlugins,
             );
         });
 

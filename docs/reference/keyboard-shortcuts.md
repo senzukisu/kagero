@@ -25,8 +25,10 @@ belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> st
 | <kbd>I</kbd> | Eyedropper |
 | <kbd>L</kbd> | Line |
 | <kbd>U</kbd> · <kbd>Shift</kbd>+<kbd>U</kbd> | Rectangle · Filled Rectangle |
+| <kbd>K</kbd> · <kbd>P</kbd> | Ellipse · Polygon (<kbd>Enter</kbd> closes a polygon) |
 | <kbd>H</kbd> or hold <kbd>Space</kbd> | Pan |
-| <kbd>M</kbd> | Rectangle Select |
+| <kbd>M</kbd> · <kbd>Q</kbd> · <kbd>W</kbd> | Rectangle Select · Lasso · Magic Wand |
+| <kbd>C</kbd> | Crop (<kbd>Enter</kbd> crops) |
 | <kbd>X</kbd> | Swap primary and secondary colors |
 {% endtab %}
 
@@ -35,7 +37,11 @@ belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> st
 |----------|--------|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Undo |
 | <kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | Redo |
-| <kbd>Ctrl</kbd>+<kbd>A</kbd> · <kbd>Esc</kbd> | Select all · deselect (Esc also cancels a stroke or stops the preview) |
+| <kbd>Ctrl</kbd>+<kbd>A</kbd> · <kbd>Esc</kbd> | Select all · deselect (Esc also cancels a stroke, a polygon or the crop frame, stops the preview, or stops a plugin) |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> | Invert the selection |
+| <kbd>Shift</kbd> · <kbd>Alt</kbd> · <kbd>Shift</kbd>+<kbd>Alt</kbd> while selecting | Add · subtract · intersect |
+| <kbd>Ctrl</kbd>+<kbd>B</kbd> | Use the selection as a brush |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> | Canvas size |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> · <kbd>Ctrl</kbd>+<kbd>X</kbd> · <kbd>Ctrl</kbd>+<kbd>V</kbd> | Copy · cut · paste |
 | <kbd>Delete</kbd> | Clear the selected pixels |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Duplicate the selection (without one: duplicate the frame) |
@@ -63,6 +69,8 @@ Flip and rotate work on the selection, or on the whole layer when nothing is sel
 | <kbd>,</kbd> · <kbd>.</kbd> (or <kbd>←</kbd> · <kbd>→</kbd> with no selection) | Previous · next frame |
 | <kbd>Ctrl</kbd>+<kbd>Home</kbd> | First frame |
 | <kbd>Alt</kbd>+<kbd>N</kbd> · <kbd>Alt</kbd>+<kbd>D</kbd> | New · duplicate frame |
+| <kbd>Alt</kbd>+<kbd>T</kbd> | New frame tag (from the selected frames) |
+| <kbd>Alt</kbd>+<kbd>,</kbd> · <kbd>Alt</kbd>+<kbd>.</kbd> | Previous · next tag |
 | <kbd>O</kbd> | Onion skin |
 {% endtab %}
 
@@ -72,6 +80,7 @@ Flip and rotate work on the selection, or on the whole layer when nothing is sel
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | New layer |
 | <kbd>F2</kbd> | Rename layer |
 | <kbd>Ctrl</kbd>+<kbd>]</kbd> · <kbd>Ctrl</kbd>+<kbd>[</kbd> | Move layer up · down |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> | Duplicate layer · merge down |
 {% endtab %}
 
 {% tab title="Files" %}

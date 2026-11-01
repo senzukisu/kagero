@@ -1,4 +1,5 @@
-//! Kagero's visual system: a dark workshop lit by warm amber, drawn in pixels.
+//! Kagero's visual system: pixel-drawn widgets in switchable color themes (the
+//! default is a dark workshop lit by warm amber; see [`crate::themes`]).
 //!
 //! Text uses egui's fonts by default ("Classic", as in Kagero 0.3.0). The optional
 //! Kagero Pixel font (`assets/fonts`, Settings → General) is sized in whole multiples
@@ -9,28 +10,136 @@ use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 
 use egui::{Color32, CornerRadius, FontFamily, FontId, Margin, Shadow, Stroke, TextStyle, Visuals};
 
-pub const BACKGROUND: Color32 = Color32::from_rgb(0x17, 0x19, 0x1F);
-pub const PANEL: Color32 = Color32::from_rgb(0x20, 0x23, 0x2B);
-pub const SURFACE: Color32 = Color32::from_rgb(0x2C, 0x30, 0x3A);
-pub const SURFACE_HOVER: Color32 = Color32::from_rgb(0x37, 0x3C, 0x48);
-pub const BORDER: Color32 = Color32::from_rgb(0x34, 0x38, 0x43);
-/// Light edge of raised pixel bevels.
-pub const BEVEL_LIGHT: Color32 = Color32::from_rgb(0x4A, 0x4F, 0x5C);
-/// Dark edge of raised pixel bevels and hard shadows.
-pub const BEVEL_DARK: Color32 = Color32::from_rgb(0x0E, 0x0F, 0x13);
-pub const TEXT_SECONDARY: Color32 = Color32::from_rgb(0xA5, 0xA9, 0xB5);
-pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(0xF0, 0xEE, 0xE8);
-pub const ACCENT: Color32 = Color32::from_rgb(0xFF, 0x9D, 0x42);
-pub const ACCENT_PRESSED: Color32 = Color32::from_rgb(0xF0, 0x6B, 0x35);
-pub const SUCCESS: Color32 = Color32::from_rgb(0x75, 0xC7, 0xB5);
-/// Deep ember used behind light text for pressed and selected states (readable contrast).
-pub const EMBER_DEEP: Color32 = Color32::from_rgb(0x6B, 0x36, 0x1C);
-pub const ERROR: Color32 = Color32::from_rgb(0xE8, 0x5D, 0x5D);
-/// Text drawn on top of the accent color.
-pub const ON_ACCENT: Color32 = Color32::from_rgb(0x1A, 0x14, 0x10);
-/// Two shades of the transparency checkerboard.
-pub const CHECKER_LIGHT: Color32 = Color32::from_rgb(0x4A, 0x4E, 0x58);
-pub const CHECKER_DARK: Color32 = Color32::from_rgb(0x3A, 0x3D, 0x46);
+/// The interface colors of a theme. Kagero draws with the current ones
+/// ([`colors`]); [`set_colors`] switches themes at runtime.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ThemeColors {
+    /// Light themes start from egui's light style, dark ones from its dark style.
+    pub dark: bool,
+    pub background: Color32,
+    pub panel: Color32,
+    pub surface: Color32,
+    pub surface_hover: Color32,
+    pub border: Color32,
+    pub bevel_light: Color32,
+    pub bevel_dark: Color32,
+    pub text_secondary: Color32,
+    pub text_primary: Color32,
+    pub accent: Color32,
+    pub accent_pressed: Color32,
+    pub success: Color32,
+    pub ember_deep: Color32,
+    pub error: Color32,
+    pub on_accent: Color32,
+    pub checker_light: Color32,
+    pub checker_dark: Color32,
+}
+
+/// Kagero Ember: a dark workshop lit by warm amber (the default).
+pub const EMBER: ThemeColors = ThemeColors {
+    dark: true,
+    background: Color32::from_rgb(0x17, 0x19, 0x1F),
+    panel: Color32::from_rgb(0x20, 0x23, 0x2B),
+    surface: Color32::from_rgb(0x2C, 0x30, 0x3A),
+    surface_hover: Color32::from_rgb(0x37, 0x3C, 0x48),
+    border: Color32::from_rgb(0x34, 0x38, 0x43),
+    bevel_light: Color32::from_rgb(0x4A, 0x4F, 0x5C),
+    bevel_dark: Color32::from_rgb(0x0E, 0x0F, 0x13),
+    text_secondary: Color32::from_rgb(0xA5, 0xA9, 0xB5),
+    text_primary: Color32::from_rgb(0xF0, 0xEE, 0xE8),
+    accent: Color32::from_rgb(0xFF, 0x9D, 0x42),
+    accent_pressed: Color32::from_rgb(0xF0, 0x6B, 0x35),
+    success: Color32::from_rgb(0x75, 0xC7, 0xB5),
+    ember_deep: Color32::from_rgb(0x6B, 0x36, 0x1C),
+    error: Color32::from_rgb(0xE8, 0x5D, 0x5D),
+    on_accent: Color32::from_rgb(0x1A, 0x14, 0x10),
+    checker_light: Color32::from_rgb(0x4A, 0x4E, 0x58),
+    checker_dark: Color32::from_rgb(0x3A, 0x3D, 0x46),
+};
+
+static CURRENT: std::sync::RwLock<ThemeColors> = std::sync::RwLock::new(EMBER);
+
+/// The colors of the current theme.
+pub fn colors() -> ThemeColors {
+    *CURRENT
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Switches the colors (call [`apply`] afterwards to restyle egui's widgets).
+pub fn set_colors(colors: ThemeColors) {
+    *CURRENT
+        .write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = colors;
+}
+
+pub fn background() -> Color32 {
+    colors().background
+}
+
+pub fn panel() -> Color32 {
+    colors().panel
+}
+
+pub fn surface() -> Color32 {
+    colors().surface
+}
+
+pub fn surface_hover() -> Color32 {
+    colors().surface_hover
+}
+
+pub fn border() -> Color32 {
+    colors().border
+}
+
+pub fn bevel_light() -> Color32 {
+    colors().bevel_light
+}
+
+pub fn bevel_dark() -> Color32 {
+    colors().bevel_dark
+}
+
+pub fn text_secondary() -> Color32 {
+    colors().text_secondary
+}
+
+pub fn text_primary() -> Color32 {
+    colors().text_primary
+}
+
+pub fn accent() -> Color32 {
+    colors().accent
+}
+
+pub fn accent_pressed() -> Color32 {
+    colors().accent_pressed
+}
+
+pub fn success() -> Color32 {
+    colors().success
+}
+
+pub fn ember_deep() -> Color32 {
+    colors().ember_deep
+}
+
+pub fn error() -> Color32 {
+    colors().error
+}
+
+pub fn on_accent() -> Color32 {
+    colors().on_accent
+}
+
+pub fn checker_light() -> Color32 {
+    colors().checker_light
+}
+
+pub fn checker_dark() -> Color32 {
+    colors().checker_dark
+}
 
 /// Corner radius of every frame: square, like pixels.
 pub const RADIUS: u8 = 0;
@@ -73,14 +182,19 @@ pub fn font(scale: u32) -> FontId {
 
 /// Applies the Kagero style to an egui context.
 pub fn apply(ctx: &egui::Context) {
-    let mut visuals = Visuals::dark();
+    let c = colors();
+    let mut visuals = if c.dark {
+        Visuals::dark()
+    } else {
+        Visuals::light()
+    };
     visuals.override_text_color = None;
-    visuals.panel_fill = PANEL;
-    visuals.window_fill = PANEL;
-    visuals.extreme_bg_color = BACKGROUND;
-    visuals.faint_bg_color = SURFACE;
-    visuals.code_bg_color = SURFACE;
-    visuals.window_stroke = Stroke::new(1.0_f32, BEVEL_LIGHT);
+    visuals.panel_fill = c.panel;
+    visuals.window_fill = c.panel;
+    visuals.extreme_bg_color = c.background;
+    visuals.faint_bg_color = c.surface;
+    visuals.code_bg_color = c.surface;
+    visuals.window_stroke = Stroke::new(1.0_f32, c.bevel_light);
     visuals.window_corner_radius = CornerRadius::ZERO;
     visuals.menu_corner_radius = CornerRadius::ZERO;
     // Hard pixel shadows: offset, no blur.
@@ -88,56 +202,56 @@ pub fn apply(ctx: &egui::Context) {
         offset: [4, 4],
         blur: 0,
         spread: 0,
-        color: Color32::from_black_alpha(150),
+        color: Color32::from_black_alpha(if c.dark { 150 } else { 60 }),
     };
     visuals.popup_shadow = Shadow {
         offset: [3, 3],
         blur: 0,
         spread: 0,
-        color: Color32::from_black_alpha(150),
+        color: Color32::from_black_alpha(if c.dark { 150 } else { 60 }),
     };
     visuals.handle_shape = egui::style::HandleShape::Rect { aspect_ratio: 0.6 };
-    visuals.hyperlink_color = ACCENT;
-    visuals.selection.bg_fill = EMBER_DEEP;
-    visuals.selection.stroke = Stroke::new(1.0_f32, ACCENT);
-    visuals.error_fg_color = ERROR;
-    visuals.warn_fg_color = ACCENT;
+    visuals.hyperlink_color = c.accent;
+    visuals.selection.bg_fill = c.ember_deep;
+    visuals.selection.stroke = Stroke::new(1.0_f32, c.accent);
+    visuals.error_fg_color = c.error;
+    visuals.warn_fg_color = c.accent;
     visuals.slider_trailing_fill = true;
 
     let radius = CornerRadius::same(RADIUS);
     let w = &mut visuals.widgets;
-    w.noninteractive.bg_fill = PANEL;
-    w.noninteractive.weak_bg_fill = PANEL;
-    w.noninteractive.bg_stroke = Stroke::new(1.0_f32, BORDER);
-    w.noninteractive.fg_stroke = Stroke::new(1.0_f32, TEXT_SECONDARY);
+    w.noninteractive.bg_fill = c.panel;
+    w.noninteractive.weak_bg_fill = c.panel;
+    w.noninteractive.bg_stroke = Stroke::new(1.0_f32, c.border);
+    w.noninteractive.fg_stroke = Stroke::new(1.0_f32, c.text_secondary);
     w.noninteractive.corner_radius = radius;
 
     // Buttons sit in a dark pixel outline, like keys on a keyboard.
-    w.inactive.bg_fill = SURFACE;
-    w.inactive.weak_bg_fill = SURFACE;
-    w.inactive.bg_stroke = Stroke::new(1.0_f32, BEVEL_DARK);
-    w.inactive.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
+    w.inactive.bg_fill = c.surface;
+    w.inactive.weak_bg_fill = c.surface;
+    w.inactive.bg_stroke = Stroke::new(1.0_f32, c.bevel_dark);
+    w.inactive.fg_stroke = Stroke::new(1.0_f32, c.text_primary);
     w.inactive.corner_radius = radius;
 
-    w.hovered.bg_fill = SURFACE_HOVER;
-    w.hovered.weak_bg_fill = SURFACE_HOVER;
-    w.hovered.bg_stroke = Stroke::new(1.0_f32, ACCENT);
-    w.hovered.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
+    w.hovered.bg_fill = c.surface_hover;
+    w.hovered.weak_bg_fill = c.surface_hover;
+    w.hovered.bg_stroke = Stroke::new(1.0_f32, c.accent);
+    w.hovered.fg_stroke = Stroke::new(1.0_f32, c.text_primary);
     w.hovered.corner_radius = radius;
     w.hovered.expansion = 0.0;
 
-    w.active.bg_fill = EMBER_DEEP;
-    w.active.weak_bg_fill = EMBER_DEEP;
-    w.active.bg_stroke = Stroke::new(1.0_f32, ACCENT);
+    w.active.bg_fill = c.ember_deep;
+    w.active.weak_bg_fill = c.ember_deep;
+    w.active.bg_stroke = Stroke::new(1.0_f32, c.accent);
     // egui also uses this color for `strong()` text, so it must stay light.
-    w.active.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
+    w.active.fg_stroke = Stroke::new(1.0_f32, c.text_primary);
     w.active.corner_radius = radius;
     w.active.expansion = 0.0;
 
-    w.open.bg_fill = SURFACE_HOVER;
-    w.open.weak_bg_fill = SURFACE_HOVER;
-    w.open.bg_stroke = Stroke::new(1.0_f32, BEVEL_DARK);
-    w.open.fg_stroke = Stroke::new(1.0_f32, TEXT_PRIMARY);
+    w.open.bg_fill = c.surface_hover;
+    w.open.weak_bg_fill = c.surface_hover;
+    w.open.bg_stroke = Stroke::new(1.0_f32, c.bevel_dark);
+    w.open.fg_stroke = Stroke::new(1.0_f32, c.text_primary);
     w.open.corner_radius = radius;
 
     ctx.set_visuals(visuals);

@@ -1,5 +1,5 @@
 ---
-description: "Frames, the timeline, real-time preview and onion skin."
+description: "Frames, frame tags, the timeline, real-time preview and onion skin."
 icon: film
 ---
 
@@ -8,7 +8,7 @@ icon: film
 Kagero animates frame by frame: you draw each frame, and every frame keeps its own
 image on each layer and its own **duration**.
 
-<figure><img src="../.gitbook/assets/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration, onion skin settings and eight frame cards"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration and onion skin, two frame tags (rise and fall) above eight frame cards"><figcaption></figcaption></figure>
 
 ## Frames
 
@@ -28,6 +28,28 @@ image on each layer and its own **duration**.
 * Deleting a frame with drawings asks first; the last frame can't be deleted.
 * Up to 1000 frames, within the memory budget.
 
+## Frame tags
+
+A **tag** names a range of frames, for example *walk*, *idle* or *attack*. Tags are
+colored bars above the frame cards; overlapping tags get their own rows.
+
+| Action | How |
+|--------|-----|
+| New tag | Right-click a frame → **New Tag…** (or **New Tag from Selection…** with several frames selected), Frame → New Tag…, or <kbd>Alt</kbd>+<kbd>T</kbd>. Give it a name, a range and a color. |
+| Select its frames | Click the bar |
+| Edit or delete | Double-click the bar, or right-click → **Edit Tag…** / **Delete Tag**. Deleting a tag keeps its frames. |
+| Loop it in the preview | Right-click the bar → **Loop in Preview**. A **Loop: name ×** button next to the frame counter turns it off. |
+| Jump between tags | <kbd>Alt</kbd>+<kbd>,</kbd> / <kbd>Alt</kbd>+<kbd>.</kbd> (also in the Frame menu) |
+
+* A new frame inside a tag, or right after its last frame, joins the tag. For example,
+  duplicating the last frame of *walk* makes *walk* one frame longer.
+* Deleting a frame shrinks its tag. If it was the tag's only frame, the tag goes away,
+  and one undo brings both back.
+* Moving frames left or right keeps the tags' ranges: a tag marks a stretch of the
+  timeline.
+* Tags are saved in the project and can be exported on their own (**Frames → Tag** in
+  the Export dialog). They are also written into sprite-sheet metadata.
+
 ## The timeline
 
 Playback controls, frame actions, duration and onion skin sit on top; below is a strip
@@ -40,7 +62,8 @@ frame has an amber border.
 ## Preview
 
 <kbd>Enter</kbd> (or the play button) loops the animation from the current frame;
-<kbd>Enter</kbd> or <kbd>Esc</kbd> stops on the frame that was showing.
+<kbd>Enter</kbd> or <kbd>Esc</kbd> stops on the frame that was showing. With a tag set
+to **Loop in Preview**, only that tag's frames play.
 
 <figure><img src="../.gitbook/assets/preview.png" alt="The animation preview playing, with the Previewing badge in the corner of the canvas"><figcaption><p>While the preview plays, a badge shows the frame; drawing is paused.</p></figcaption></figure>
 
@@ -68,5 +91,5 @@ Onion skin is purely visual: it never changes your pixels, is never saved and ne
 appears in exports. It hides while the preview plays.
 {% endhint %}
 
-To export the animation, see [Animated GIF](../export/export/animated-export.md) and
+To export the animation, see [Animations: GIF and WebP](../export/export/animated-export.md) and
 [Sprite sheets](../export/export/sprite-sheets.md).

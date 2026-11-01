@@ -104,7 +104,7 @@ pub fn show(
     });
     if let Some(text) = note {
         ui.add_space(2.0);
-        ui.label(RichText::new(text.as_str()).color(theme::ACCENT));
+        ui.label(RichText::new(text.as_str()).color(theme::accent()));
     }
 
     let query = filter.trim().to_lowercase();
@@ -136,16 +136,16 @@ pub fn show(
                     });
                     let waiting = *capturing == Some(action);
                     let text = if waiting {
-                        RichText::new("Press keys…").color(theme::ON_ACCENT)
+                        RichText::new("Press keys…").color(theme::on_accent())
                     } else {
                         match keymap.binding(action) {
-                            Some(b) => RichText::new(b.label()).color(theme::ACCENT),
-                            None => RichText::new("—").color(theme::TEXT_SECONDARY),
+                            Some(b) => RichText::new(b.label()).color(theme::accent()),
+                            None => RichText::new("—").color(theme::text_secondary()),
                         }
                     };
                     let mut button = egui::Button::new(text).min_size(egui::vec2(150.0, 22.0));
                     if waiting {
-                        button = button.fill(theme::ACCENT);
+                        button = button.fill(theme::accent());
                     }
                     if ui
                         .add(button)
@@ -195,8 +195,8 @@ pub fn show(
         .spacing([12.0, 4.0])
         .show(ui, |ui| {
             for (keys, what) in FIXED {
-                ui.label(RichText::new(keys).color(theme::TEXT_PRIMARY));
-                ui.label(RichText::new(what).color(theme::TEXT_SECONDARY));
+                ui.label(RichText::new(keys).color(theme::text_primary()));
+                ui.label(RichText::new(what).color(theme::text_secondary()));
                 ui.end_row();
             }
         });

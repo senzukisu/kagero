@@ -1,5 +1,6 @@
 use super::animation::{Frame, FrameId, DEFAULT_FRAME_DURATION_MS};
-use super::selection::SelRect;
+use super::selection::{SelRect, Selection};
+use super::tags::FrameTag;
 use super::{
     layers_bytes, validate_size, CoreError, PixelBuffer, Rgba, MAX_DOCUMENT_BYTES, MAX_FRAMES,
     MAX_LAYERS,
@@ -18,6 +19,96 @@ pub struct LayerInfo {
     pub id: LayerId,
     pub name: String,
     pub visible: bool,
+    /// How strongly the layer shows, 0 (invisible) to 255 (as drawn). Applied when
+    /// compositing; the layer's own pixels never change.
+    pub opacity: u8,
+    /// Locked layers can't be drawn on or changed.
+    pub locked: bool,
+    /// Drawing only recolors pixels that already have color; transparency stays.
+    pub alpha_lock: bool,
+}
+
+impl LayerInfo {
+    /// A visible, fully opaque, unlocked layer.
+    pub fn new(id: LayerId, name: String) -> Self {
+        Self {
+            id,
+            name,
+            visible: true,
+            opacity: 255,
+            locked: false,
+            alpha_lock: false,
+        }
+    }
+}
+
+/// The parts of a layer that are only settings (no pixels), for undoable changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayerProps {
+    pub opacity: u8,
+    pub locked: bool,
+    pub alpha_lock: bool,
+}
+
+impl LayerInfo {
+    pub fn props(&self) -> LayerProps {
+        LayerProps {
+            opacity: self.opacity,
+            locked: self.locked,
+            alpha_lock: self.alpha_lock,
+        }
+    }
+
+    pub fn set_props(&mut self, p: LayerProps) {
+        self.opacity = p.opacity;
+        self.locked = p.locked;
+        self.alpha_lock = p.alpha_lock;
+    }
+}
+
+/// Size and pixels of a whole document, swapped in and out by canvas resize and crop.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Geometry {
+    pub width: u32,
+    pub height: u32,
+    /// Every frame's cels (one per layer, bottom to top).
+    pub frames: Vec<(FrameId, Vec<PixelBuffer>)>,
+    pub selection: Option<Selection>,
+}
+
+impl Geometry {
+    pub fn byte_size(&self) -> usize {
+        self.frames
+            .iter()
+            .flat_map(|(_, cels)| cels.iter())
+            .map(|c| c.as_bytes().len())
+            .sum()
+    }
+}
+
+/// Where existing pixels stay when the canvas changes size: 0 = left/top, 1 =
+/// center, 2 = right/bottom, per axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Anchor {
+    pub x: u8,
+    pub y: u8,
+}
+
+impl Anchor {
+    pub const CENTER: Anchor = Anchor { x: 1, y: 1 };
+
+    /// Offset of the old image inside the new canvas.
+    pub fn offset(self, old_w: u32, old_h: u32, new_w: u32, new_h: u32) -> (i64, i64) {
+        let along = |old: u32, new: u32, a: u8| -> i64 {
+            let diff = i64::from(new) - i64::from(old);
+            match a.min(2) {
+                0 => 0,
+                1 => diff.div_euclid(2),
+                _ => diff,
+            }
+        };
+        (along(old_w, new_w, self.x), along(old_h, new_h, self.y))
+    }
 }
 
 /// A layer taken out of the document: its properties plus its image in every frame.
@@ -56,8 +147,19 @@ pub struct Document {
     next_frame_id: u64,
     /// Bumped when layer order or visibility changes (affects every frame's look).
     structure_revision: u64,
-    /// Rectangular selection (editor state, not saved in project files).
-    selection: Option<SelRect>,
+    /// Selected pixels (editor state, not saved in project files).
+    selection: Option<Selection>,
+    /// Named frame ranges, in the order they were created.
+    tags: Vec<FrameTag>,
+}
+
+/// `px` with its alpha scaled by a layer opacity (255 = unchanged).
+pub fn with_opacity(px: Rgba, opacity: u8) -> Rgba {
+    if opacity == 255 {
+        return px;
+    }
+    let a = (u16::from(px.a()) * u16::from(opacity) + 127) / 255;
+    Rgba([px.r(), px.g(), px.b(), a as u8])
 }
 
 impl Document {
@@ -68,11 +170,7 @@ impl Document {
         Ok(Self {
             width,
             height,
-            layers: vec![LayerInfo {
-                id: LayerId(1),
-                name: "Background".to_owned(),
-                visible: true,
-            }],
+            layers: vec![LayerInfo::new(LayerId(1), "Background".to_owned())],
             frames: vec![Frame::new(
                 FrameId(1),
                 DEFAULT_FRAME_DURATION_MS,
@@ -84,6 +182,7 @@ impl Document {
             next_frame_id: 2,
             structure_revision: 0,
             selection: None,
+            tags: Vec::new(),
         })
     }
 
@@ -142,9 +241,8 @@ impl Document {
             .into_iter()
             .enumerate()
             .map(|(i, (name, visible))| LayerInfo {
-                id: LayerId(i as u64 + 1),
-                name,
                 visible,
+                ..LayerInfo::new(LayerId(i as u64 + 1), name)
             })
             .collect();
         let mut out_frames = Vec::with_capacity(frames.len());
@@ -177,6 +275,7 @@ impl Document {
             frames: out_frames,
             structure_revision: 0,
             selection: None,
+            tags: Vec::new(),
         })
     }
 
@@ -216,14 +315,24 @@ impl Document {
 
     // ------------------------------------------------------------ selection
 
-    /// The current selection, always clipped to the image.
+    /// The rectangle around the selected pixels, always inside the image.
     pub fn selection(&self) -> Option<SelRect> {
-        self.selection
+        self.selection.as_ref().map(Selection::bounds)
+    }
+
+    /// The selected pixels.
+    pub fn selection_shape(&self) -> Option<&Selection> {
+        self.selection.as_ref()
+    }
+
+    /// Selects a rectangle (clipped). `None` or an empty result deselects.
+    pub fn set_selection(&mut self, rect: Option<SelRect>) {
+        self.set_selection_shape(rect.map(Selection::from));
     }
 
     /// Sets (and clips) the selection. `None` or an empty result deselects.
-    pub fn set_selection(&mut self, rect: Option<SelRect>) {
-        self.selection = rect.and_then(|r| r.clip(self.width, self.height));
+    pub fn set_selection_shape(&mut self, selection: Option<Selection>) {
+        self.selection = selection.and_then(|s| s.clip(self.width, self.height));
     }
 
     // ------------------------------------------------------------ layers
@@ -268,6 +377,11 @@ impl Document {
     }
 
     /// Changes whenever layer order or visibility changes.
+    /// Marks the look of every frame as changed (layer opacity, visibility, …).
+    pub fn touch_structure(&mut self) {
+        self.structure_revision = self.structure_revision.wrapping_add(1);
+    }
+
     pub fn structure_revision(&self) -> u64 {
         self.structure_revision
     }
@@ -301,13 +415,237 @@ impl Document {
             cels.push((frame.id, PixelBuffer::new(self.width, self.height)?));
         }
         Ok(LayerData {
+            info: LayerInfo::new(self.allocate_layer_id(), name),
+            cels,
+        })
+    }
+
+    /// A copy of the layer at `index` in every frame, with its own id and pixels
+    /// (not inserted yet).
+    pub fn make_duplicate_layer(
+        &mut self,
+        index: usize,
+        name: String,
+    ) -> Result<LayerData, CoreError> {
+        let source = self
+            .layers
+            .get(index)
+            .ok_or(CoreError::LayerIndex(index))?
+            .clone();
+        self.can_add_layer()?;
+        let cels = self
+            .frames
+            .iter()
+            .map(|f| (f.id, f.cels[index].clone()))
+            .collect();
+        Ok(LayerData {
             info: LayerInfo {
                 id: self.allocate_layer_id(),
                 name,
-                visible: true,
+                ..source
             },
             cels,
         })
+    }
+
+    /// The layer at `index` (properties and every frame's pixels), copied.
+    pub fn layer_data(&self, index: usize) -> Result<LayerData, CoreError> {
+        let info = self
+            .layers
+            .get(index)
+            .ok_or(CoreError::LayerIndex(index))?
+            .clone();
+        let cels = self
+            .frames
+            .iter()
+            .map(|f| (f.id, f.cels[index].clone()))
+            .collect();
+        Ok(LayerData { info, cels })
+    }
+
+    /// Swaps the layer at `index` with `data` (properties and pixels of every frame).
+    /// Swapping twice restores the original, which makes this an exact undo step.
+    pub fn swap_layer_data(&mut self, index: usize, data: &mut LayerData) -> Result<(), CoreError> {
+        if index >= self.layers.len() {
+            return Err(CoreError::LayerIndex(index));
+        }
+        if data.cels.len() != self.frames.len() {
+            return Err(CoreError::CelCount {
+                expected: self.frames.len(),
+                actual: data.cels.len(),
+            });
+        }
+        for frame in &self.frames {
+            let cel = data
+                .cels
+                .iter()
+                .find(|(id, _)| *id == frame.id)
+                .map(|(_, c)| c)
+                .ok_or(CoreError::FrameMissing)?;
+            if cel.width() != self.width || cel.height() != self.height {
+                return Err(CoreError::InvalidSize {
+                    width: cel.width(),
+                    height: cel.height(),
+                });
+            }
+        }
+        std::mem::swap(&mut self.layers[index], &mut data.info);
+        for frame in &mut self.frames {
+            if let Some((_, cel)) = data.cels.iter_mut().find(|(id, _)| *id == frame.id) {
+                std::mem::swap(&mut frame.cels[index], cel);
+                frame.touch();
+            }
+        }
+        self.structure_revision = self.structure_revision.wrapping_add(1);
+        Ok(())
+    }
+
+    /// `layer_bottom` with `layer_top` composited onto it in every frame, as one layer
+    /// that looks the same as the two did (opacity is baked into the pixels).
+    pub fn merged_layer(&self, top: usize, bottom: usize) -> Result<LayerData, CoreError> {
+        let top_info = self.layers.get(top).ok_or(CoreError::LayerIndex(top))?;
+        let bottom_info = self
+            .layers
+            .get(bottom)
+            .ok_or(CoreError::LayerIndex(bottom))?;
+        let mut cels = Vec::with_capacity(self.frames.len());
+        for frame in &self.frames {
+            let (t, b) = (&frame.cels[top], &frame.cels[bottom]);
+            let mut out = Vec::with_capacity(b.as_bytes().len());
+            for (tp, bp) in t
+                .as_bytes()
+                .chunks_exact(4)
+                .zip(b.as_bytes().chunks_exact(4))
+            {
+                let tp = with_opacity(Rgba([tp[0], tp[1], tp[2], tp[3]]), top_info.opacity);
+                let bp = with_opacity(Rgba([bp[0], bp[1], bp[2], bp[3]]), bottom_info.opacity);
+                out.extend_from_slice(&tp.over(bp).0);
+            }
+            cels.push((
+                frame.id,
+                PixelBuffer::from_raw(self.width, self.height, out)?,
+            ));
+        }
+        Ok(LayerData {
+            info: LayerInfo {
+                opacity: 255,
+                ..bottom_info.clone()
+            },
+            cels,
+        })
+    }
+
+    /// The document resized to `width × height` with the old pixels placed by
+    /// `anchor`; pixels outside the new canvas are cut off, new area is transparent.
+    pub fn resized_geometry(
+        &self,
+        width: u32,
+        height: u32,
+        anchor: Anchor,
+    ) -> Result<Geometry, CoreError> {
+        let (dx, dy) = anchor.offset(self.width, self.height, width, height);
+        self.relocated_geometry(width, height, dx, dy)
+    }
+
+    /// The document cut down to the rectangle `(x, y, width, height)`.
+    pub fn cropped_geometry(
+        &self,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    ) -> Result<Geometry, CoreError> {
+        if x.checked_add(width).is_none_or(|r| r > self.width)
+            || y.checked_add(height).is_none_or(|b| b > self.height)
+        {
+            return Err(CoreError::InvalidSize { width, height });
+        }
+        self.relocated_geometry(width, height, -i64::from(x), -i64::from(y))
+    }
+
+    /// New `width × height` cels with the old pixels shifted by `(dx, dy)`.
+    fn relocated_geometry(
+        &self,
+        width: u32,
+        height: u32,
+        dx: i64,
+        dy: i64,
+    ) -> Result<Geometry, CoreError> {
+        validate_size(width, height)?;
+        if layers_bytes(width, height, self.layers.len() * self.frames.len()) > MAX_DOCUMENT_BYTES {
+            return Err(CoreError::MemoryBudget);
+        }
+        let mut frames = Vec::with_capacity(self.frames.len());
+        for frame in &self.frames {
+            let mut cels = Vec::with_capacity(frame.cels.len());
+            for old in &frame.cels {
+                let mut cel = PixelBuffer::new(width, height)?;
+                // Copy only the overlapping rows.
+                let x0 = dx.max(0);
+                let x1 = (dx + i64::from(self.width)).min(i64::from(width));
+                if x0 < x1 {
+                    for ny in dy.max(0)..(dy + i64::from(self.height)).min(i64::from(height)) {
+                        let oy = ny - dy;
+                        for nx in x0..x1 {
+                            if let Some(px) = old.get((nx - dx) as i32, oy as i32) {
+                                cel.set(nx as i32, ny as i32, px);
+                            }
+                        }
+                    }
+                }
+                cels.push(cel);
+            }
+            frames.push((frame.id, cels));
+        }
+        let selection = self
+            .selection
+            .as_ref()
+            .and_then(|s| s.translated(dx as i32, dy as i32).clip(width, height));
+        Ok(Geometry {
+            width,
+            height,
+            frames,
+            selection,
+        })
+    }
+
+    /// Swaps the document's size and pixels with `geometry`. Swapping twice restores
+    /// the original, which makes canvas resize and crop exact undo steps.
+    pub fn swap_geometry(&mut self, geometry: &mut Geometry) -> Result<(), CoreError> {
+        validate_size(geometry.width, geometry.height)?;
+        for frame in &self.frames {
+            let (_, cels) = geometry
+                .frames
+                .iter()
+                .find(|(id, _)| *id == frame.id)
+                .ok_or(CoreError::FrameMissing)?;
+            if cels.len() != self.layers.len() {
+                return Err(CoreError::CelCount {
+                    expected: self.layers.len(),
+                    actual: cels.len(),
+                });
+            }
+            if let Some(bad) = cels
+                .iter()
+                .find(|c| c.width() != geometry.width || c.height() != geometry.height)
+            {
+                return Err(CoreError::InvalidSize {
+                    width: bad.width(),
+                    height: bad.height(),
+                });
+            }
+        }
+        std::mem::swap(&mut self.width, &mut geometry.width);
+        std::mem::swap(&mut self.height, &mut geometry.height);
+        std::mem::swap(&mut self.selection, &mut geometry.selection);
+        for frame in &mut self.frames {
+            if let Some((_, cels)) = geometry.frames.iter_mut().find(|(id, _)| *id == frame.id) {
+                std::mem::swap(&mut frame.cels, cels);
+                frame.touch();
+            }
+        }
+        self.structure_revision = self.structure_revision.wrapping_add(1);
+        Ok(())
     }
 
     /// Checks that `layer` could be inserted at `index` without changing anything.
@@ -532,6 +870,31 @@ impl Document {
         Ok(())
     }
 
+    // ------------------------------------------------------------ tags
+
+    /// Frame tags (ranges of frame positions).
+    pub fn tags(&self) -> &[FrameTag] {
+        &self.tags
+    }
+
+    /// Replaces the tags; invalid ones (out of range, empty names) are dropped.
+    pub fn set_tags(&mut self, tags: Vec<FrameTag>) {
+        self.tags = super::tags::sanitize_tags(tags, self.frames.len());
+    }
+
+    /// Swaps the tag list with `tags` (self-inverse; used by undo).
+    pub fn swap_tags(&mut self, tags: &mut Vec<FrameTag>) {
+        std::mem::swap(&mut self.tags, tags);
+    }
+
+    /// The first tag containing frame `index`.
+    pub fn tag_at(&self, index: usize) -> Option<(usize, &FrameTag)> {
+        self.tags
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t.contains(index))
+    }
+
     // ------------------------------------------------------------ cels
 
     /// Image of layer `layer` in frame `frame` (indices).
@@ -577,9 +940,9 @@ impl Document {
         let frame = self.frames.get(frame)?;
         let mut out = Rgba::TRANSPARENT;
         for (info, cel) in self.layers.iter().zip(&frame.cels) {
-            if info.visible {
+            if info.visible && info.opacity > 0 {
                 if let Some(px) = cel.get(x, y) {
-                    out = px.over(out);
+                    out = with_opacity(px, info.opacity).over(out);
                 }
             }
         }
@@ -609,21 +972,21 @@ impl Document {
         let w = w.min(self.width - x);
         let h = h.min(self.height - y);
         let mut out = vec![0u8; w as usize * h as usize * 4];
-        let visible: Vec<&PixelBuffer> = self
+        let visible: Vec<(u8, &PixelBuffer)> = self
             .layers
             .iter()
             .zip(&frame.cels)
-            .filter(|(info, _)| info.visible)
-            .map(|(_, cel)| cel)
+            .filter(|(info, _)| info.visible && info.opacity > 0)
+            .map(|(info, cel)| (info.opacity, cel))
             .collect();
         for row in 0..h {
             let src_row = (y + row) as usize * self.width as usize;
             for col in 0..w {
                 let src_index = src_row + (x + col) as usize;
                 let mut px = Rgba::TRANSPARENT;
-                for cel in &visible {
+                for (opacity, cel) in &visible {
                     if let Some(c) = cel.get_index(src_index as u32) {
-                        px = c.over(px);
+                        px = with_opacity(c, *opacity).over(px);
                     }
                 }
                 let dst = (row as usize * w as usize + col as usize) * 4;

@@ -7,6 +7,28 @@ use serde::{Deserialize, Serialize};
 
 use super::Rgba;
 
+/// The palette color closest to `c` (by weighted RGB distance; the first one wins a
+/// tie), keeping `c`'s alpha. Fully transparent pixels and palettes without opaque
+/// colors leave `c` unchanged.
+pub fn nearest(colors: &[Rgba], c: Rgba) -> Rgba {
+    if c.a() == 0 {
+        return c;
+    }
+    let dist = |p: &Rgba| {
+        // "Redmean" weights: cheap and much closer to how colors look than plain RGB.
+        let rm = (i32::from(c.r()) + i32::from(p.r())) / 2;
+        let dr = i32::from(c.r()) - i32::from(p.r());
+        let dg = i32::from(c.g()) - i32::from(p.g());
+        let db = i32::from(c.b()) - i32::from(p.b());
+        (((512 + rm) * dr * dr) >> 8) + 4 * dg * dg + (((767 - rm) * db * db) >> 8)
+    };
+    colors
+        .iter()
+        .filter(|p| p.a() != 0)
+        .min_by_key(|p| dist(p))
+        .map_or(c, |p| Rgba::new(p.r(), p.g(), p.b(), c.a()))
+}
+
 /// Most colors a palette can hold.
 pub const MAX_PALETTE_COLORS: usize = 256;
 /// Longest palette name.

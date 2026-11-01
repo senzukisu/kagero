@@ -82,7 +82,7 @@ pub fn show(ui: &mut egui::Ui, title: &str, menus: impl FnOnce(&mut egui::Ui)) {
         egui::Align2::CENTER_CENTER,
         title,
         egui::TextStyle::Body.resolve(ui.style()),
-        theme::TEXT_SECONDARY,
+        theme::text_secondary(),
     );
 
     ui.horizontal_centered(|ui| {
@@ -114,7 +114,7 @@ pub fn show(ui: &mut egui::Ui, title: &str, menus: impl FnOnce(&mut egui::Ui)) {
     // A 1-pixel ember line under the bar.
     let px = 1.0 / ctx.pixels_per_point();
     let line = Rect::from_min_max(egui::pos2(bar.min.x, bar.max.y - px), bar.max);
-    ui.painter().rect_filled(line, 0.0, theme::BORDER);
+    ui.painter().rect_filled(line, 0.0, theme::border());
 }
 
 fn window_button(ui: &mut egui::Ui, icon: &[&str], tooltip: &str, close: bool) -> egui::Response {
@@ -124,13 +124,13 @@ fn window_button(ui: &mut egui::Ui, icon: &[&str], tooltip: &str, close: bool) -
         if close {
             Color32::from_rgb(0xB8, 0x3A, 0x3A)
         } else {
-            theme::EMBER_DEEP
+            theme::ember_deep()
         }
     } else if resp.hovered() {
         if close {
-            theme::ERROR
+            theme::error()
         } else {
-            theme::SURFACE_HOVER
+            theme::surface_hover()
         }
     } else {
         Color32::TRANSPARENT

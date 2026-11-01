@@ -13,6 +13,7 @@ use serde::Serialize;
 use super::sequence::frame_stem;
 use super::spritesheet::{Rect, SheetPlan};
 use super::{SheetLayout, SheetOptions};
+use crate::core::FrameTag;
 
 /// Version of the Kagero sprite-sheet JSON format.
 pub const KAGERO_SHEET_FORMAT_VERSION: u32 = 1;
@@ -35,6 +36,9 @@ struct KageroFrame {
     source: Rect,
     source_size: Size,
     duration: u32,
+    /// Packed sheets: this frame reuses the pixels of the frame at this position.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duplicate_of: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -56,10 +60,55 @@ struct KageroSheet {
     frame_count: usize,
     total_duration: u64,
     frames: Vec<KageroFrame>,
+    /// Frame tags, as positions in `frames` (inclusive). Absent when there are none.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<SheetTag>,
 }
 
-fn layout_name(layout: SheetLayout) -> &'static str {
-    match layout {
+#[derive(Serialize)]
+struct SheetTag {
+    name: String,
+    from: usize,
+    to: usize,
+    color: String,
+}
+
+/// Aseprite-style tag entry (`meta.frameTags`), understood by many engines.
+#[derive(Serialize)]
+struct HashTag {
+    name: String,
+    from: usize,
+    to: usize,
+    direction: &'static str,
+    color: String,
+}
+
+/// Tags that have frames on the sheet, as (name, first, last sheet position, color).
+fn sheet_tags(plan: &SheetPlan, tags: &[FrameTag]) -> Vec<SheetTag> {
+    tags.iter()
+        .filter_map(|t| {
+            let mut orders = plan
+                .placements
+                .iter()
+                .filter(|p| t.contains(p.frame_index))
+                .map(|p| p.order);
+            let first = orders.next()?;
+            let (from, to) = orders.fold((first, first), |(a, b), o| (a.min(o), b.max(o)));
+            Some(SheetTag {
+                name: t.name.clone(),
+                from,
+                to,
+                color: t.color.to_hex(),
+            })
+        })
+        .collect()
+}
+
+fn layout_name(options: &SheetOptions) -> &'static str {
+    if options.packed {
+        return "packed";
+    }
+    match options.layout {
         SheetLayout::Horizontal => "horizontal",
         SheetLayout::Vertical => "vertical",
         SheetLayout::Columns => "columns",
@@ -75,6 +124,7 @@ pub fn kagero_json(
     base: &str,
     digits: u8,
     scale: u32,
+    tags: &[FrameTag],
 ) -> Result<String, serde_json::Error> {
     let sheet = KageroSheet {
         format: "kagero-sprite-sheet",
@@ -86,7 +136,7 @@ pub fn kagero_json(
             h: plan.height,
         },
         scale,
-        layout: layout_name(options.layout),
+        layout: layout_name(options),
         cell: Size {
             w: plan.cell_w,
             h: plan.cell_h,
@@ -116,8 +166,10 @@ pub fn kagero_json(
                     h: p.source_h,
                 },
                 duration: p.duration_ms,
+                duplicate_of: p.duplicate_of,
             })
             .collect(),
+        tags: sheet_tags(plan, tags),
     };
     serde_json::to_string_pretty(&sheet)
 }
@@ -134,6 +186,7 @@ struct HashFrame {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct HashMeta {
     app: &'static str,
     version: &'static str,
@@ -141,6 +194,8 @@ struct HashMeta {
     format: &'static str,
     size: Size,
     scale: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    frame_tags: Vec<HashTag>,
 }
 
 #[derive(Serialize)]
@@ -156,6 +211,7 @@ pub fn json_hash(
     base: &str,
     digits: u8,
     scale: u32,
+    tags: &[FrameTag],
 ) -> Result<String, serde_json::Error> {
     let mut frames = serde_json::Map::new();
     for p in &plan.placements {
@@ -187,6 +243,17 @@ pub fn json_hash(
                 h: plan.height,
             },
             scale: scale.to_string(),
+            frame_tags: sheet_tags(plan, tags)
+                .into_iter()
+                .map(|t| HashTag {
+                    name: t.name,
+                    from: t.from,
+                    to: t.to,
+                    direction: "forward",
+                    // Aseprite writes #rrggbbaa.
+                    color: format!("{}ff", t.color.to_lowercase()),
+                })
+                .collect(),
         },
     };
     serde_json::to_string_pretty(&sheet)

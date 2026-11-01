@@ -5,27 +5,20 @@ icon: map
 
 # Roadmap
 
-## Next: 0.4 — everyday comfort
+## Next
 
-- Canvas resize and crop
-- Layer opacity, duplicate layer and merge down
-- Autosave to a recovery folder and restore after a crash
-- Frame tags and ranges, to preview and export part of an animation
-- Lasso and magic-wand selection
-- Animated WebP and packed sprite sheets
 - Kagero Pixel as the default interface font once it is polished
-- Plugins and themes
-- An executable icon and an installer
-
-## Later
-
-- Tilemap mode, custom brushes, symmetry, dithering tools
+- Drawing tools that stay inside the selection
+- Saved custom brushes and a brush library
+- A larger plugin API: layers, frames and new tools
+- Tilemap mode
 - Linux and macOS builds and update packages
 
 ## Done
 
 | Version | Highlights |
 |---------|------------|
+| **0.4.0** | Canvas size and crop, layer opacity/duplicate/merge/locks, autosave and recovery, frame tags, lasso and magic wand, ellipse and polygon, symmetry, dithering, brushes, fill tolerance, convert to palette, animated WebP, packed sheets, themes, Lua plugins, program icon and installer |
 | **0.3.8** | Custom shortcuts, redesigned Settings and New Image, Experimental page (pixel font, pixel-perfect pencil, tiled view), clearer icons, licenses in the program, Discord improvements |
 | **0.3.5 – 0.3.7** | Kagero's own title bar, pixel-style interface and icons, Kagero Pixel font (optional), maximized start, Discord images, About window; Export dialog fits on small screens |
 | **0.3.0** | Export dialog: PNG, JPEG, WebP, animated GIF, sprite sheets with JSON metadata, integer scaling; rectangle selection and transforms; multiple palettes |

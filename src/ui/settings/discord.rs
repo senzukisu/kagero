@@ -23,21 +23,21 @@ pub fn show(
     ui.ctx()
         .request_repaint_after(std::time::Duration::from_millis(500));
     if !view.discord_configured {
-        status_line(ui, theme::TEXT_SECONDARY, "Not configured in this build");
+        status_line(ui, theme::text_secondary(), "Not configured in this build");
     } else {
         match &view.discord_state {
             ConnectionState::NotConfigured => {
-                status_line(ui, theme::TEXT_SECONDARY, "Not configured in this build")
+                status_line(ui, theme::text_secondary(), "Not configured in this build")
             }
-            ConnectionState::Disabled => status_line(ui, theme::TEXT_SECONDARY, "Off"),
-            ConnectionState::Connecting => status_line(ui, theme::ACCENT, "Connecting…"),
-            ConnectionState::Connected => status_line(ui, theme::SUCCESS, "Connected to Discord"),
+            ConnectionState::Disabled => status_line(ui, theme::text_secondary(), "Off"),
+            ConnectionState::Connecting => status_line(ui, theme::accent(), "Connecting…"),
+            ConnectionState::Connected => status_line(ui, theme::success(), "Connected to Discord"),
             ConnectionState::NotConnected { reason, retry_in } => {
                 let text = match retry_in {
                     Some(d) => format!("Not connected — {reason} (retrying in {}s)", d.as_secs()),
                     None => format!("Not connected — {reason}"),
                 };
-                status_line(ui, theme::TEXT_SECONDARY, &text);
+                status_line(ui, theme::text_secondary(), &text);
             }
         }
         ui.horizontal(|ui| {

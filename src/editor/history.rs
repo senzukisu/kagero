@@ -6,8 +6,10 @@
 
 use std::collections::VecDeque;
 
-use crate::core::selection::SelRect;
-use crate::core::{CoreError, Document, Frame, FrameId, LayerData, LayerId, Rgba};
+use crate::core::selection::Selection;
+use crate::core::{
+    CoreError, Document, Frame, FrameId, FrameTag, Geometry, LayerData, LayerId, LayerProps, Rgba,
+};
 
 /// Default number of undo steps kept.
 pub const DEFAULT_MAX_ENTRIES: usize = 256;
@@ -106,13 +108,35 @@ pub enum Change {
     },
     /// Moves or clears the selection outline.
     SetSelection {
-        before: Option<SelRect>,
-        after: Option<SelRect>,
+        before: Option<Selection>,
+        after: Option<Selection>,
     },
     /// Several changes that undo and redo together (e.g. move pixels + selection).
     Group {
         label: &'static str,
         changes: Vec<Change>,
+    },
+    /// Opacity and locks of a layer.
+    SetLayerProps {
+        layer: LayerId,
+        before: LayerProps,
+        after: LayerProps,
+    },
+    /// Swaps a whole layer (properties and every frame's pixels) with `data`;
+    /// self-inverse. Used by Merge Down.
+    SwapLayer {
+        index: usize,
+        data: LayerData,
+    },
+    /// Swaps the document's size and pixels; self-inverse. Canvas Size and Crop.
+    Geometry {
+        label: &'static str,
+        geometry: Geometry,
+    },
+    /// Swaps the frame tags with `tags`; self-inverse.
+    Tags {
+        label: &'static str,
+        tags: Vec<FrameTag>,
     },
 }
 
@@ -135,6 +159,17 @@ impl Change {
             Change::SetFrameDuration { .. } => "Frame Duration",
             Change::SetSelection { .. } => "Selection",
             Change::Group { label, .. } => label,
+            Change::SetLayerProps { before, after, .. } => {
+                if before.opacity != after.opacity {
+                    "Layer Opacity"
+                } else if before.locked != after.locked {
+                    "Lock Layer"
+                } else {
+                    "Alpha Lock"
+                }
+            }
+            Change::SwapLayer { .. } => "Merge Down",
+            Change::Geometry { label, .. } | Change::Tags { label, .. } => label,
         }
     }
 
@@ -151,6 +186,10 @@ impl Change {
             }
             Change::RenameLayer { before, after, .. } => before.len() + after.len(),
             Change::Group { changes, .. } => changes.iter().map(Change::byte_size).sum(),
+            Change::SwapLayer { data, .. } => data.byte_size(),
+            Change::Geometry { geometry, .. } => geometry.byte_size(),
+            Change::Tags { tags, .. } => tags.iter().map(|t| 64 + t.name.len()).sum(),
+            Change::SetLayerProps { .. } => 0,
             Change::SetSelection { .. }
             | Change::MoveLayer { .. }
             | Change::SetVisible { .. }
@@ -175,7 +214,9 @@ impl Change {
             }
             Change::RenameLayer { .. }
             | Change::SetFrameDuration { .. }
-            | Change::SetSelection { .. } => None,
+            | Change::SetSelection { .. }
+            | Change::Tags { .. } => None,
+            Change::SetLayerProps { before, after, .. } if before.opacity == after.opacity => None,
             Change::Group { changes, .. } => {
                 changes
                     .iter()
@@ -237,13 +278,26 @@ impl Change {
                 Ok(())
             }
             Change::SetSelection { after, .. } => {
-                doc.set_selection(*after);
+                doc.set_selection_shape(after.clone());
                 Ok(())
             }
             Change::Group { changes, .. } => {
                 for c in changes.iter_mut() {
                     c.apply(doc)?;
                 }
+                Ok(())
+            }
+            Change::SetLayerProps { layer, after, .. } => {
+                doc.layer_mut(*layer)
+                    .ok_or(CoreError::LayerIndex(usize::MAX))?
+                    .set_props(*after);
+                doc.touch_structure();
+                Ok(())
+            }
+            Change::SwapLayer { index, data } => doc.swap_layer_data(*index, data),
+            Change::Geometry { geometry, .. } => doc.swap_geometry(geometry),
+            Change::Tags { tags, .. } => {
+                doc.swap_tags(tags);
                 Ok(())
             }
         }
@@ -325,13 +379,26 @@ impl Change {
                 Ok(())
             }
             Change::SetSelection { before, .. } => {
-                doc.set_selection(*before);
+                doc.set_selection_shape(before.clone());
                 Ok(())
             }
             Change::Group { changes, .. } => {
                 for c in changes.iter_mut().rev() {
                     c.revert(doc)?;
                 }
+                Ok(())
+            }
+            Change::SetLayerProps { layer, before, .. } => {
+                doc.layer_mut(*layer)
+                    .ok_or(CoreError::LayerIndex(usize::MAX))?
+                    .set_props(*before);
+                doc.touch_structure();
+                Ok(())
+            }
+            Change::SwapLayer { index, data } => doc.swap_layer_data(*index, data),
+            Change::Geometry { geometry, .. } => doc.swap_geometry(geometry),
+            Change::Tags { tags, .. } => {
+                doc.swap_tags(tags);
                 Ok(())
             }
         }

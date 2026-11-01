@@ -25,6 +25,38 @@ pub fn show(ui: &mut egui::Ui, config: &mut Config, actions: &mut Vec<SettingsAc
         "Turns off the pulsing preview indicator and eased transitions.",
     );
 
+    section(ui, "Autosave & recovery");
+    changed |= toggle(
+        ui,
+        &mut config.autosave.enabled,
+        "Autosave unsaved work to the recovery folder",
+    );
+    ui.add_enabled_ui(config.autosave.enabled, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Every");
+            let resp = ui.add(
+                egui::Slider::new(
+                    &mut config.autosave.interval_minutes,
+                    crate::config::AUTOSAVE_MINUTES,
+                )
+                .suffix(" min")
+                .clamping(egui::SliderClamping::Always),
+            );
+            changed |= resp.drag_stopped() || (resp.changed() && !resp.dragged());
+        });
+    });
+    ui.horizontal(|ui| {
+        if ui.button("Open Recovery Folder").clicked() {
+            actions.push(SettingsAction::OpenRecoveryFolder);
+        }
+    });
+    hint(
+        ui,
+        "If Kagero closes unexpectedly, the next start offers your autosaved work. Copies \
+         never replace your projects. Autosave lowers the risk of losing work; it can't \
+         guarantee recovery after every possible failure.",
+    );
+
     section(ui, "Onion skin");
     changed |= toggle(ui, &mut config.onion.enabled, "Show neighbor frames (O)");
     changed |= toggle(

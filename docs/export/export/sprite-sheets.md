@@ -1,5 +1,5 @@
 ---
-description: "Sprite sheets for game engines: layouts, spacing, padding, trim, extrude and metadata."
+description: "Sprite sheets for game engines: grid and packed layouts, spacing, padding, trim, extrude and metadata."
 icon: table-cells
 ---
 
@@ -19,16 +19,32 @@ sheet and its size before you export.
 | **Vertical strip** | All frames in one column |
 | **Grid (fixed columns)** | You set the columns; rows follow |
 | **Grid (fixed rows)** | You set the rows; columns follow |
+| **Packed (smallest sheet)** | Trimmed frames packed tightly |
 
-Frames go left to right, top to bottom, in timeline order. Every frame gets a cell of
-the **same size**, so animations don't jump in engines.
+In the strip and grid layouts, frames go left to right and top to bottom in timeline
+order, and every frame gets a cell of the **same size**, so animations don't jump in
+engines.
+
+### Packed
+
+**Packed** trims every frame to its content and fits the frames tightly.
+
+* Kagero tries several sheet widths and keeps the smallest sheet that fits the limits.
+* The same frames always give the same sheet, and frames never overlap.
+* Spacing, padding and extrude are respected.
+* **Identical frames share one spot** (on by default): frames with exactly the same
+  pixels are stored once. The metadata points every such frame at that spot (Kagero
+  JSON also marks it with `duplicateOf`).
+
+Positions and trim offsets are only known from the metadata, so keep it on (the dialog
+warns when it's off).
 
 | Option | Range | Meaning |
 |--------|-------|---------|
 | **Spacing** | 0–256 px | Gap between cells |
 | **Padding** | 0–256 px | Empty border around the sheet |
 | **Extrude** | 0–16 px | Repeats each frame's edge pixels outward, so engines that filter textures don't bleed neighbors in |
-| **Trim empty borders** | on/off | Cuts each frame's transparent border; the metadata records the offsets |
+| **Trim empty borders** | on/off | Cuts each frame's transparent border; the metadata records the offsets (always on for Packed) |
 | **Background** | Transparent / color | A color also fills spacing and padding |
 
 All sizes are in output pixels (after scaling). The sheet is saved as **PNG** or
@@ -47,6 +63,6 @@ The JSON file is saved next to the image with the same name. Frame names follow 
 [file-name rules](README.md#file-names): `name_0001`, `name_0002`, … Both formats are
 described field by field in [Sprite sheet metadata](../../developers/metadata-format.md).
 
-{% hint style="info" %}
-Packed (bin-packing) layouts aren't available yet; every frame uses an equal cell.
-{% endhint %}
+[Frame tags](../../animate/animation.md#frame-tags) are written too: as `tags` in
+Kagero JSON and as Aseprite-style `meta.frameTags` in JSON Hash, which many engines
+read.

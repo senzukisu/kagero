@@ -8,6 +8,10 @@ Notes:
 
 - **egui / epaint** embed the *Ubuntu-Light* font (Ubuntu Font Licence 1.0), *Hack* (MIT/Bitstream Vera),
   *Noto Emoji* and *emoji-icon-font* (SIL Open Font License 1.1).
+- **Lua 5.4** (MIT, Copyright © 1994–2024 Lua.org, PUC-Rio) is compiled into Kagero for
+  plugins, built from source by `lua-src` through `mlua-sys`.
+- The program icon and version information are added at build time with `winresource`
+  (MIT), which isn't part of the program itself.
 - HTTPS for the updater uses the Windows TLS stack (SChannel) through `native-tls`; no
   certificate bundle is shipped.
 - On Windows Kagero may *load* an installed system Japanese font (Yu Gothic, MS Gothic or Meiryo) at
@@ -32,11 +36,14 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | arrayvec | 0.7.8 | MIT OR Apache-2.0 | https://github.com/bluss/arrayvec |
 | base64 | 0.23.1 | MIT OR Apache-2.0 | https://github.com/marshallpierce/rust-base64 |
 | base64ct | 1.8.3 | Apache-2.0 OR MIT | https://github.com/RustCrypto/formats |
+| bitflags | 1.3.2 | MIT/Apache-2.0 | https://github.com/bitflags/bitflags |
 | bitflags | 2.13.2 | MIT OR Apache-2.0 | https://github.com/bitflags/bitflags |
 | block-buffer | 0.10.4 | MIT OR Apache-2.0 | https://github.com/RustCrypto/utils |
+| bstr | 1.13.1 | MIT OR Apache-2.0 | https://github.com/BurntSushi/bstr |
 | bumpalo | 3.20.3 | MIT OR Apache-2.0 | https://github.com/fitzgen/bumpalo |
 | bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/bytemuck |
 | bytemuck_derive | 1.12.1 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/bytemuck |
+| byteorder | 1.5.0 | Unlicense OR MIT | https://github.com/BurntSushi/byteorder |
 | byteorder-lite | 0.1.0 | Unlicense OR MIT | https://github.com/image-rs/byteorder-lite |
 | bytes | 1.12.1 | MIT | https://github.com/tokio-rs/bytes |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/cfg-if |
@@ -57,6 +64,7 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | egui | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui |
 | egui-winit | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/egui-winit |
 | egui_glow | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/egui_glow |
+| either | 1.19.0 | MIT OR Apache-2.0 | https://github.com/rayon-rs/either |
 | emath | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/emath |
 | epaint | 0.31.1 | MIT OR Apache-2.0 | https://github.com/emilk/egui/tree/master/crates/epaint |
 | epaint_default_fonts | 0.31.1 | (MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0 | https://github.com/emilk/egui/tree/master/crates/epaint_default_fonts |
@@ -106,7 +114,10 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | minisign-verify | 0.3.0 | MIT | https://github.com/jedisct1/rust-minisign-verify |
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
+| mlua | 0.10.5 | MIT | https://github.com/mlua-rs/mlua |
+| mlua-sys | 0.6.8 | MIT | https://github.com/mlua-rs/mlua |
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/moxcms.git |
+| mslnk | 0.1.8 | MIT | https://github.com/dobefore/mslnk.git |
 | native-tls | 0.2.18 | MIT OR Apache-2.0 | https://github.com/rust-native-tls/rust-native-tls |
 | nohash-hasher | 0.2.0 | Apache-2.0 OR MIT | https://github.com/paritytech/nohash-hasher |
 | num-traits | 0.2.19 | MIT OR Apache-2.0 | https://github.com/rust-num/num-traits |
@@ -127,7 +138,9 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | quote | 1.0.47 | MIT OR Apache-2.0 | https://github.com/dtolnay/quote |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib | https://github.com/rust-windowing/raw-window-handle |
 | rfd | 0.15.4 | MIT | https://github.com/PolyMeilex/rfd |
+| rustc-hash | 2.1.3 | Apache-2.0 OR MIT | https://github.com/rust-lang/rustc-hash |
 | rustls-pki-types | 1.15.1 | MIT OR Apache-2.0 | https://github.com/rustls/pki-types |
+| rustversion | 1.0.23 | MIT OR Apache-2.0 | https://github.com/dtolnay/rustversion |
 | schannel | 0.1.30 | MIT | https://github.com/steffengy/schannel-rs |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 | https://github.com/bluss/scopeguard |
 | semver | 1.0.28 | MIT OR Apache-2.0 | https://github.com/dtolnay/semver |
@@ -182,6 +195,7 @@ Generated from `cargo metadata` for x86_64-pc-windows-msvc (runtime dependencies
 | windows-targets | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | winit | 0.30.13 | Apache-2.0 | https://github.com/rust-windowing/winit |
+| winreg | 0.55.0 | MIT | https://github.com/gentoo90/winreg-rs |
 | writeable | 0.6.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | yoke | 0.8.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | yoke-derive | 0.8.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |

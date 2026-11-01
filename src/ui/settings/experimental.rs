@@ -8,10 +8,10 @@ use crate::theme;
 
 pub fn show(ui: &mut egui::Ui, config: &mut Config, actions: &mut Vec<SettingsAction>) {
     egui::Frame::new()
-        .fill(theme::EMBER_DEEP.gamma_multiply(0.35))
+        .fill(theme::ember_deep().gamma_multiply(0.35))
         .stroke(egui::Stroke::new(
             1.0_f32,
-            theme::ACCENT.gamma_multiply(0.6),
+            theme::accent().gamma_multiply(0.6),
         ))
         .inner_margin(egui::Margin::symmetric(10, 8))
         .show(ui, |ui| {
@@ -21,7 +21,7 @@ pub fn show(ui: &mut egui::Ui, config: &mut Config, actions: &mut Vec<SettingsAc
                     "These features are still being tested. They may change, move or be \
                      removed in a later version. Your projects are never affected.",
                 )
-                .color(theme::TEXT_PRIMARY),
+                .color(theme::text_primary()),
             );
         });
 

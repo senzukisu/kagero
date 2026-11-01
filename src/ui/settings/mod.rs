@@ -5,7 +5,8 @@ mod discord;
 mod experimental;
 mod general;
 mod keys;
-mod soon;
+mod plugins;
+mod themes;
 mod updates;
 
 use egui::{Color32, Rect, RichText, Sense, Vec2};
@@ -64,13 +65,13 @@ impl SettingsTab {
             SettingsTab::Experimental => {
                 "Features that are still being tested. Turn them on to try them."
             }
-            SettingsTab::Plugins => "Extend Kagero with new tools, formats and effects.",
-            SettingsTab::Themes => "Change how Kagero looks.",
+            SettingsTab::Plugins => "Add commands written in Lua, run safely in a sandbox.",
+            SettingsTab::Themes => "Change Kagero's colors, or make your own theme.",
         }
     }
 
     fn is_soon(self) -> bool {
-        matches!(self, SettingsTab::Plugins | SettingsTab::Themes)
+        false
     }
 }
 
@@ -108,6 +109,19 @@ pub enum SettingsAction {
     DismissUpdateError,
     DiscordRetry,
     DiscordDisconnect,
+    OpenRecoveryFolder,
+    /// Show a theme on the whole window without saving it yet.
+    PreviewTheme(String),
+    KeepTheme,
+    RevertTheme,
+    ImportTheme,
+    ExportTheme(String),
+    DeleteTheme(String),
+    OpenThemesFolder,
+    ReloadThemes,
+    OpenPluginsFolder,
+    ReloadPlugins,
+    InstallExamplePlugin,
 }
 
 /// Read-only state the window displays.
@@ -117,6 +131,14 @@ pub struct SettingsView {
     pub discord_configured: bool,
     pub can_install: bool,
     pub has_backup: bool,
+    /// Every theme (built-in first), the saved one, and the one being previewed.
+    pub themes: Vec<crate::themes::Theme>,
+    pub current_theme: String,
+    pub theme_preview: Option<String>,
+    /// Theme files that couldn't be used, and why.
+    pub theme_problems: Vec<(String, String)>,
+    /// Plugin folders found (usable or not).
+    pub plugins: Vec<crate::plugins::Plugin>,
 }
 
 pub struct SettingsWindow {
@@ -185,7 +207,7 @@ impl SettingsWindow {
                     ui.painter().vline(
                         x,
                         ui.max_rect().y_range(),
-                        egui::Stroke::new(1.0_f32, theme::BORDER),
+                        egui::Stroke::new(1.0_f32, theme::border()),
                     );
                     ui.add_space(14.0);
                     ui.vertical(|ui| {
@@ -213,8 +235,10 @@ impl SettingsWindow {
                                 SettingsTab::Experimental => {
                                     experimental::show(ui, config, &mut actions)
                                 }
-                                SettingsTab::Plugins => soon::plugins(ui),
-                                SettingsTab::Themes => soon::themes(ui),
+                                SettingsTab::Plugins => {
+                                    plugins::show(ui, config, view, &mut actions)
+                                }
+                                SettingsTab::Themes => themes::show(ui, view, &mut actions),
                             });
                     });
                 });
@@ -232,7 +256,7 @@ impl SettingsWindow {
             ui.label(
                 RichText::new(group.to_uppercase())
                     .small()
-                    .color(theme::TEXT_SECONDARY),
+                    .color(theme::text_secondary()),
             );
             ui.add_space(2.0);
             for &tab in tabs {
@@ -251,11 +275,11 @@ fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Respon
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(166.0, 30.0), Sense::click());
     let painter = ui.painter();
     if selected {
-        painter.rect_filled(rect, 0.0, theme::EMBER_DEEP);
+        painter.rect_filled(rect, 0.0, theme::ember_deep());
         let bar = Rect::from_min_size(rect.min, Vec2::new(3.0, rect.height()));
-        painter.rect_filled(bar, 0.0, theme::ACCENT);
+        painter.rect_filled(bar, 0.0, theme::accent());
     } else if resp.hovered() {
-        painter.rect_filled(rect, 0.0, theme::SURFACE_HOVER);
+        painter.rect_filled(rect, 0.0, theme::surface_hover());
     }
     let icon = Rect::from_center_size(
         egui::pos2(rect.left() + 20.0, rect.center().y),
@@ -268,9 +292,9 @@ fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Respon
         tab.label(),
         egui::TextStyle::Body.resolve(ui.style()),
         if selected {
-            theme::TEXT_PRIMARY
+            theme::text_primary()
         } else {
-            theme::TEXT_SECONDARY
+            theme::text_secondary()
         },
     );
     if tab.is_soon() {
@@ -280,7 +304,7 @@ fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Respon
             egui::Align2::RIGHT_CENTER,
             "SOON",
             egui::TextStyle::Small.resolve(ui.style()),
-            theme::ACCENT.gamma_multiply(0.8),
+            theme::accent().gamma_multiply(0.8),
         );
     }
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -297,9 +321,9 @@ fn page_header(ui: &mut egui::Ui, tab: SettingsTab) {
             ui.label(
                 RichText::new(tab.label())
                     .font(theme::font(2))
-                    .color(theme::TEXT_PRIMARY),
+                    .color(theme::text_primary()),
             );
-            ui.label(RichText::new(tab.description()).color(theme::TEXT_SECONDARY));
+            ui.label(RichText::new(tab.description()).color(theme::text_secondary()));
         });
     });
     ui.add_space(4.0);
@@ -313,14 +337,14 @@ fn section(ui: &mut egui::Ui, title: &str) {
         RichText::new(title.to_uppercase())
             .small()
             .strong()
-            .color(theme::ACCENT),
+            .color(theme::accent()),
     );
     ui.add_space(2.0);
 }
 
 /// Secondary explanatory text.
 fn hint(ui: &mut egui::Ui, text: &str) {
-    ui.label(RichText::new(text).small().color(theme::TEXT_SECONDARY));
+    ui.label(RichText::new(text).small().color(theme::text_secondary()));
 }
 
 /// Kagero's switch: a pill toggle followed by its label. Returns `true` when changed.
@@ -334,17 +358,17 @@ pub fn toggle(ui: &mut egui::Ui, value: &mut bool, label: &str) -> bool {
             changed = true;
         }
         let t = ui.ctx().animate_bool_with_time(resp.id, *value, 0.12);
-        let off = theme::SURFACE_HOVER;
-        let track = lerp_color(off, theme::ACCENT, t);
+        let off = theme::surface_hover();
+        let track = lerp_color(off, theme::accent(), t);
         ui.painter().rect_filled(rect, size.y / 2.0, track);
         let knob_x = egui::lerp((rect.left() + 9.0)..=(rect.right() - 9.0), t);
         ui.painter().circle_filled(
             egui::pos2(knob_x, rect.center().y),
             6.5,
             if *value {
-                theme::ON_ACCENT
+                theme::on_accent()
             } else {
-                theme::TEXT_PRIMARY
+                theme::text_primary()
             },
         );
         let text = ui.add(egui::Label::new(label).sense(Sense::click()));
@@ -366,6 +390,54 @@ fn status_line(ui: &mut egui::Ui, color: Color32, text: &str) {
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(12.0), Sense::hover());
         ui.painter().circle_filled(rect.center(), 4.5, color);
-        ui.label(RichText::new(text).color(theme::TEXT_PRIMARY));
+        ui.label(RichText::new(text).color(theme::text_primary()));
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_page_renders_including_themes_and_plugins() {
+        let dir = std::env::temp_dir().join(format!("kagero-settings-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut store = crate::plugins::PluginStore::load(Some(dir.clone()));
+        store.install_example().expect("example");
+        let view = SettingsView {
+            update_status: UpdateStatus::Idle,
+            discord_state: ConnectionState::Disabled,
+            discord_configured: false,
+            can_install: false,
+            has_backup: false,
+            themes: crate::themes::builtins(),
+            current_theme: crate::themes::DEFAULT_THEME.to_owned(),
+            theme_preview: Some("Paper".to_owned()),
+            theme_problems: vec![("bad.json".into(), "the color \"panel\" is missing".into())],
+            plugins: store.plugins.clone(),
+        };
+        let mut config = Config::default();
+        let mut window = SettingsWindow::default();
+        let ctx = egui::Context::default();
+        for (_, tabs) in MENU {
+            for &tab in tabs {
+                window.open_at(tab);
+                for _ in 0..4 {
+                    let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                        let actions = window.show(ctx, &mut config, &view);
+                        assert!(actions.is_empty(), "{tab:?}: {actions:?}");
+                    });
+                }
+                // No page may stretch the window beyond its designed width.
+                let width = ctx
+                    .memory(|m| m.area_rect(egui::Id::new("kagero-settings")))
+                    .map_or(0.0, |r| r.width());
+                assert!(
+                    width > 0.0 && width < 850.0,
+                    "{tab:?}: window is {width} wide"
+                );
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

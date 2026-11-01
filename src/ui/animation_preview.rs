@@ -3,6 +3,7 @@
 //! Timing uses a monotonic clock and maps elapsed time to a frame index, so frames are
 //! never skipped or slowed by how often the UI repaints, and errors do not accumulate.
 
+use std::ops::Range;
 use std::time::{Duration, Instant};
 
 use crate::config::{PlaybackSettings, PlaybackTiming};
@@ -13,6 +14,8 @@ use crate::editor::Editor;
 pub struct Player {
     /// When playback started and the animation time (ms) at that moment.
     clock: Option<(Instant, u64)>,
+    /// Frames being looped (a tag), or `None` for all of them.
+    range: Option<Range<usize>>,
 }
 
 impl Player {
@@ -21,8 +24,16 @@ impl Player {
     }
 
     /// Per-frame durations used for playback.
-    fn durations(editor: &Editor, settings: &PlaybackSettings) -> Vec<u32> {
-        let frames = editor.document().frames();
+    fn durations(
+        editor: &Editor,
+        settings: &PlaybackSettings,
+        range: &Option<Range<usize>>,
+    ) -> Vec<u32> {
+        let all = editor.document().frames();
+        let frames = match range {
+            Some(r) => &all[r.start.min(all.len())..r.end.min(all.len())],
+            None => all,
+        };
         match settings.timing {
             PlaybackTiming::FrameDurations => frames.iter().map(|f| f.duration_ms()).collect(),
             PlaybackTiming::FixedFps => {
@@ -32,11 +43,28 @@ impl Player {
         }
     }
 
-    /// Starts looping from the active frame. Pixel editing is blocked while playing.
-    pub fn start(&mut self, editor: &mut Editor, settings: &PlaybackSettings) {
-        let durations = Self::durations(editor, settings);
+    /// Starts looping from the active frame — within `range` (a tag) if given, from
+    /// its first frame when the active one is outside. Pixel editing is blocked while
+    /// playing.
+    pub fn start(
+        &mut self,
+        editor: &mut Editor,
+        settings: &PlaybackSettings,
+        range: Option<Range<usize>>,
+    ) {
+        let count = editor.document().frame_count();
+        self.range = range.filter(|r| !r.is_empty() && r.end <= count);
+        let first = self.range.as_ref().map_or(0, |r| r.start);
         let active = editor.document().active_frame_index();
-        let offset: u64 = durations[..active.min(durations.len())]
+        let relative = match &self.range {
+            Some(r) if !r.contains(&active) => {
+                editor.select_frame(first);
+                0
+            }
+            _ => active - first,
+        };
+        let durations = Self::durations(editor, settings, &self.range);
+        let offset: u64 = durations[..relative.min(durations.len())]
             .iter()
             .map(|&d| u64::from(d))
             .sum();
@@ -53,14 +81,6 @@ impl Player {
         }
     }
 
-    pub fn toggle(&mut self, editor: &mut Editor, settings: &PlaybackSettings) {
-        if self.is_playing() {
-            self.stop(editor);
-        } else {
-            self.start(editor, settings);
-        }
-    }
-
     /// Forgets playback without touching an editor (e.g. when the document closes).
     pub fn reset(&mut self) {
         self.clock = None;
@@ -71,11 +91,12 @@ impl Player {
         let Some((started, offset)) = self.clock else {
             return;
         };
-        let durations = Self::durations(editor, settings);
+        let durations = Self::durations(editor, settings, &self.range);
+        let first = self.range.as_ref().map_or(0, |r| r.start);
         let elapsed = offset + started.elapsed().as_millis() as u64;
         match frame_at_time(&durations, elapsed) {
             Some((index, remaining_ms)) => {
-                editor.select_frame(index);
+                editor.select_frame(first + index);
                 ctx.request_repaint_after(Duration::from_millis(remaining_ms.max(1)));
             }
             None => self.stop(editor),

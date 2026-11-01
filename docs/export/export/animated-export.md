@@ -1,23 +1,37 @@
 ---
-description: "Animated GIFs: timing, looping, transparency and colors."
+description: "Animated GIF and animated WebP: timing, looping, transparency and colors."
 icon: images
 ---
 
-# Animated GIF
+# Animations: GIF and WebP
 
 The **Animation** tab of the Export dialog (**File → Export Animation as GIF…**) writes
-`name.gif`. Choose the frames, a [scale](README.md#frames-layers-scale) and a folder;
-the preview plays with the real frame durations.
+`name.gif` or `name.webp`. Choose the format, the frames (all, selected, or a
+[tag](../../animate/animation.md#frame-tags)), a [scale](README.md#frames-layers-scale)
+and a folder. The preview plays with the real frame durations.
+
+| Format | Colors and transparency | Timing | Plays in |
+|--------|-------------------------|--------|----------|
+| **GIF** | Up to 255 colors; pixels are fully transparent or fully opaque | 10 ms steps | Everything |
+| **Animated WebP** | Every color and soft transparency, lossless | Exact milliseconds | Browsers and most engines; some older image viewers show only the first frame |
+
+## Animated WebP
+
+Lossless: what you see in Kagero is exactly what is stored, including semi-transparent
+pixels. **Repeat** is *Loop forever* or *Play once*, and there is nothing else to set.
+Each frame replaces the previous one completely.
+
+## GIF
 
 <figure><img src="../../.gitbook/assets/export-gif.png" alt="The Export dialog on the Animation tab: GIF options for repeat, transparency, soft edges and dithering, with an animated preview"><figcaption></figcaption></figure>
 
-## Timing
+### Timing
 
 Each frame keeps its duration from the timeline. GIF stores delays in 10 ms steps, so
 Kagero rounds to the nearest step, with a minimum of **20 ms** (many viewers play
 shorter delays far too slowly). The dialog warns when rounding changes your timing.
 
-## Options
+### Options
 
 | Option | Choices |
 |--------|---------|
@@ -26,7 +40,7 @@ shorter delays far too slowly). The dialog warns when rounding changes your timi
 | **Soft edges** | *Keep color*, or *Blend over* a color you pick — useful when you know the background |
 | **Dither** | Off by default; mixes nearby colors to hide banding when colors must be reduced |
 
-## Colors and transparency
+### Colors and transparency
 
 * GIF pixels are either fully transparent or fully opaque; the dialog warns when the
   image has semi-transparent pixels.
@@ -36,6 +50,6 @@ shorter delays far too slowly). The dialog warns when rounding changes your timi
 * Each frame fully replaces the previous one, so transparent areas never show leftovers.
 
 {% hint style="info" %}
-Animated WebP isn't available in this version. Use GIF for sharing, or a
-[sprite sheet](sprite-sheets.md) for game engines.
+For game engines, a [sprite sheet](sprite-sheets.md) with metadata is usually the best
+choice.
 {% endhint %}

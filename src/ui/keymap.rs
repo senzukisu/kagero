@@ -200,6 +200,9 @@ const fn ctrl_shift(k: Key) -> Option<Binding> {
 const fn shift(k: Key) -> Option<Binding> {
     Some(Binding::new(false, true, false, k))
 }
+const fn ctrl_alt(k: Key) -> Option<Binding> {
+    Some(Binding::new(true, false, true, k))
+}
 const fn alt(k: Key) -> Option<Binding> {
     Some(Binding::new(false, false, true, k))
 }
@@ -217,6 +220,8 @@ actions! {
     Undo => "edit.undo", "Undo", Edit, ctrl(Key::Z);
     Redo => "edit.redo", "Redo", Edit, ctrl(Key::Y);
     SelectAll => "edit.select_all", "Select all", Edit, ctrl(Key::A);
+    InvertSelection => "edit.invert_selection", "Invert selection", Edit, ctrl_shift(Key::I);
+    BrushFromSelection => "edit.brush_from_selection", "Use selection as brush", Edit, ctrl(Key::B);
     DeleteSelection => "edit.delete", "Clear selection", Edit, key(Key::Delete);
     Duplicate => "edit.duplicate", "Duplicate selection (or frame)", Edit, ctrl(Key::D);
     FlipHorizontal => "edit.flip_h", "Flip horizontal", Edit, shift(Key::H);
@@ -232,8 +237,13 @@ actions! {
     Line => "tool.line", "Line", Tools, key(Key::L);
     Rectangle => "tool.rectangle", "Rectangle", Tools, key(Key::U);
     FilledRectangle => "tool.filled_rectangle", "Filled rectangle", Tools, shift(Key::U);
+    Ellipse => "tool.ellipse", "Ellipse", Tools, key(Key::K);
+    Polygon => "tool.polygon", "Polygon", Tools, key(Key::P);
     Pan => "tool.pan", "Pan", Tools, key(Key::H);
     Select => "tool.select", "Rectangle select", Tools, key(Key::M);
+    Lasso => "tool.lasso", "Lasso", Tools, key(Key::Q);
+    MagicWand => "tool.magic_wand", "Magic wand", Tools, key(Key::W);
+    Crop => "tool.crop", "Crop", Tools, key(Key::C);
 
     ZoomIn => "view.zoom_in", "Zoom in", View, key(Key::Plus);
     ZoomOut => "view.zoom_out", "Zoom out", View, key(Key::Minus);
@@ -251,11 +261,17 @@ actions! {
     NewFrame => "anim.new_frame", "New frame", Animation, alt(Key::N);
     DuplicateFrame => "anim.duplicate_frame", "Duplicate frame", Animation, alt(Key::D);
     OnionSkin => "anim.onion", "Onion skin", Animation, key(Key::O);
+    NewTag => "anim.new_tag", "New tag from selected frames", Animation, alt(Key::T);
+    PrevTag => "anim.prev_tag", "Previous tag", Animation, alt(Key::Comma);
+    NextTag => "anim.next_tag", "Next tag", Animation, alt(Key::Period);
 
     NewLayer => "layer.new", "New layer", Layers, ctrl_shift(Key::N);
     RenameLayer => "layer.rename", "Rename layer", Layers, key(Key::F2);
     LayerUp => "layer.up", "Move layer up", Layers, ctrl(Key::CloseBracket);
     LayerDown => "layer.down", "Move layer down", Layers, ctrl(Key::OpenBracket);
+    DuplicateLayer => "layer.duplicate", "Duplicate layer", Layers, ctrl_alt(Key::D);
+    MergeDown => "layer.merge_down", "Merge down", Layers, ctrl_alt(Key::M);
+    CanvasSize => "image.canvas_size", "Canvas size", Edit, ctrl_alt(Key::C);
 }
 
 /// Shortcuts that can't be changed, for the list in Settings → Shortcuts.
@@ -277,6 +293,10 @@ pub struct KeyContext {
     pub active_layer: usize,
     /// With a selection, arrows nudge it and Duplicate copies it.
     pub has_selection: bool,
+    /// The Crop tool has a frame: Enter applies it.
+    pub cropping: bool,
+    /// A polygon is being drawn: Enter closes it.
+    pub polygon: bool,
 }
 
 impl Action {
@@ -304,6 +324,8 @@ impl Action {
             A::Undo => Command::Undo,
             A::Redo => Command::Redo,
             A::SelectAll => Command::SelectAll,
+            A::InvertSelection => Command::InvertSelection,
+            A::BrushFromSelection => Command::BrushFromSelection,
             A::DeleteSelection => Command::DeleteSelection,
             A::Duplicate if keys.has_selection => Command::DuplicateSelection,
             A::Duplicate => Command::DuplicateFrame,
@@ -319,8 +341,16 @@ impl Action {
             A::Line => Command::SetTool(ToolKind::Line),
             A::Rectangle => Command::SetTool(ToolKind::Rectangle),
             A::FilledRectangle => Command::SetTool(ToolKind::FilledRectangle),
+            A::Ellipse => Command::SetTool(ToolKind::Ellipse),
+            A::Polygon => Command::SetTool(ToolKind::Polygon),
             A::Pan => Command::SetTool(ToolKind::Pan),
             A::Select => Command::SetTool(ToolKind::Select),
+            A::Lasso => Command::SetTool(ToolKind::Lasso),
+            A::MagicWand => Command::SetTool(ToolKind::MagicWand),
+            A::Crop => Command::SetTool(ToolKind::Crop),
+            A::DuplicateLayer => Command::DuplicateLayer,
+            A::MergeDown => Command::MergeDown,
+            A::CanvasSize => Command::OpenCanvasSize,
             A::ZoomIn => Command::ZoomIn,
             A::ZoomOut => Command::ZoomOut,
             A::ActualSize => Command::ZoomActual,
@@ -336,6 +366,9 @@ impl Action {
             A::NewFrame => Command::AddFrame,
             A::DuplicateFrame => Command::DuplicateFrame,
             A::OnionSkin => Command::ToggleOnionSkin,
+            A::NewTag => Command::NewTag,
+            A::PrevTag => Command::PrevTag,
+            A::NextTag => Command::NextTag,
             A::NewLayer => Command::AddLayer,
             A::RenameLayer => Command::BeginRenameLayer(keys.active_layer),
             A::LayerUp => Command::LayerUp,
@@ -353,8 +386,13 @@ impl Action {
             ToolKind::Line => Action::Line,
             ToolKind::Rectangle => Action::Rectangle,
             ToolKind::FilledRectangle => Action::FilledRectangle,
+            ToolKind::Ellipse => Action::Ellipse,
+            ToolKind::Polygon => Action::Polygon,
             ToolKind::Pan => Action::Pan,
             ToolKind::Select => Action::Select,
+            ToolKind::Lasso => Action::Lasso,
+            ToolKind::MagicWand => Action::MagicWand,
+            ToolKind::Crop => Action::Crop,
         }
     }
 }

@@ -6,7 +6,8 @@
 //!    images on the UI thread. The document, its history and the editor are only read.
 //! 2. **Prepare** — nearest-neighbor scaling, trimming and sprite-sheet layout
 //!    ([`render`], [`spritesheet`]).
-//! 3. **Encode and write** — PNG, JPEG, WebP ([`still`]), GIF ([`gif`]) and JSON
+//! 3. **Encode and write** — PNG, JPEG, WebP ([`still`]), GIF ([`gif`]), animated
+//!    WebP ([`webp_anim`]) and JSON
 //!    metadata ([`metadata`]), driven by [`service`], usually on a background thread
 //!    with progress and cancellation.
 //!
@@ -20,6 +21,7 @@ pub mod sequence;
 pub mod service;
 pub mod spritesheet;
 pub mod still;
+pub mod webp_anim;
 
 pub use options::*;
 

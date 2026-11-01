@@ -106,9 +106,10 @@ versions), `APP_CHANNEL` in `src/lib.rs` if needed, and `CHANGELOG.md`. Run the 
 powershell -ExecutionPolicy Bypass -File scripts\package-release.ps1
 ```
 
-Builds with `KAGERO_OFFICIAL_BUILD=1`, creates `dist\kagero-X.Y.Z-windows-x64.zip`
-(the two executables and their `SHA256SUMS.txt`), signs and verifies it, and writes the
-release's own `SHA256SUMS.txt` for the zip and its signature.
+Builds with `KAGERO_OFFICIAL_BUILD=1` and creates
+`dist\kagero-X.Y.Z-windows-x64.zip` (the two executables and their `SHA256SUMS.txt`).
+It then builds the installer `dist\kagero-X.Y.Z-setup.exe` from that zip, signs and
+verifies both, and writes the release's own `SHA256SUMS.txt` for the four files.
 {% endstep %}
 
 {% step %}
@@ -120,7 +121,7 @@ git push origin main --tags
 ```
 
 Create the GitHub release `Kagero X.Y.Z <Channel>` with highlights, the changelog
-section, known limitations and install steps, and attach the three files from `dist\`.
+section, known limitations and install steps, and attach the five files from `dist\`.
 Mark it **pre-release** only for versions with a suffix such as `0.4.0-beta.1`.
 {% endstep %}
 

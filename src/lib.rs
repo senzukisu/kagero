@@ -13,9 +13,11 @@ pub mod editor;
 pub mod export;
 pub mod file_io;
 pub mod integrations;
+pub mod plugins;
 pub mod release;
 pub mod services;
 pub mod theme;
+pub mod themes;
 pub mod ui;
 
 /// Human-readable application name.

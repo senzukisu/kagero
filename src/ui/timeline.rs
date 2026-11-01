@@ -24,6 +24,12 @@ const THUMB_BOX: f32 = 50.0;
 const THUMB_PIXELS: u32 = 64;
 /// How many thumbnails may be rebuilt per UI frame.
 const THUMB_BUILD_BUDGET: usize = 12;
+/// Space between frame cards.
+const CARD_GAP: f32 = 6.0;
+/// Height of one row of tag bars.
+const TAG_LANE: f32 = 16.0;
+/// Overlapping tags use up to this many rows.
+const MAX_TAG_LANES: usize = 3;
 
 struct Thumb {
     key: (u64, u64),
@@ -37,6 +43,8 @@ pub struct Timeline {
     duration_edit: Option<(FrameId, u32)>,
     /// Frames picked with Ctrl/Shift+click (for exporting selected frames).
     selected: BTreeSet<FrameId>,
+    /// Name of the tag the preview loops, if any.
+    loop_tag: Option<String>,
 }
 
 /// Settings the timeline edits in place (saved by the app on `SettingsChanged`).
@@ -62,6 +70,22 @@ impl Timeline {
         self.thumbs.clear();
         self.duration_edit = None;
         self.selected.clear();
+        self.loop_tag = None;
+    }
+
+    /// Frames of the tag the preview should loop, if one is chosen.
+    pub fn loop_range(&self, doc: &Document) -> Option<std::ops::Range<usize>> {
+        let name = self.loop_tag.as_ref()?;
+        let tag = doc.tags().iter().find(|t| &t.name == name)?;
+        Some(tag.frames(doc.frame_count()))
+    }
+
+    /// Selects frames `range` (as if Shift+clicked).
+    pub fn select_range(&mut self, doc: &Document, range: std::ops::Range<usize>) {
+        self.selected.clear();
+        for f in doc.frames().get(range).unwrap_or_default() {
+            self.selected.insert(f.id);
+        }
     }
 
     pub fn show(
@@ -77,6 +101,13 @@ impl Timeline {
             .retain(|id, _| doc.frames().iter().any(|f| f.id == *id));
         self.selected
             .retain(|id| doc.frames().iter().any(|f| f.id == *id));
+        if self
+            .loop_tag
+            .as_ref()
+            .is_some_and(|name| !doc.tags().iter().any(|t| &t.name == name))
+        {
+            self.loop_tag = None;
+        }
 
         ui.allocate_ui(Vec2::new(ui.available_width(), HEADER_HEIGHT - 6.0), |ui| {
             ui.horizontal_centered(|ui| {
@@ -90,7 +121,7 @@ impl Timeline {
         if doc.frame_count() == 0 {
             ui.vertical_centered(|ui| {
                 ui.label(
-                    RichText::new("This document has no frames.").color(theme::TEXT_SECONDARY),
+                    RichText::new("This document has no frames.").color(theme::text_secondary()),
                 );
                 if ui.button("Create the first frame").clicked() {
                     commands.push(Command::AddFrame);
@@ -119,7 +150,7 @@ impl Timeline {
             RichText::new("TIMELINE")
                 .small()
                 .strong()
-                .color(theme::TEXT_SECONDARY),
+                .color(theme::text_secondary()),
         );
         ui.add_space(6.0);
         if icon_button(
@@ -169,9 +200,24 @@ impl Timeline {
         ui.label(
             RichText::new(format!("{} / {}", active + 1, count))
                 .monospace()
-                .color(theme::TEXT_PRIMARY),
+                .color(theme::text_primary()),
         )
         .on_hover_text("Current frame / total frames");
+        if let Some(name) = self.loop_tag.clone() {
+            let chip = ui
+                .add(
+                    egui::Button::new(
+                        RichText::new(format!("Loop: {name}  ×"))
+                            .small()
+                            .color(theme::text_primary()),
+                    )
+                    .fill(theme::surface_hover()),
+                )
+                .on_hover_text("The preview loops only this tag. Click to loop all frames again.");
+            if chip.clicked() {
+                self.loop_tag = None;
+            }
+        }
 
         ui.separator();
         let can_add = doc.can_add_frame().is_ok() && editable;
@@ -330,7 +376,7 @@ impl Timeline {
             ui.label(
                 RichText::new("Preview")
                     .small()
-                    .color(theme::TEXT_SECONDARY),
+                    .color(theme::text_secondary()),
             );
             if changed {
                 commands.push(Command::SettingsChanged);
@@ -355,7 +401,7 @@ impl Timeline {
         ui.label(
             RichText::new("Duration")
                 .small()
-                .color(theme::TEXT_SECONDARY),
+                .color(theme::text_secondary()),
         );
         let resp = ui
             .add_enabled(
@@ -399,8 +445,12 @@ impl Timeline {
             .id_salt("timeline-strip")
             .auto_shrink([false, false])
             .show(ui, |ui| {
+                if !doc.tags().is_empty() {
+                    ui.spacing_mut().item_spacing.y = 3.0;
+                    self.tag_row(ui, doc, playing, commands);
+                }
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
+                    ui.spacing_mut().item_spacing.x = CARD_GAP;
                     for (index, frame) in doc.frames().iter().enumerate() {
                         let (rect, resp) = ui.allocate_exact_size(
                             Vec2::new(CARD_WIDTH, THUMB_BOX + 34.0),
@@ -475,6 +525,22 @@ impl Timeline {
                         }
                         resp.context_menu(|ui| {
                             ui.add_enabled_ui(!playing, |ui| {
+                                let label = if self.selected.len() > 1
+                                    && self.selected.contains(&frame.id)
+                                {
+                                    "New Tag from Selection…"
+                                } else {
+                                    "New Tag…"
+                                };
+                                if ui.button(label).clicked() {
+                                    if !self.selected.contains(&frame.id) {
+                                        self.selected.clear();
+                                        commands.push(Command::SelectFrame(index));
+                                    }
+                                    commands.push(Command::NewTag);
+                                    ui.close_menu();
+                                }
+                                ui.separator();
                                 if ui.button("Duplicate").clicked() {
                                     commands.push(Command::SelectFrame(index));
                                     commands.push(Command::DuplicateFrame);
@@ -513,9 +579,9 @@ impl Timeline {
                         ui.allocate_exact_size(Vec2::new(36.0, THUMB_BOX), Sense::click());
                     let enabled = !playing && doc.can_add_frame().is_ok();
                     let color = if resp.hovered() && enabled {
-                        theme::ACCENT
+                        theme::accent()
                     } else {
-                        theme::BORDER
+                        theme::border()
                     };
                     ui.painter().rect_stroke(
                         rect,
@@ -541,6 +607,146 @@ impl Timeline {
     }
 }
 
+impl Timeline {
+    /// Colored bars above the frame cards, one per tag, in rows when they overlap.
+    fn tag_row(
+        &mut self,
+        ui: &mut egui::Ui,
+        doc: &Document,
+        playing: bool,
+        commands: &mut Vec<Command>,
+    ) {
+        let tags = doc.tags();
+        let lanes = tag_lanes(tags);
+        let rows = lanes.iter().max().map_or(1, |l| l + 1);
+        let step = CARD_WIDTH + CARD_GAP;
+        let width = doc.frame_count() as f32 * step - CARD_GAP;
+        let (row, _) =
+            ui.allocate_exact_size(Vec2::new(width, rows as f32 * TAG_LANE), Sense::hover());
+        for (i, tag) in tags.iter().enumerate() {
+            let x0 = row.left() + tag.start as f32 * step;
+            let x1 = row.left() + tag.end as f32 * step + CARD_WIDTH;
+            let y0 = row.top() + lanes[i] as f32 * TAG_LANE;
+            let bar = Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y0 + TAG_LANE - 2.0));
+            if !ui.is_rect_visible(bar) {
+                continue;
+            }
+            let resp = ui.interact(bar, ui.id().with(("frame-tag", i)), Sense::click());
+            let looping = self.loop_tag.as_deref() == Some(tag.name.as_str());
+            let c = tag.color;
+            let mut fill = Color32::from_rgb(c.r(), c.g(), c.b());
+            if !resp.hovered() {
+                fill = fill.gamma_multiply(0.85);
+            }
+            let painter = ui.painter();
+            painter.rect_filled(bar, 3.0, fill);
+            if looping {
+                painter.rect_stroke(
+                    bar,
+                    3.0,
+                    Stroke::new(1.5_f32, theme::text_primary()),
+                    StrokeKind::Inside,
+                );
+            }
+            // Dark text on light colors, light text on dark ones.
+            let luma =
+                0.299 * f32::from(c.r()) + 0.587 * f32::from(c.g()) + 0.114 * f32::from(c.b());
+            let text_color = if luma > 150.0 {
+                Color32::from_rgb(24, 20, 18)
+            } else {
+                Color32::from_rgb(250, 246, 240)
+            };
+            let text = if looping {
+                format!("{}  · loop", tag.name)
+            } else {
+                tag.name.clone()
+            };
+            painter.with_clip_rect(bar.shrink(1.0)).text(
+                bar.left_center() + Vec2::new(5.0, 0.0),
+                egui::Align2::LEFT_CENTER,
+                text,
+                egui::FontId::proportional(11.0),
+                text_color,
+            );
+            let resp = resp.on_hover_text(format!(
+                "{} · frames {}–{}\nClick to select its frames · double-click to edit · right-click for more",
+                tag.name,
+                tag.start + 1,
+                tag.end + 1
+            ));
+            if resp.double_clicked() {
+                if !playing {
+                    commands.push(Command::EditTag(i));
+                }
+            } else if resp.clicked() {
+                self.select_range(doc, tag.frames(doc.frame_count()));
+                if !playing {
+                    commands.push(Command::SelectFrame(tag.start));
+                }
+            }
+            resp.context_menu(|ui| {
+                if ui
+                    .add_enabled(!playing, egui::Button::new("Edit Tag…"))
+                    .clicked()
+                {
+                    commands.push(Command::EditTag(i));
+                    ui.close_menu();
+                }
+                if ui.button("Select Frames").clicked() {
+                    self.select_range(doc, tag.frames(doc.frame_count()));
+                    ui.close_menu();
+                }
+                let label = if looping {
+                    "Loop All Frames"
+                } else {
+                    "Loop in Preview"
+                };
+                if ui
+                    .button(label)
+                    .on_hover_text("Play (Enter) repeats only this tag's frames")
+                    .clicked()
+                {
+                    self.loop_tag = (!looping).then(|| tag.name.clone());
+                    ui.close_menu();
+                }
+                ui.separator();
+                if ui
+                    .add_enabled(!playing, egui::Button::new("Delete Tag"))
+                    .on_hover_text("Removes the tag, not its frames")
+                    .clicked()
+                {
+                    commands.push(Command::DeleteTag(i));
+                    ui.close_menu();
+                }
+            });
+        }
+    }
+}
+
+/// Row of each tag so that overlapping tags don't cover each other (at most
+/// [`MAX_TAG_LANES`] rows; beyond that they share the last row).
+fn tag_lanes(tags: &[crate::core::FrameTag]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..tags.len()).collect();
+    order.sort_by_key(|&i| (tags[i].start, tags[i].end));
+    let mut lane_end: Vec<usize> = Vec::new();
+    let mut lanes = vec![0; tags.len()];
+    for i in order {
+        let t = &tags[i];
+        let lane = lane_end
+            .iter()
+            .position(|&end| end < t.start)
+            .unwrap_or(lane_end.len())
+            .min(MAX_TAG_LANES - 1);
+        if lane == lane_end.len() {
+            lane_end.push(t.end);
+        } else {
+            lane_end[lane] = lane_end[lane].max(t.end);
+        }
+        lanes[i] = lane;
+    }
+    lanes
+}
+
 #[allow(clippy::too_many_arguments)]
 fn paint_card(
     ui: &egui::Ui,
@@ -554,9 +760,9 @@ fn paint_card(
 ) {
     let painter = ui.painter();
     let bg = if active || selected {
-        theme::SURFACE_HOVER
+        theme::surface_hover()
     } else if resp.hovered() {
-        theme::SURFACE
+        theme::surface()
     } else {
         Color32::TRANSPARENT
     };
@@ -567,7 +773,7 @@ fn paint_card(
     );
     // A small fixed checkerboard tells transparency apart from dark pixels.
     let cell = THUMB_BOX / 6.0;
-    painter.rect_filled(box_rect, 0.0, theme::CHECKER_DARK);
+    painter.rect_filled(box_rect, 0.0, theme::checker_dark());
     for cy in 0..6 {
         for cx in 0..6 {
             if (cx + cy) % 2 == 0 {
@@ -575,7 +781,7 @@ fn paint_card(
                 painter.rect_filled(
                     Rect::from_min_size(min, Vec2::splat(cell)),
                     0.0,
-                    theme::CHECKER_LIGHT,
+                    theme::checker_light(),
                 );
             }
         }
@@ -593,11 +799,11 @@ fn paint_card(
         );
     }
     let border = if active {
-        theme::ACCENT
+        theme::accent()
     } else if selected {
-        theme::SUCCESS
+        theme::success()
     } else {
-        theme::BORDER
+        theme::border()
     };
     painter.rect_stroke(
         box_rect,
@@ -606,9 +812,9 @@ fn paint_card(
         StrokeKind::Outside,
     );
     let number_color = if active {
-        theme::ACCENT
+        theme::accent()
     } else {
-        theme::TEXT_PRIMARY
+        theme::text_primary()
     };
     painter.text(
         egui::Pos2::new(rect.center().x, box_rect.max.y + 4.0),
@@ -622,7 +828,7 @@ fn paint_card(
         egui::Align2::CENTER_TOP,
         format!("{duration} ms"),
         theme::font(1),
-        theme::TEXT_SECONDARY,
+        theme::text_secondary(),
     );
 }
 
@@ -650,6 +856,87 @@ pub fn thumbnail(doc: &Document, frame: usize) -> ColorImage {
 mod tests {
     use super::*;
     use crate::core::Rgba;
+
+    fn tag(start: usize, end: usize) -> crate::core::FrameTag {
+        crate::core::FrameTag {
+            name: format!("t{start}"),
+            start,
+            end,
+            color: crate::core::tags::TAG_COLORS[0],
+        }
+    }
+
+    #[test]
+    fn overlapping_tags_get_their_own_rows() {
+        let tags = [
+            tag(0, 3),
+            tag(2, 4),
+            tag(5, 6),
+            tag(1, 1),
+            tag(3, 3),
+            tag(3, 3),
+        ];
+        // By start: 0–3 row 0; 1–1 overlaps it → row 1; 2–4 fits after 1–1 → row 1;
+        // 3–3 overlaps both → row 2; another 3–3 → capped at row 2; 5–6 → row 0.
+        assert_eq!(tag_lanes(&tags), [0, 1, 0, 1, 2, 2]);
+        assert!(tag_lanes(&[]).is_empty());
+    }
+
+    #[test]
+    fn timeline_with_tags_renders_and_clicking_nothing_changes_nothing() {
+        let doc = Document::new(8, 8, Rgba::TRANSPARENT).expect("valid");
+        let mut e = Editor::new(doc, None, "T".into());
+        for _ in 0..5 {
+            e.add_frame().expect("frame");
+        }
+        e.add_tag(0, 2).expect("tag");
+        e.add_tag(2, 5).expect("tag");
+        let mut timeline = Timeline {
+            loop_tag: Some(e.document().tags()[1].name.clone()),
+            ..Timeline::default()
+        };
+        let mut onion = OnionSkin::default();
+        let mut playback = PlaybackSettings::default();
+        let ctx = egui::Context::default();
+        let mut commands = Vec::new();
+        for _ in 0..3 {
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    timeline.show(
+                        ui,
+                        &e,
+                        false,
+                        TimelineSettings {
+                            onion: &mut onion,
+                            playback: &mut playback,
+                            expanded: true,
+                        },
+                        &mut commands,
+                    );
+                });
+            });
+        }
+        assert!(commands.is_empty(), "{commands:?}");
+        assert_eq!(timeline.loop_range(e.document()), Some(2..6));
+        // Deleting the looped tag forgets the loop on the next frame.
+        e.remove_tag(1).expect("delete");
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                timeline.show(
+                    ui,
+                    &e,
+                    false,
+                    TimelineSettings {
+                        onion: &mut onion,
+                        playback: &mut playback,
+                        expanded: true,
+                    },
+                    &mut commands,
+                );
+            });
+        });
+        assert_eq!(timeline.loop_range(e.document()), None);
+    }
 
     #[test]
     fn thumbnails_keep_aspect_and_sample_real_pixels() {

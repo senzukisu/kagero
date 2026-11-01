@@ -25,6 +25,17 @@ pub fn collect(ctx: &egui::Context, keymap: &Keymap, keys: KeyContext) -> (Vec<C
                     modifiers,
                     ..
                 } => {
+                    // With a crop frame, Enter crops instead of playing the animation.
+                    if keys.cropping && !typing && *key == Key::Enter && modifiers.is_none() {
+                        commands.push(Command::ApplyCrop);
+                        consumed.push(index);
+                        continue;
+                    }
+                    if keys.polygon && !typing && *key == Key::Enter && modifiers.is_none() {
+                        commands.push(Command::FinishPolygon);
+                        consumed.push(index);
+                        continue;
+                    }
                     let found = ordered.iter().find(|(a, b)| {
                         b.matches(*key, *modifiers) && (!typing || a.works_while_typing())
                     });

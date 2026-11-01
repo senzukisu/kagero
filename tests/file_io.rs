@@ -482,15 +482,15 @@ fn rejects_future_format_versions() {
     let newer = zip_with(&[
         (
             "manifest.json",
-            br#"{"format":"kagero-project","format_version":3}"#,
+            br#"{"format":"kagero-project","format_version":4}"#,
         ),
         ("document.json", b"{}"),
     ]);
     assert!(matches!(
         read_kgr(Cursor::new(newer)),
         Err(FileError::UnsupportedVersion {
-            found: 3,
-            supported: 2
+            found: 4,
+            supported: 3
         })
     ));
 }

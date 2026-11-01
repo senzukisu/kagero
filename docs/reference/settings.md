@@ -1,5 +1,5 @@
 ---
-description: "General, Shortcuts, Updates, Discord and Experimental settings."
+description: "General (with autosave), Shortcuts, Updates, Discord, Experimental, Plugins and Themes."
 icon: gear
 ---
 
@@ -16,6 +16,7 @@ icon: gear
 * Show the timeline (<kbd>F7</kbd>) and the colors & layers panel (<kbd>F8</kbd>)
 * Pixel grid when zoomed in (<kbd>Ctrl</kbd>+<kbd>G</kbd>)
 * **Reduce motion** — turns off the pulsing preview badge and eased transitions
+* **Autosave & recovery**: see [Autosave and recovery](#autosave-and-recovery) below.
 * **Onion skin** — show neighbor frames (<kbd>O</kbd>), previous (warm) and/or next
   (cool), opacity 5–90 %
 {% endtab %}
@@ -84,18 +85,41 @@ tested and may change in a later version; your projects are never affected.
 
 <figure><img src="../.gitbook/assets/tiled-view.png" alt="Tiled view: the sprite in the middle with dimmed copies repeated around it"><figcaption><p>Tiled view: the image in the middle, dimmed copies around it.</p></figcaption></figure>
 
+## Autosave and recovery
+
+While a document has unsaved changes, Kagero writes a copy of it every **2 minutes**.
+You can change the interval (1–60 minutes) or turn autosave off in Settings → General.
+
+* Copies go to `%APPDATA%\OnibiLab\Kagero\recovery`, never next to or over your
+  project (**Open Recovery Folder** shows them).
+* A copy is deleted when you save, or when you close the document on purpose.
+* If Kagero closes unexpectedly, the next start lists every copy with its name, original
+  path and time:
+  * **Open Recovered** opens it as an unsaved document;
+  * **Open Original** opens the project file;
+  * **Delete Copy** throws it away;
+  * **Later** keeps the copies.
+* **File → Recover Projects…** shows the list again any time. Copies of another
+  Kagero that is still running are never offered.
+* At most 10 copies and 512 MB are kept; the oldest go first.
+
+Autosave lowers the risk of losing work, but it can't promise recovery after every
+possible failure, so keep saving your projects.
+
 ## Plugins and themes
 
-**Plugins** (new tools, formats and effects) and **Themes** (color schemes, accents,
-your own themes) are planned — their pages show what's coming.
+* **Plugins** add commands written in Lua to the **Plugins** menu. They run in a
+  sandbox and start turned off. See [Plugins](../plugins/README.md).
+* **Themes** change Kagero's colors: four built-in themes, live preview, and your own
+  themes as files. See [Themes](themes.md).
 
 {% tabs %}
 {% tab title="Plugins" %}
-<figure><img src="../.gitbook/assets/settings-plugins.png" alt="Settings, Plugins page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-plugins.png" alt="Settings, Plugins page: the safety note and the installed Example Tools plugin with its switch" width="560"><figcaption></figcaption></figure>
 {% endtab %}
 
 {% tab title="Themes" %}
-<figure><img src="../.gitbook/assets/settings-themes.png" alt="Settings, Themes page: coming soon, with the planned features" width="560"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/settings-themes.png" alt="Settings, Themes page: theme cards with color strips and Preview and Export buttons" width="560"><figcaption></figcaption></figure>
 {% endtab %}
 {% endtabs %}
 
@@ -135,5 +159,9 @@ and **Connect / Retry** / **Disconnect** with a live connection status.
 ## Where settings are stored
 
 `%APPDATA%\OnibiLab\Kagero\config.json` — recent files, palettes, layout, onion skin,
-preview timing, export, shortcuts, experimental, update and Discord preferences.
-Deleting it resets everything; a damaged file is ignored and replaced with defaults.
+preview timing, export, shortcuts, experimental, autosave, theme, enabled plugins,
+update and Discord preferences. Deleting it resets everything; a damaged file is ignored
+and replaced with defaults.
+
+Next to it are the `recovery`, `themes` and `plugins` folders. Uninstalling Kagero keeps
+all of them.

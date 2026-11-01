@@ -60,6 +60,25 @@ impl Rgba {
         ])
     }
 
+    /// Parses `#RGB`, `#RRGGBB` or `#RRGGBBAA` (the `#` is optional, case ignored).
+    pub fn from_hex(text: &str) -> Option<Rgba> {
+        let hex = text.trim();
+        let hex = hex.strip_prefix('#').unwrap_or(hex);
+        if !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return None;
+        }
+        let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
+        match hex.len() {
+            3 => {
+                let nib = |i: usize| u8::from_str_radix(&hex[i..=i], 16).ok().map(|v| v * 17);
+                Some(Rgba::opaque(nib(0)?, nib(1)?, nib(2)?))
+            }
+            6 => Some(Rgba::opaque(byte(0)?, byte(2)?, byte(4)?)),
+            8 => Some(Rgba::new(byte(0)?, byte(2)?, byte(4)?, byte(6)?)),
+            _ => None,
+        }
+    }
+
     /// `#RRGGBBAA` (or `#RRGGBB` for opaque colors).
     pub fn to_hex(self) -> String {
         if self.a() == 255 {
@@ -78,6 +97,21 @@ impl Rgba {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn hex_round_trip() {
+        use super::Rgba;
+        for c in [Rgba::opaque(1, 2, 3), Rgba::new(255, 128, 0, 77)] {
+            assert_eq!(Rgba::from_hex(&c.to_hex()), Some(c));
+        }
+        assert_eq!(Rgba::from_hex(" f80 "), Some(Rgba::opaque(0xFF, 0x88, 0)));
+        assert_eq!(
+            Rgba::from_hex("#e86a33"),
+            Some(Rgba::opaque(0xE8, 0x6A, 0x33))
+        );
+        for bad in ["", "#12", "#12345", "zzzzzz", "#ééé", "+12345"] {
+            assert_eq!(Rgba::from_hex(bad), None, "{bad}");
+        }
+    }
     use super::*;
 
     #[test]

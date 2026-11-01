@@ -8,6 +8,25 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.4.0 Beta — everyday comfort and pixel-artist tools (2026-10-30)
+
+* **Canvas:** Canvas Size with an anchor, a Crop tool, and Crop to Selection.
+* **Layers:** opacity, Duplicate, Merge Down, Lock and Alpha Lock.
+* **Autosave and crash recovery** to a separate folder, never over your project.
+* **Frame tags:** named frame ranges to loop, jump between and export.
+* **Selections:** Lasso, Magic Wand, Add / Subtract / Intersect, and Invert; every edit
+  follows the exact shape.
+* **Drawing:** Ellipse and Polygon tools, symmetry, dithering, round and custom brushes,
+  and Fill with tolerance.
+* **Colors:** HEX/RGBA entry and Convert to Palette with a preview.
+* **Export:** animated WebP and packed sprite sheets.
+* **Themes** (4 built-in plus your own) and **plugins** (sandboxed Lua).
+* **A program icon and an installer**; uninstalling keeps your data.
+
+See *Known limitations* in [CHANGELOG.md](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
+
+[Download 0.4.0](https://github.com/senzukisu/kagero/releases/tag/v0.4.0)
+
 ## 0.3.8 Beta — settings, shortcuts and experiments (2026-10-29)
 
 * **Custom shortcuts** in Settings → Shortcuts: click a key, press the new one.

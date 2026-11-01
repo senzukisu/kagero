@@ -55,6 +55,20 @@ pub enum Command {
     ZoomActual,
     AddLayer,
     DeleteLayer,
+    DuplicateLayer,
+    MergeDown,
+    /// Opacity and locks of a layer (one undo step).
+    SetLayerProps(usize, crate::core::LayerProps),
+    /// Opacity while its slider is dragged (no undo step yet).
+    PreviewLayerOpacity(usize, u8),
+    /// Slider released: record the change from the opacity it started at.
+    CommitLayerOpacity(usize, u8),
+    OpenCanvasSize,
+    ResizeCanvas(u32, u32, crate::core::Anchor),
+    /// Crop tool: cut the canvas to its frame.
+    ApplyCrop,
+    CancelCrop,
+    CropToSelection,
     LayerUp,
     LayerDown,
     SelectLayer(usize),
@@ -64,6 +78,8 @@ pub enum Command {
     About,
     /// Help → Licenses: Kagero's and the third-party licenses.
     Licenses,
+    /// File → Recover Projects…: crashed autosave copies.
+    OpenRecovery,
     // Animation
     TogglePlayback,
     StopPlayback,
@@ -79,6 +95,16 @@ pub enum Command {
     MoveFrameLeft(usize),
     MoveFrameRight(usize),
     SetFrameDuration(usize, u32),
+    /// Opens the tag dialog for the selected frames (or the current one).
+    NewTag,
+    /// Opens the tag dialog for an existing tag.
+    EditTag(usize),
+    InsertTag(crate::core::FrameTag),
+    UpdateTag(usize, crate::core::FrameTag),
+    DeleteTag(usize),
+    /// Jumps to the first frame of the previous / next tag.
+    PrevTag,
+    NextTag,
     ToggleOnionSkin,
     ExportAllFrames,
     // Workspace and services
@@ -91,6 +117,18 @@ pub enum Command {
     // Selection and clipboard
     SelectAll,
     Deselect,
+    InvertSelection,
+    /// Edit → Use Selection as Brush.
+    BrushFromSelection,
+    /// Polygon tool: close the shape (Enter).
+    FinishPolygon,
+    /// Plugins menu: run a command (plugin id, command id).
+    RunPlugin(String, String),
+    /// Settings → Plugins.
+    ManagePlugins,
+    /// Image → Convert to Palette… (dialog), and the conversion itself.
+    OpenConvertPalette,
+    ConvertToPalette(crate::editor::PaletteScope),
     Copy,
     Cut,
     Paste,

@@ -5,18 +5,25 @@ icon: file-zipper
 
 # The `.kgr` Project Format
 
-Format id `kagero-project`. Kagero 0.2 and later write **version 2** and read versions 1
-and 2. The format version is independent of the application version.
+Format id `kagero-project`. Kagero 0.4 writes **version 2**, or **version 3** when a
+layer has opacity below 100 %, and reads versions 1, 2 and 3. Kagero 0.2 and 0.3 write
+version 2. The format version is independent of the application version.
+
+| Version | Written by | Adds |
+|---------|-----------|------|
+| 1 | 0.1 | Layers (one image) |
+| 2 | 0.2+ | Frames, durations, ids |
+| 3 | 0.4+, only when needed | Layer opacity (a project that older Kagero would show wrongly is refused by them instead) |
 
 {% hint style="info" %}
 The selection, the clipboard, palettes and export settings are not part of a project:
 palettes and export settings live in the user settings file (`config.json`), the
-selection and clipboard only in memory. That's why the format hasn't changed since 0.2.
+selection and clipboard only in memory.
 {% endhint %}
 
 A `.kgr` file is a standard ZIP archive.
 
-## Version 2 (Kagero 0.2+)
+## Version 2 and 3
 
 ```
 project.kgr
@@ -54,17 +61,27 @@ project.kgr
   "active_layer": 1,
   "active_frame": 0,
   "layers": [
-    { "id": 1, "name": "Background", "visible": true },
-    { "id": 2, "name": "Ink",        "visible": false }
+    { "id": 1, "name": "Background", "visible": true, "opacity": 255 },
+    { "id": 2, "name": "Ink",        "visible": false, "opacity": 128, "locked": true }
   ],
   "frames": [
     { "id": 1, "duration_ms": 100, "cels": ["frames/0000/0000.png", "frames/0000/0001.png"] },
     { "id": 4, "duration_ms": 250, "cels": ["frames/0001/0000.png", "frames/0001/0001.png"] }
+  ],
+  "tags": [
+    { "name": "walk", "start": 0, "end": 1, "color": "#E86A33" }
   ]
 }
 ```
 
 - `layers` are bottom to top and shared by all frames (name, visibility, id).
+- `opacity` (0–255, default 255) is how strongly a layer is shown; a value below 255
+  makes the file version 3. `locked` and `alpha_lock` (default `false`) are written only
+  when `true`.
+- `tags` (optional, written only when there are any): frame tags with a name (1–48
+  characters), the first and last frame position (0-based, inclusive) and an `#RRGGBB`
+  color. At most 256. Tags with a range outside the frames or an empty name are dropped
+  when opening, rather than refusing the file. Older Kagero ignores them.
 - `frames` are in playback order. Each frame lists one PNG per layer in layer order.
 - Cel paths must be exactly `frames/FFFF/LLLL.png` (frame and layer positions,
   zero-padded). Any other path is rejected.

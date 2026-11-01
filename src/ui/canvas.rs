@@ -8,7 +8,7 @@ use egui::{
 use std::collections::HashMap;
 
 use crate::core::onion_skin::OnionSkin;
-use crate::core::selection::SelRect;
+use crate::core::selection::{Segment, SelRect, SelectMode, Selection};
 use crate::core::{raster, Document, FrameId};
 use crate::editor::{ColorSlot, Dirty, EditError, Editor, ToolKind};
 use crate::theme;
@@ -45,6 +45,12 @@ impl ViewTransform {
     pub fn screen_to_pixel(&self, pos: Pos2) -> (i32, i32) {
         let p = (pos - self.origin) / self.zoom;
         (clamp_to_i32(p.x.floor()), clamp_to_i32(p.y.floor()))
+    }
+
+    /// The pixel boundary nearest to a screen position (for edges between pixels).
+    pub fn screen_to_edge(&self, pos: Pos2) -> (i32, i32) {
+        let p = (pos - self.origin) / self.zoom;
+        (clamp_to_i32(p.x.round()), clamp_to_i32(p.y.round()))
     }
 
     pub fn pixel_to_screen(&self, x: f32, y: f32) -> Pos2 {
@@ -124,6 +130,8 @@ pub struct CanvasOptions {
 pub struct CanvasView {
     texture: Option<TextureHandle>,
     checker: Option<TextureHandle>,
+    /// The theme colors `checker` was made with.
+    checker_colors: Option<(Color32, Color32)>,
     frame_cache: HashMap<FrameId, FrameTexture>,
     frame_tick: u64,
     pub zoom: f32,
@@ -133,6 +141,13 @@ pub struct CanvasView {
     pub hover_pixel: Option<(i32, i32)>,
     stroke_button: Option<PointerButton>,
     select_drag: Option<SelectDrag>,
+    /// Lasso: the outline being drawn (image pixels) and how it will combine.
+    lasso: Option<(Vec<(i32, i32)>, SelectMode)>,
+    /// The last selection outline drawn: the selection it belongs to (kept so its mask
+    /// can't be freed and its address reused) and its segments relative to its bounds.
+    outline_cache: Option<(Selection, Vec<Segment>)>,
+    /// Crop tool: what the current drag adjusts.
+    crop_drag: Option<CropDrag>,
     panning: bool,
     needs_fit: bool,
     viewport: Rect,
@@ -145,6 +160,7 @@ impl CanvasView {
         Self {
             texture: None,
             checker: None,
+            checker_colors: None,
             frame_cache: HashMap::new(),
             frame_tick: 0,
             zoom: 1.0,
@@ -153,6 +169,9 @@ impl CanvasView {
             hover_pixel: None,
             stroke_button: None,
             select_drag: None,
+            lasso: None,
+            outline_cache: None,
+            crop_drag: None,
             panning: false,
             needs_fit: true,
             viewport: Rect::NOTHING,
@@ -444,7 +463,8 @@ impl CanvasView {
             && !space
             && !self.panning
             && editor.tool != ToolKind::Pan
-            && editor.tool != ToolKind::Select
+            && !editor.tool.selects()
+            && editor.tool != ToolKind::Polygon
             && self.stroke_button.is_none()
             && !editor.is_stroking();
         if can_start {
@@ -478,12 +498,42 @@ impl CanvasView {
                 editor.end_stroke();
                 self.stroke_button = None;
             }
-        } else if editor.is_stroking() {
+        } else if editor.is_stroking() && !editor.is_drawing_polygon() {
             // A stroke without a button (e.g. focus lost) must not stay open.
             editor.end_stroke();
         }
+        // ---- polygon: clicks add corners, the cursor previews the next side
+        if editor.tool == ToolKind::Polygon && !options.playing && !space && !self.panning {
+            if let (true, Some(pos)) = (response.hovered(), pointer_pos) {
+                let p = transform.screen_to_pixel(pos);
+                let slot = if pressed[0] {
+                    Some(ColorSlot::Primary)
+                } else if pressed[1] {
+                    Some(ColorSlot::Secondary)
+                } else {
+                    None
+                };
+                if let Some(slot) = slot {
+                    if let Err(e) = editor.polygon_click(p, slot) {
+                        error = Some(e);
+                    }
+                } else if editor.is_drawing_polygon() {
+                    editor.update_stroke(p);
+                }
+            }
+        } else if editor.is_drawing_polygon() {
+            editor.end_stroke();
+        }
         // ---- rectangle selection
-        let (ctrl, escape) = ctx.input(|i| (i.modifiers.command, i.key_pressed(egui::Key::Escape)));
+        let (ctrl, shift, alt, escape) = ctx.input(|i| {
+            (
+                i.modifiers.command,
+                i.modifiers.shift,
+                i.modifiers.alt,
+                i.key_pressed(egui::Key::Escape),
+            )
+        });
+        let mode = SelectMode::with_modifiers(editor.settings.select_mode, shift, alt);
         if editor.tool != ToolKind::Select || options.playing || escape {
             self.select_drag = None;
         } else {
@@ -495,7 +545,10 @@ impl CanvasView {
             {
                 if let Some(pos) = pointer_pos {
                     let p = transform.screen_to_pixel(pos);
-                    let inside = editor.selection().is_some_and(|r| r.contains(p.0, p.1));
+                    let inside = mode == SelectMode::Replace
+                        && editor
+                            .selection_shape()
+                            .is_some_and(|s| s.contains(p.0, p.1));
                     self.select_drag = Some(if inside && ctrl {
                         SelectDrag::Outline { start: p }
                     } else if inside {
@@ -508,7 +561,7 @@ impl CanvasView {
                         });
                         SelectDrag::Move { start: p, ghost }
                     } else {
-                        SelectDrag::New { start: p }
+                        SelectDrag::New { start: p, mode }
                     });
                 }
             }
@@ -518,10 +571,14 @@ impl CanvasView {
                     let cur = pointer_pos.map_or(start, |p| transform.screen_to_pixel(p));
                     let (dx, dy) = (cur.0 - start.0, cur.1 - start.1);
                     match drag {
-                        SelectDrag::New { .. } if cur == start => editor.deselect(),
-                        SelectDrag::New { .. } => {
-                            editor.set_selection(Some(SelRect::from_corners(start, cur)))
-                        }
+                        SelectDrag::New {
+                            mode: SelectMode::Replace,
+                            ..
+                        } if cur == start => editor.deselect(),
+                        SelectDrag::New { mode, .. } => editor.select(
+                            Some(Selection::from(SelRect::from_corners(start, cur))),
+                            *mode,
+                        ),
                         SelectDrag::Move { .. } => {
                             if let Err(e) = editor.move_selection(dx, dy) {
                                 error = Some(e);
@@ -530,6 +587,122 @@ impl CanvasView {
                         SelectDrag::Outline { .. } => editor.move_selection_outline(dx, dy),
                     }
                     self.select_drag = None;
+                }
+            }
+        }
+        // ---- lasso
+        if editor.tool != ToolKind::Lasso || options.playing || escape {
+            self.lasso = None;
+        } else {
+            let start =
+                self.lasso.is_none() && response.hovered() && !space && !self.panning && pressed[0];
+            if start {
+                if let Some(pos) = pointer_pos {
+                    self.lasso = Some((vec![transform.screen_to_pixel(pos)], mode));
+                }
+            }
+            if let Some((points, mode)) = &mut self.lasso {
+                if let Some(pos) = pointer_pos {
+                    let p = transform.screen_to_pixel(pos);
+                    if points.last() != Some(&p) && points.len() < MAX_LASSO_POINTS {
+                        points.push(p);
+                    }
+                }
+                if released[0] || !down[0] {
+                    if points.len() <= 1 && *mode == SelectMode::Replace {
+                        editor.deselect();
+                    } else {
+                        editor.select_lasso(points, *mode);
+                    }
+                    self.lasso = None;
+                }
+            }
+        }
+        // ---- magic wand
+        if editor.tool == ToolKind::MagicWand
+            && !options.playing
+            && response.hovered()
+            && !space
+            && !self.panning
+            && pressed[0]
+        {
+            if let Some(pos) = pointer_pos {
+                if let Err(e) = editor.magic_wand(transform.screen_to_pixel(pos), mode) {
+                    error = Some(e);
+                }
+            }
+        }
+        // ---- crop frame
+        if editor.tool != ToolKind::Crop || options.playing {
+            self.crop_drag = None;
+        } else {
+            if self.crop_drag.is_none()
+                && response.hovered()
+                && !space
+                && !self.panning
+                && pressed[0]
+            {
+                if let Some(pos) = pointer_pos {
+                    let p = transform.screen_to_pixel(pos);
+                    self.crop_drag = Some(match editor.crop_rect {
+                        Some(r) => {
+                            let edges = crop_edges(&transform, r, pos);
+                            if edges != (false, false, false, false) {
+                                CropDrag::Edges { edges, orig: r }
+                            } else if r.contains(p.0, p.1) {
+                                CropDrag::Move { start: p, orig: r }
+                            } else {
+                                CropDrag::New { start: p }
+                            }
+                        }
+                        None => CropDrag::New { start: p },
+                    });
+                }
+            }
+            if let (Some(drag), Some(pos)) = (&self.crop_drag, pointer_pos) {
+                let (doc_w, doc_h) = (editor.document().width(), editor.document().height());
+                let (w, h) = (doc_w as i32, doc_h as i32);
+                // Edges snap between pixels: round to the nearest pixel boundary.
+                let edge = transform.screen_to_edge(pos);
+                let cur = transform.screen_to_pixel(pos);
+                let rect = match *drag {
+                    CropDrag::New { start } => Some(SelRect::from_corners(start, cur)),
+                    CropDrag::Move { start, orig } => {
+                        let dx = (cur.0 - start.0).clamp(-orig.x, w - orig.right() as i32);
+                        let dy = (cur.1 - start.1).clamp(-orig.y, h - orig.bottom() as i32);
+                        Some(orig.translated(dx, dy))
+                    }
+                    CropDrag::Edges {
+                        edges: (l, r, t, b),
+                        orig,
+                    } => {
+                        let mut x0 = orig.x;
+                        let mut y0 = orig.y;
+                        let mut x1 = orig.right() as i32;
+                        let mut y1 = orig.bottom() as i32;
+                        if l {
+                            x0 = edge.0.clamp(0, x1 - 1);
+                        }
+                        if r {
+                            x1 = edge.0.clamp(x0 + 1, w);
+                        }
+                        if t {
+                            y0 = edge.1.clamp(0, y1 - 1);
+                        }
+                        if b {
+                            y1 = edge.1.clamp(y0 + 1, h);
+                        }
+                        Some(SelRect {
+                            x: x0,
+                            y: y0,
+                            w: (x1 - x0) as u32,
+                            h: (y1 - y0) as u32,
+                        })
+                    }
+                };
+                editor.crop_rect = rect.and_then(|r| r.clip(doc_w, doc_h));
+                if released[0] || !down[0] {
+                    self.crop_drag = None;
                 }
             }
         }
@@ -557,7 +730,7 @@ impl CanvasView {
 
         // ---- painting
         let painter = ui.painter_at(viewport);
-        painter.rect_filled(viewport, 0.0, theme::BACKGROUND);
+        painter.rect_filled(viewport, 0.0, theme::background());
         let image_rect = transform.image_rect(w, h);
         // Checker cells are whole image pixels, so they line up with the pixel grid.
         let cell = checker_cell_pixels(self.zoom);
@@ -626,10 +799,43 @@ impl CanvasView {
             self.paint_grid(&painter, &transform, viewport, w, h);
         }
         self.paint_selection(&painter, &transform, editor, pointer_pos, &options);
+        let s = editor.settings;
+        if (s.mirror_x || s.mirror_y) && editor.tool.edits_pixels() && editor.tool != ToolKind::Fill
+        {
+            // Symmetry axes through the image center.
+            let (w, h) = (
+                editor.document().width() as f32,
+                editor.document().height() as f32,
+            );
+            let stroke = Stroke::new(1.0_f32, theme::accent().gamma_multiply(0.7));
+            if s.mirror_x {
+                painter.line_segment(
+                    [
+                        transform.pixel_to_screen(w / 2.0, 0.0),
+                        transform.pixel_to_screen(w / 2.0, h),
+                    ],
+                    stroke,
+                );
+            }
+            if s.mirror_y {
+                painter.line_segment(
+                    [
+                        transform.pixel_to_screen(0.0, h / 2.0),
+                        transform.pixel_to_screen(w, h / 2.0),
+                    ],
+                    stroke,
+                );
+            }
+        }
+        if editor.tool == ToolKind::Crop && !options.playing {
+            if let Some(r) = editor.crop_rect {
+                paint_crop_frame(&painter, &transform, image_rect, r);
+            }
+        }
         painter.rect_stroke(
             image_rect,
             0.0,
-            Stroke::new(1.0_f32, theme::BORDER),
+            Stroke::new(1.0_f32, theme::border()),
             StrokeKind::Outside,
         );
         if let Some((x, y)) = self.hover_pixel {
@@ -652,7 +858,7 @@ impl CanvasView {
                 painter.rect_stroke(
                     r,
                     0.0,
-                    Stroke::new(1.0_f32, theme::ACCENT),
+                    Stroke::new(1.0_f32, theme::accent()),
                     StrokeKind::Outside,
                 );
             }
@@ -669,7 +875,7 @@ impl CanvasView {
 
     /// The selection outline (marching ants) and, while dragging, a live preview.
     fn paint_selection(
-        &self,
+        &mut self,
         painter: &egui::Painter,
         t: &ViewTransform,
         editor: &Editor,
@@ -684,42 +890,100 @@ impl CanvasView {
             )
         };
         let cur = pointer.map(|p| t.screen_to_pixel(p));
-        let rect = match &self.select_drag {
-            Some(SelectDrag::New { start }) => {
-                cur.and_then(|c| SelRect::from_corners(*start, c).clip(w, h))
-            }
-            Some(SelectDrag::Move { start, ghost }) => {
-                let (dx, dy) = cur.map_or((0, 0), |c| (c.0 - start.0, c.1 - start.1));
-                editor.selection().map(|sel| {
-                    // Dim the lifted area and draw the pixels where they will land.
-                    painter.rect_filled(to_screen(sel), 0.0, Color32::from_black_alpha(110));
-                    let moved = sel.translated(dx, dy);
-                    if let Some(tex) = ghost {
-                        painter.image(
-                            tex.id(),
-                            to_screen(moved),
-                            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                            Color32::WHITE,
-                        );
-                    }
-                    moved
-                })
-            }
-            Some(SelectDrag::Outline { start }) => {
-                let (dx, dy) = cur.map_or((0, 0), |c| (c.0 - start.0, c.1 - start.1));
-                editor.selection().map(|s| s.translated(dx, dy))
-            }
-            None => editor.selection(),
-        };
-        let Some(rect) = rect else {
-            return;
-        };
         let phase = if options.reduce_motion {
             0.0
         } else {
             (painter.ctx().input(|i| i.time) * 12.0 % 8.0) as f32
         };
-        paint_marching_ants(painter, to_screen(rect), phase);
+        // The selection where it is (or will be after the current drag).
+        let (dx, dy) = match &self.select_drag {
+            Some(SelectDrag::Move { start, .. } | SelectDrag::Outline { start }) => {
+                cur.map_or((0, 0), |c| (c.0 - start.0, c.1 - start.1))
+            }
+            _ => (0, 0),
+        };
+        if let (Some(SelectDrag::Move { ghost, .. }), Some(sel)) =
+            (&self.select_drag, editor.selection())
+        {
+            // Dim the lifted area and draw the pixels where they will land.
+            painter.rect_filled(to_screen(sel), 0.0, Color32::from_black_alpha(110));
+            if let Some(tex) = ghost {
+                painter.image(
+                    tex.id(),
+                    to_screen(sel.translated(dx, dy)),
+                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
+        }
+        let mut animated = false;
+        if let Some(sel) = editor.selection_shape() {
+            let r = sel.bounds();
+            if sel.is_rectangular() {
+                paint_marching_ants(painter, to_screen(r.translated(dx, dy)), phase);
+            } else {
+                let fresh = self
+                    .outline_cache
+                    .as_ref()
+                    .is_some_and(|(s, _)| s.mask_id() == sel.mask_id() && s.bounds() == r);
+                if !fresh {
+                    let segments = sel
+                        .outline()
+                        .into_iter()
+                        .map(|[a, b]| [(a.0 - r.x, a.1 - r.y), (b.0 - r.x, b.1 - r.y)])
+                        .collect();
+                    self.outline_cache = Some((sel.clone(), segments));
+                }
+                if let Some((_, segments)) = &self.outline_cache {
+                    let (ox, oy) = (r.x + dx, r.y + dy);
+                    let to =
+                        |p: (i32, i32)| t.pixel_to_screen((ox + p.0) as f32, (oy + p.1) as f32);
+                    if segments.len() > MAX_OUTLINE_SEGMENTS {
+                        // Too detailed to draw every edge: show its bounds instead.
+                        paint_marching_ants(painter, to_screen(r.translated(dx, dy)), phase);
+                    } else {
+                        let clip = painter.clip_rect().expand(2.0);
+                        paint_ants_segments(
+                            painter,
+                            segments
+                                .iter()
+                                .map(|[a, b]| (to(*a), to(*b)))
+                                .filter(|(a, b)| clip.intersects(Rect::from_two_pos(*a, *b))),
+                            phase,
+                        );
+                    }
+                }
+            }
+            animated = true;
+        } else {
+            self.outline_cache = None;
+        }
+        // A new rectangle being dragged.
+        if let (Some(SelectDrag::New { start, .. }), Some(c)) = (&self.select_drag, cur) {
+            if let Some(r) = SelRect::from_corners(*start, c).clip(w, h) {
+                paint_marching_ants(painter, to_screen(r), phase);
+                animated = true;
+            }
+        }
+        // The lasso outline being drawn, closed back to its start.
+        if let Some((points, _)) = &self.lasso {
+            let center = |p: &(i32, i32)| t.pixel_to_screen(p.0 as f32 + 0.5, p.1 as f32 + 0.5);
+            let mut line: Vec<Pos2> = points.iter().map(center).collect();
+            if let Some(first) = line.first().copied() {
+                line.push(first);
+            }
+            painter.add(egui::Shape::line(
+                line.clone(),
+                Stroke::new(3.0_f32, Color32::BLACK),
+            ));
+            painter.add(egui::Shape::line(
+                line,
+                Stroke::new(1.0_f32, Color32::WHITE),
+            ));
+        }
+        if !animated {
+            return;
+        }
         if !options.reduce_motion {
             painter
                 .ctx()
@@ -753,24 +1017,24 @@ impl CanvasView {
         } else {
             return;
         };
-        let galley = painter.layout_no_wrap(text, font, theme::TEXT_PRIMARY);
+        let galley = painter.layout_no_wrap(text, font, theme::text_primary());
         let dot = 10.0;
         let rect = Rect::from_min_size(
             origin,
             Vec2::new(galley.size().x + dot + 22.0, galley.size().y + 10.0),
         );
-        painter.rect_filled(rect, 0.0, theme::PANEL.gamma_multiply(0.92));
+        painter.rect_filled(rect, 0.0, theme::panel().gamma_multiply(0.92));
         painter.rect_stroke(
             rect,
             0.0,
-            Stroke::new(1.0_f32, theme::BORDER),
+            Stroke::new(1.0_f32, theme::border()),
             StrokeKind::Inside,
         );
         let dot_center = Pos2::new(rect.min.x + 10.0 + dot / 2.0, rect.center().y);
         let color = if options.playing {
-            theme::ACCENT
+            theme::accent()
         } else {
-            theme::SUCCESS
+            theme::success()
         };
         let pulse = if options.playing && !options.reduce_motion {
             let t = painter.ctx().input(|i| i.time);
@@ -786,15 +1050,20 @@ impl CanvasView {
         painter.galley(
             Pos2::new(dot_center.x + dot / 2.0 + 8.0, rect.min.y + 5.0),
             galley,
-            theme::TEXT_PRIMARY,
+            theme::text_primary(),
         );
     }
 
     fn ensure_checker(&mut self, ctx: &egui::Context) {
+        let colors = (theme::checker_light(), theme::checker_dark());
+        if self.checker_colors != Some(colors) {
+            self.checker = None;
+            self.checker_colors = Some(colors);
+        }
         if self.checker.is_some() {
             return;
         }
-        let (l, d) = (theme::CHECKER_LIGHT, theme::CHECKER_DARK);
+        let (l, d) = (theme::checker_light(), theme::checker_dark());
         let mut bytes = Vec::with_capacity(16);
         for c in [l, d, d, l] {
             bytes.extend_from_slice(&[c.r(), c.g(), c.b(), 255]);
@@ -840,10 +1109,15 @@ impl CanvasView {
     }
 }
 
+/// Most points one lasso outline keeps.
+const MAX_LASSO_POINTS: usize = 20_000;
+/// Selection outlines with more edges than this are drawn as their bounds.
+const MAX_OUTLINE_SEGMENTS: usize = 60_000;
+
 /// A selection drag in progress (Select tool).
 enum SelectDrag {
-    /// Dragging out a new rectangle from `start`.
-    New { start: (i32, i32) },
+    /// Dragging out a new rectangle from `start`, combined with the selection by `mode`.
+    New { start: (i32, i32), mode: SelectMode },
     /// Moving the selected pixels; `ghost` shows them under the cursor.
     Move {
         start: (i32, i32),
@@ -856,9 +1130,40 @@ enum SelectDrag {
 impl SelectDrag {
     fn start(&self) -> (i32, i32) {
         match self {
-            SelectDrag::New { start }
+            SelectDrag::New { start, .. }
             | SelectDrag::Move { start, .. }
             | SelectDrag::Outline { start } => *start,
+        }
+    }
+}
+
+/// Dashed black/white lines; dashes line up across segments that meet, so a mask
+/// outline looks like one continuous line.
+fn paint_ants_segments(
+    painter: &egui::Painter,
+    segments: impl Iterator<Item = (Pos2, Pos2)>,
+    phase: f32,
+) {
+    const DASH: f32 = 4.0;
+    for (a, b) in segments {
+        let len = a.distance(b);
+        if len <= 0.0 {
+            continue;
+        }
+        let dir = (b - a) / len;
+        // Position along a diagonal pattern, so meeting segments continue each other.
+        let mut travelled = phase + (a.x + a.y).rem_euclid(2.0 * DASH);
+        let mut t = 0.0;
+        while t < len {
+            let seg = (DASH - travelled % DASH).min(len - t);
+            let dark = ((travelled / DASH) as i64) % 2 == 0;
+            let color = if dark { Color32::BLACK } else { Color32::WHITE };
+            painter.line_segment(
+                [a + dir * t, a + dir * (t + seg)],
+                Stroke::new(1.0_f32, color),
+            );
+            t += seg;
+            travelled += seg;
         }
     }
 }
@@ -958,4 +1263,96 @@ mod tests {
         v.zoom_out();
         assert_eq!(v.zoom, 3.0);
     }
+}
+
+/// What a Crop-tool drag changes.
+#[derive(Debug, Clone, Copy)]
+enum CropDrag {
+    New {
+        start: (i32, i32),
+    },
+    Move {
+        start: (i32, i32),
+        orig: SelRect,
+    },
+    /// Left, right, top, bottom edges being dragged.
+    Edges {
+        edges: (bool, bool, bool, bool),
+        orig: SelRect,
+    },
+}
+
+/// Which edges of the crop frame are under the pointer (within a few screen pixels).
+fn crop_edges(t: &ViewTransform, r: SelRect, pos: Pos2) -> (bool, bool, bool, bool) {
+    const GRAB: f32 = 6.0;
+    let min = t.pixel_to_screen(r.x as f32, r.y as f32);
+    let max = t.pixel_to_screen(r.right() as f32, r.bottom() as f32);
+    let in_x = pos.x > min.x - GRAB && pos.x < max.x + GRAB;
+    let in_y = pos.y > min.y - GRAB && pos.y < max.y + GRAB;
+    (
+        in_y && (pos.x - min.x).abs() <= GRAB,
+        in_y && (pos.x - max.x).abs() <= GRAB,
+        in_x && (pos.y - min.y).abs() <= GRAB,
+        in_x && (pos.y - max.y).abs() <= GRAB,
+    )
+}
+
+/// The crop frame: everything outside it dimmed, an amber outline with handles and
+/// its size.
+fn paint_crop_frame(painter: &egui::Painter, t: &ViewTransform, image: Rect, r: SelRect) {
+    let frame = Rect::from_min_max(
+        t.pixel_to_screen(r.x as f32, r.y as f32),
+        t.pixel_to_screen(r.right() as f32, r.bottom() as f32),
+    );
+    let shade = Color32::from_black_alpha(150);
+    // Four bands around the frame, inside the image.
+    for band in [
+        Rect::from_min_max(image.min, Pos2::new(image.max.x, frame.min.y)),
+        Rect::from_min_max(Pos2::new(image.min.x, frame.max.y), image.max),
+        Rect::from_min_max(
+            Pos2::new(image.min.x, frame.min.y),
+            Pos2::new(frame.min.x, frame.max.y),
+        ),
+        Rect::from_min_max(
+            Pos2::new(frame.max.x, frame.min.y),
+            Pos2::new(image.max.x, frame.max.y),
+        ),
+    ] {
+        if band.is_positive() {
+            painter.rect_filled(band, 0.0, shade);
+        }
+    }
+    painter.rect_stroke(
+        frame,
+        0.0,
+        Stroke::new(2.0_f32, theme::accent()),
+        StrokeKind::Outside,
+    );
+    let handle = Vec2::splat(7.0);
+    for p in [
+        frame.min,
+        frame.max,
+        Pos2::new(frame.min.x, frame.max.y),
+        Pos2::new(frame.max.x, frame.min.y),
+        Pos2::new(frame.center().x, frame.min.y),
+        Pos2::new(frame.center().x, frame.max.y),
+        Pos2::new(frame.min.x, frame.center().y),
+        Pos2::new(frame.max.x, frame.center().y),
+    ] {
+        let h = Rect::from_center_size(p, handle);
+        painter.rect_filled(h, 0.0, theme::accent());
+        painter.rect_stroke(
+            h,
+            0.0,
+            Stroke::new(1.0_f32, theme::bevel_dark()),
+            StrokeKind::Outside,
+        );
+    }
+    painter.text(
+        Pos2::new(frame.center().x, frame.max.y + 10.0),
+        egui::Align2::CENTER_TOP,
+        format!("{} × {}", r.w, r.h),
+        egui::FontId::proportional(13.0),
+        theme::text_primary(),
+    );
 }

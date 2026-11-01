@@ -25,7 +25,7 @@ pub fn show(
             crate::APP_CHANNEL
         ))
         .strong()
-        .color(theme::TEXT_PRIMARY),
+        .color(theme::text_primary()),
     );
     let build = if release::is_official_build() {
         "Official release build"
@@ -37,18 +37,18 @@ pub fn show(
 
     section(ui, "Status");
     match &view.update_status {
-        UpdateStatus::Idle => status_line(ui, theme::TEXT_SECONDARY, "Not checked yet"),
+        UpdateStatus::Idle => status_line(ui, theme::text_secondary(), "Not checked yet"),
         UpdateStatus::Checking => {
             ui.horizontal(|ui| {
                 ui.spinner();
                 ui.label("Checking GitHub for updates…");
             });
         }
-        UpdateStatus::UpToDate => status_line(ui, theme::SUCCESS, "Kagero is up to date"),
+        UpdateStatus::UpToDate => status_line(ui, theme::success(), "Kagero is up to date"),
         UpdateStatus::Available(info) => {
             status_line(
                 ui,
-                theme::ACCENT,
+                theme::accent(),
                 &format!("Version {} is available", info.version),
             );
             release_card(ui, info);
@@ -67,7 +67,7 @@ pub fn show(
         } => {
             status_line(
                 ui,
-                theme::ACCENT,
+                theme::accent(),
                 &format!("Downloading {}…", release.version),
             );
             let fraction = total.map_or(0.0, |t| *received as f32 / t.max(1) as f32);
@@ -86,25 +86,25 @@ pub fn show(
         UpdateStatus::Downloaded { release, package } => {
             status_line(
                 ui,
-                theme::SUCCESS,
+                theme::success(),
                 &format!("Version {} downloaded", release.version),
             );
             ui.label(
                 RichText::new(format!("SHA-256 {}", package.sha256))
                     .small()
                     .monospace()
-                    .color(theme::TEXT_SECONDARY),
+                    .color(theme::text_secondary()),
             );
             if package.signature_verified {
                 status_line(
                     ui,
-                    theme::SUCCESS,
+                    theme::success(),
                     "Signature verified (official Onibi Lab release)",
                 );
             } else {
                 status_line(
                     ui,
-                    theme::ERROR,
+                    theme::error(),
                     "Authenticity not verified — this build has no update signing key, so it won't install",
                 );
             }
@@ -123,8 +123,8 @@ pub fn show(
             release_card(ui, release);
         }
         UpdateStatus::Failed(message) => {
-            status_line(ui, theme::ERROR, "The last update action failed");
-            ui.label(RichText::new(message).color(theme::TEXT_SECONDARY));
+            status_line(ui, theme::error(), "The last update action failed");
+            ui.label(RichText::new(message).color(theme::text_secondary()));
             if ui.small_button("Dismiss").clicked() {
                 actions.push(SettingsAction::DismissUpdateError);
             }
@@ -193,7 +193,7 @@ pub fn show(
 
 fn release_card(ui: &mut egui::Ui, info: &ReleaseInfo) {
     egui::Frame::new()
-        .fill(theme::SURFACE)
+        .fill(theme::surface())
         .corner_radius(0)
         .inner_margin(egui::Margin::same(10))
         .show(ui, |ui| {
@@ -201,7 +201,7 @@ fn release_card(ui: &mut egui::Ui, info: &ReleaseInfo) {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(&info.title).strong());
                 if info.prerelease {
-                    ui.label(RichText::new("prerelease").small().color(theme::ACCENT));
+                    ui.label(RichText::new("prerelease").small().color(theme::accent()));
                 }
             });
             let mut meta = Vec::new();

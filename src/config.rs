@@ -36,6 +36,10 @@ pub struct Config {
     pub onion: OnionSkin,
     pub playback: PlaybackSettings,
     pub updates: UpdateSettings,
+    pub autosave: AutosaveSettings,
+    /// Name of the color theme (built-in or from the themes folder).
+    pub theme: String,
+    pub plugins: PluginSettings,
     pub discord: DiscordSettings,
     pub export: ExportSettings,
     /// Shortcut changes: action id → key text (`""` = no key). See `ui::keymap`.
@@ -73,6 +77,9 @@ impl Default for Config {
             onion: OnionSkin::default(),
             playback: PlaybackSettings::default(),
             updates: UpdateSettings::default(),
+            autosave: AutosaveSettings::default(),
+            theme: crate::themes::DEFAULT_THEME.to_owned(),
+            plugins: PluginSettings::default(),
             discord: DiscordSettings::default(),
             export: ExportSettings::default(),
             shortcuts: Default::default(),
@@ -101,7 +108,7 @@ impl Default for UiSettings {
     fn default() -> Self {
         Self {
             timeline_visible: true,
-            timeline_height: 156.0,
+            timeline_height: 176.0,
             side_panel_visible: true,
             reduce_motion: false,
             window_maximized: true,
@@ -110,7 +117,7 @@ impl Default for UiSettings {
     }
 }
 
-pub const TIMELINE_MIN_HEIGHT: f32 = 142.0;
+pub const TIMELINE_MIN_HEIGHT: f32 = 160.0;
 pub const TIMELINE_MAX_HEIGHT: f32 = 360.0;
 
 /// How the animation preview is timed.
@@ -139,6 +146,34 @@ impl Default for PlaybackSettings {
 }
 
 pub const FPS_RANGE: std::ops::RangeInclusive<u32> = 1..=60;
+
+/// Plugins the user turned on (by id). New plugins start turned off.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PluginSettings {
+    pub enabled: Vec<String>,
+}
+
+/// Autosave to the recovery folder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AutosaveSettings {
+    pub enabled: bool,
+    /// Minutes between copies while there are unsaved changes.
+    pub interval_minutes: u32,
+}
+
+impl Default for AutosaveSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            interval_minutes: 2,
+        }
+    }
+}
+
+/// Allowed autosave interval, in minutes.
+pub const AUTOSAVE_MINUTES: std::ops::RangeInclusive<u32> = 1..=60;
 
 /// GitHub updater preferences.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -240,6 +275,10 @@ impl Config {
     }
 
     fn sanitize(&mut self) {
+        self.autosave.interval_minutes = self
+            .autosave
+            .interval_minutes
+            .clamp(*AUTOSAVE_MINUTES.start(), *AUTOSAVE_MINUTES.end());
         if std::mem::take(&mut self.ui.pixel_font) {
             self.experimental.pixel_font = true;
         }

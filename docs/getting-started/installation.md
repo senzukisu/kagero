@@ -1,5 +1,5 @@
 ---
-description: "Download, unpack and run Kagero — and keep it up to date."
+description: "Install Kagero with the installer or as a portable zip — and keep it up to date."
 icon: download
 ---
 
@@ -11,9 +11,41 @@ icon: download
 * A graphics driver with OpenGL 2.0 or newer (any GPU from the last decade)
 * About 10 MB of disk space
 
-No installer, runtime or account is needed.
+No runtime or account is needed, and installing doesn't need administrator rights.
 
-## Install
+## Install with the installer (recommended)
+
+{% stepper %}
+{% step %}
+### Download
+
+Open the [latest release](https://github.com/senzukisu/kagero/releases/latest) and
+download `kagero-<version>-setup.exe`.
+{% endstep %}
+
+{% step %}
+### Run it
+
+Choose whether you want a **desktop shortcut** (a **Start menu** shortcut is added
+unless you turn it off), then click **Install**. Kagero is installed for your user
+account in `%LOCALAPPDATA%\Programs\Kagero` (**Change…** picks another folder). It
+appears in **Settings → Apps → Installed apps** with its icon.
+
+If an older Kagero is in that folder, it is replaced and kept as the previous version,
+just like an update. Updates later install into the same folder automatically.
+
+Windows SmartScreen may say the app is unrecognized, because the executable isn't
+signed with a paid certificate. Choose **More info → Run anyway**. The installer
+itself is signed — see [Verify the download](#verify-the-download).
+{% endstep %}
+{% endstepper %}
+
+{% hint style="info" %}
+For scripted installs: `kagero-<version>-setup.exe --silent [--dir <folder>]
+[--desktop-shortcut] [--no-start-menu] [--no-register]`.
+{% endhint %}
+
+## Portable (zip)
 
 {% stepper %}
 {% step %}
@@ -116,7 +148,16 @@ The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blo
 | Log file | `%APPDATA%\OnibiLab\Kagero\kagero.log` |
 | Previous version after an update | `<install folder>\.kagero-backup\` |
 
-**Uninstall:** delete the Kagero folder, and `%APPDATA%\OnibiLab\Kagero` to remove the
-settings too. Your `.kgr` projects stay wherever you saved them.
+## Uninstall
+
+* **Installed with the installer:** open **Settings → Apps → Installed apps**, find
+  Kagero and choose **Uninstall** (or run `uninstall.exe` in Kagero's folder). This
+  removes the program, its shortcuts and its "Installed apps" entry. **Your data is
+  kept:** projects, settings, palettes, themes, plugins and autosave copies in
+  `%APPDATA%\OnibiLab\Kagero`. Files you put into Kagero's folder yourself stay too.
+* **Portable:** delete the Kagero folder.
+
+To remove your settings and other data too, delete `%APPDATA%\OnibiLab\Kagero` by
+hand. Your `.kgr` projects stay wherever you saved them.
 
 To build Kagero yourself, see [Contributing](../developers/contributing.md).
