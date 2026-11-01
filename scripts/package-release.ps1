@@ -76,8 +76,9 @@ if ($LASTEXITCODE -ne 0) { throw "signature verification failed" }
 # The installer carries the signed release zip and checks its SHA256SUMS.txt.
 $setup = Join-Path $dist "kagero-$version-setup.exe"
 if (Test-Path $setup) { Remove-Item $setup -Force }
-& target\release\kagero-setup.exe --build-installer $zip $setup
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path $setup)) { throw "building the installer failed" }
+# kagero-setup.exe is a windowed program in release builds: wait for it explicitly.
+$build = Start-Process -FilePath (Join-Path $root "target\release\kagero-setup.exe") -ArgumentList "--build-installer", "`"$zip`"", "`"$setup`"" -Wait -PassThru -NoNewWindow
+if ($build.ExitCode -ne 0 -or -not (Test-Path $setup)) { throw "building the installer failed" }
 $setupSig = "$setup.minisig"
 if (Test-Path $setupSig) { Remove-Item $setupSig -Force }
 $signArgs = @("sign", "-s", $SecretKey, "-x", $setupSig, "-t", "Kagero $version installer")
