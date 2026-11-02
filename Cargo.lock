@@ -1669,7 +1669,7 @@ dependencies = [
 
 [[package]]
 name = "kagero"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ab_glyph",
  "color_quant",

@@ -1,0 +1,15 @@
+{
+  "format": "kagero-plugin",
+  "api": 1,
+  "id": "kagero.pixel-cleanup",
+  "name": "Pixel Cleanup",
+  "version": "1.0.0",
+  "author": "Onibi Lab",
+  "description": "Tidy up sprites: remove stray pixels, make soft edges crisp, add a drop shadow or an inner outline. Works on the selection, or the whole layer without one.",
+  "commands": [
+    { "id": "remove-strays", "title": "Remove Stray Pixels" },
+    { "id": "harden-edges", "title": "Harden Soft Edges" },
+    { "id": "drop-shadow", "title": "Drop Shadow (Secondary Color)" },
+    { "id": "inner-outline", "title": "Inner Outline (Primary Color)" }
+  ]
+}

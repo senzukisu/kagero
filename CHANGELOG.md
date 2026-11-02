@@ -4,6 +4,34 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.3] Beta — 2026-11-02
+
+A bug fix for 0.4.2, and two ready-made plugins.
+
+### Fixed
+
+- **A dark stripe beside the tool strip** (0.4.2). The strip's panel was 12 px narrower
+  than its frame, so a strip of unpainted window showed between the tools and the
+  canvas. The panel now matches its frame (44 px with one column, 78 px with two). A
+  new test lays the strip out in a real panel, at two window heights, and checks that
+  the frame fills it exactly and the canvas starts right after it.
+
+### Added
+
+- **Pixel Cleanup** plugin: Remove Stray Pixels, Harden Soft Edges, Drop Shadow
+  (secondary color) and Inner Outline (primary color).
+- **Color Tools** plugin: Replace Primary with Secondary, Shift Hue ±30°, Lighten,
+  Darken and Most Used Color to Primary.
+- Both are attached to the release as ZIP files and their source is in
+  `examples/plugins`; see [Plugins](docs/plugins/README.md#ready-made-plugins). Every
+  command has a test.
+
+### Changed
+
+- The 0.4.2 notes said the tool strip had become thinner. It hadn't: the screenshot was
+  measured at 125% display scaling. The strip is the same 44 px as in 0.4.1, now on
+  the exact grid from 0.4.2.
+
 ## [0.4.2] Beta — 2026-11-02
 
 Reliability, tests and a tidier tool strip. No new features and no change to the project
@@ -12,8 +40,8 @@ format: 0.4.1 and 0.4.2 open each other's projects.
 ### Changed
 
 - **Tool strip:** the buttons sit on an exact grid, centered, with even gaps and thin
-  lines between the groups. The strip is thinner: 44 px instead of about 56 px with one
-  column, 78 px with two (before, the panel margin was counted twice).
+  lines between the groups. (This version also left a dark stripe beside the strip;
+  fixed in 0.4.3.)
 - **Logs:** opening, saving and exporting write the file path to `kagero.log`, and a
   failure writes the path with the reason. Recovery copies that can't be deleted, and
   a Discord connection that doesn't close in time on exit, are logged instead of being

@@ -112,6 +112,30 @@ If the script raises an error (or `error("...")` is called), nothing is changed 
 
 The bundled **Example Tools** plugin (Invert Colors, Grayscale, Outline with Primary Color) is in the source code under `examples/plugins/kagero.example-tools`. It is also installed by **Install Example Plugin**.
 
+## Ready-made plugins
+
+Two more plugins are attached to every [release](https://github.com/senzukisu/kagero/releases/latest) as ZIP files. Extract the ZIP into the plugins folder (it contains the plugin's folder), click **Reload** and turn the plugin on. Their source is in `examples/plugins`.
+
+**Pixel Cleanup** (`kagero.pixel-cleanup`):
+
+| Command | What it does |
+| --- | --- |
+| Remove Stray Pixels | Deletes single pixels with nothing around them, not even diagonally. |
+| Harden Soft Edges | Half-transparent pixels become opaque (alpha 128 or more) or transparent. |
+| Drop Shadow (Secondary Color) | Paints a shadow one pixel down and right, only on empty pixels. |
+| Inner Outline (Primary Color) | Repaints the outermost pixels of each shape; the shape doesn't grow. |
+
+**Color Tools** (`kagero.color-tools`):
+
+| Command | What it does |
+| --- | --- |
+| Replace Primary with Secondary | Every pixel of exactly the primary color gets the secondary color. |
+| Shift Hue +30° / −30° | Turns colors around the color wheel; grays stay gray. |
+| Lighten / Darken | Moves colors a quarter of the way toward white or black. |
+| Most Used Color to Primary | Picks the color used by the most pixels. |
+
+All of them work on the selection, or the whole active layer without one, never change transparent pixels they don't need to, and are one undo step.
+
 ## Why Lua?
 
 Rust plugins would be native DLLs. They would run with Kagero's full rights, could crash it, and would have to be built with exactly the same compiler version, because Rust has no stable binary interface. Lua was made to be embedded, can be sandboxed, and needs only a text editor to write.

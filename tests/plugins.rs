@@ -283,3 +283,118 @@ fn the_plugins_folder_lists_good_and_broken_plugins() {
     assert!(load_plugin(&example).is_valid());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// The bundled plugins in `examples/plugins` (published with each release).
+mod bundled {
+    use super::*;
+
+    const CLEANUP: (&str, &str) = (
+        include_str!("../examples/plugins/kagero.pixel-cleanup/plugin.json"),
+        include_str!("../examples/plugins/kagero.pixel-cleanup/main.lua"),
+    );
+    const COLORS: (&str, &str) = (
+        include_str!("../examples/plugins/kagero.color-tools/plugin.json"),
+        include_str!("../examples/plugins/kagero.color-tools/main.lua"),
+    );
+
+    const R: [u8; 4] = [200, 40, 40, 255];
+    const E: [u8; 4] = [0, 0, 0, 0];
+
+    /// 5×5: a 2×2 red block at (1,1), a stray red pixel at (4,4), a soft pixel at (0,4).
+    fn image() -> PluginInput {
+        let mut px = [E; 25];
+        for (x, y) in [(1, 1), (2, 1), (1, 2), (2, 2), (4, 4)] {
+            px[y * 5 + x] = R;
+        }
+        px[4 * 5] = [10, 10, 10, 200];
+        PluginInput {
+            width: 5,
+            height: 5,
+            pixels: px.concat(),
+            selection: None,
+            primary: Rgba::opaque(1, 2, 3),
+            secondary: Rgba::opaque(9, 9, 9),
+        }
+    }
+
+    fn at(px: &[u8], x: usize, y: usize) -> [u8; 4] {
+        let i = (y * 5 + x) * 4;
+        [px[i], px[i + 1], px[i + 2], px[i + 3]]
+    }
+
+    fn run_cmd(plugin: (&str, &str), command: &str, input: PluginInput) -> plugins::PluginOutput {
+        let m = parse_manifest(plugin.0).expect("valid manifest");
+        assert!(m.commands.iter().any(|c| c.id == command), "{command}");
+        run(plugin.1, &m, command, input, &AtomicBool::new(false)).expect(command)
+    }
+
+    #[test]
+    fn manifests_are_valid_and_every_command_runs() {
+        for plugin in [CLEANUP, COLORS] {
+            let m = parse_manifest(plugin.0).expect("valid manifest");
+            for c in &m.commands {
+                run(plugin.1, &m, &c.id, image(), &AtomicBool::new(false))
+                    .unwrap_or_else(|e| panic!("{}: {e}", c.id));
+            }
+        }
+    }
+
+    #[test]
+    fn pixel_cleanup() {
+        let out = run_cmd(CLEANUP, "remove-strays", image());
+        let px = out.pixels.expect("changed");
+        assert_eq!(at(&px, 4, 4), E, "the stray pixel is removed");
+        assert_eq!(at(&px, 1, 1), R, "the block stays");
+        assert_eq!(out.messages, ["Removed 2 stray pixels"]);
+
+        let px = run_cmd(CLEANUP, "harden-edges", image())
+            .pixels
+            .expect("changed");
+        assert_eq!(at(&px, 0, 4), [10, 10, 10, 255]);
+
+        let px = run_cmd(CLEANUP, "drop-shadow", image())
+            .pixels
+            .expect("changed");
+        assert_eq!(at(&px, 3, 3), [9, 9, 9, 255], "below-right of the block");
+        assert_eq!(at(&px, 2, 2), R, "colored pixels are not covered");
+        assert_eq!(at(&px, 0, 0), E);
+
+        let px = run_cmd(CLEANUP, "inner-outline", image())
+            .pixels
+            .expect("changed");
+        assert_eq!(at(&px, 1, 1), [1, 2, 3, 255], "a 2×2 block is all edge");
+        assert_eq!(at(&px, 0, 0), E, "the shape doesn't grow");
+    }
+
+    #[test]
+    fn color_tools() {
+        let mut input = image();
+        input.primary = Rgba::new(R[0], R[1], R[2], R[3]);
+        let px = run_cmd(COLORS, "replace-color", input)
+            .pixels
+            .expect("changed");
+        assert_eq!(at(&px, 1, 1), [9, 9, 9, 255]);
+        assert_eq!(at(&px, 0, 4), [10, 10, 10, 200], "other colors stay");
+
+        // Red shifted by +30° is orange, and back again is red.
+        let px = run_cmd(COLORS, "hue-forward", image())
+            .pixels
+            .expect("changed");
+        assert_eq!(at(&px, 1, 1), [200, 120, 40, 255]);
+        let mut again = image();
+        again.pixels = px;
+        let px = run_cmd(COLORS, "hue-back", again).pixels.expect("changed");
+        assert_eq!(at(&px, 1, 1), R);
+        assert_eq!(at(&px, 0, 0), E, "transparent pixels stay");
+
+        let px = run_cmd(COLORS, "lighten", image()).pixels.expect("changed");
+        assert_eq!(at(&px, 1, 1), [214, 94, 94, 255]);
+        let px = run_cmd(COLORS, "darken", image()).pixels.expect("changed");
+        assert_eq!(at(&px, 1, 1), [150, 30, 30, 255]);
+
+        let out = run_cmd(COLORS, "most-used", image());
+        assert!(out.pixels.is_none(), "picking changes no pixels");
+        assert_eq!(out.primary, Some(Rgba::new(200, 40, 40, 255)));
+        assert_eq!(out.messages, ["Primary is now #C82828 (5 pixels)"]);
+    }
+}

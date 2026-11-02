@@ -8,9 +8,19 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.4.3 Beta — bug fix and two plugins (2026-11-02)
+
+* **Fixed:** the dark stripe beside the tool strip from 0.4.2.
+* **New plugins**, attached to the release: **Pixel Cleanup** (remove stray pixels,
+  harden soft edges, drop shadow, inner outline) and **Color Tools** (replace a color,
+  shift hue, lighten, darken, pick the most used color). See
+  [Plugins](../plugins/README.md#ready-made-plugins).
+
+[Download 0.4.3](https://github.com/senzukisu/kagero/releases/tag/v0.4.3)
+
 ## 0.4.2 Beta — reliability and a tidier tool strip (2026-11-02)
 
-* **Tool strip:** tools line up on an exact grid, and the strip is thinner.
+* **Tool strip:** tools line up on an exact grid.
 * **Fixed:** a crash inside an export no longer leaves the Export dialog waiting forever.
 * **Better logs:** opening, saving and exporting write the file path, and failures the
   reason.

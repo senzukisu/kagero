@@ -19,7 +19,7 @@ onion skin, and export images, animations and sprite sheets for your game. It ru
 offline and needs no account.
 
 {% hint style="info" %}
-**Kagero 0.4.2 Beta** · Windows 10/11 · [Download](https://github.com/senzukisu/kagero/releases/latest) ·
+**Kagero 0.4.3 Beta** · Windows 10/11 · [Download](https://github.com/senzukisu/kagero/releases/latest) ·
 [What's new](about/changelog.md)
 {% endhint %}
 

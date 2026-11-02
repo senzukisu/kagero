@@ -1032,15 +1032,7 @@ impl KageroApp {
         }
 
         if let Some(editor) = &mut self.editor {
-            egui::SidePanel::left("toolbar")
-                .frame(
-                    Frame::new()
-                        .fill(theme::panel())
-                        .inner_margin(Margin::same(toolbar::MARGIN)),
-                )
-                .resizable(false)
-                .exact_width(toolbar::panel_width(ctx))
-                .show(ctx, |ui| toolbar::show(ui, editor.tool, &keymap, commands));
+            toolbar::panel(ctx).show(ctx, |ui| toolbar::show(ui, editor.tool, &keymap, commands));
 
             if self.config.ui.side_panel_visible {
                 egui::SidePanel::right("side-panel")

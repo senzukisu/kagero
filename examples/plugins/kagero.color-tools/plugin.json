@@ -1,0 +1,17 @@
+{
+  "format": "kagero-plugin",
+  "api": 1,
+  "id": "kagero.color-tools",
+  "name": "Color Tools",
+  "version": "1.0.0",
+  "author": "Onibi Lab",
+  "description": "Recolor quickly: replace one color with another, shift hues, lighten or darken, and pick the most used color. Works on the selection, or the whole layer without one.",
+  "commands": [
+    { "id": "replace-color", "title": "Replace Primary with Secondary" },
+    { "id": "hue-forward", "title": "Shift Hue +30°" },
+    { "id": "hue-back", "title": "Shift Hue −30°" },
+    { "id": "lighten", "title": "Lighten" },
+    { "id": "darken", "title": "Darken" },
+    { "id": "most-used", "title": "Most Used Color to Primary" }
+  ]
+}

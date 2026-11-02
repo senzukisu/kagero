@@ -8,7 +8,7 @@ use crate::editor::ToolKind;
 /// Side of a tool button, the gap between buttons, and the panel's inner margin.
 const BUTTON: f32 = 32.0;
 const GAP: f32 = 2.0;
-pub const MARGIN: i8 = 6;
+const MARGIN: i8 = 6;
 /// Space taken by the line between two groups.
 const GROUP_GAP: f32 = 9.0;
 /// Tools in visual groups: freehand | fill & pick | shapes | navigation & selection.
@@ -48,13 +48,25 @@ fn grid_height(columns: usize) -> f32 {
         + (GROUPS.len() - 1) as f32 * GROUP_GAP
 }
 
-/// Width of the tool panel's contents (its frame adds `MARGIN` on each side): one or two
-/// columns, as decided by the last frame.
-pub fn panel_width(ctx: &egui::Context) -> f32 {
+/// Width of the tool panel, including its frame's `MARGIN` on each side (egui's
+/// `exact_width` counts the frame): one or two columns, as decided by the last frame.
+fn panel_width(ctx: &egui::Context) -> f32 {
     let two = ctx
         .data(|d| d.get_temp::<bool>(columns_id()))
         .unwrap_or(false);
-    grid_width(if two { 2 } else { 1 })
+    grid_width(if two { 2 } else { 1 }) + 2.0 * f32::from(MARGIN)
+}
+
+/// The left panel that holds the tool strip.
+pub fn panel(ctx: &egui::Context) -> egui::SidePanel {
+    egui::SidePanel::left("toolbar")
+        .frame(
+            egui::Frame::new()
+                .fill(crate::theme::panel())
+                .inner_margin(egui::Margin::same(MARGIN)),
+        )
+        .resizable(false)
+        .exact_width(panel_width(ctx))
 }
 
 pub fn show(ui: &mut egui::Ui, current: ToolKind, keymap: &Keymap, commands: &mut Vec<Command>) {
@@ -133,6 +145,41 @@ mod tests {
         assert_eq!(grid_width(2) + 2.0 * f32::from(MARGIN), 78.0);
         // Two columns need fewer rows, so less height.
         assert!(grid_height(2) < grid_height(1));
+    }
+
+    /// The panel's frame must fill the panel exactly: a frame wider than the panel
+    /// leaves an unpainted stripe beside it (0.4.2), a narrower one wastes space.
+    #[test]
+    fn the_frame_fills_the_panel_exactly() {
+        for height in [900.0, 420.0] {
+            let ctx = egui::Context::default();
+            let keymap = Keymap::default();
+            let input = || egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(800.0, height),
+                )),
+                ..Default::default()
+            };
+            // Two passes: the column count is decided on the first.
+            for _ in 0..3 {
+                let _ = ctx.run(input(), |ctx| {
+                    let mut commands = Vec::new();
+                    let expected = panel_width(ctx);
+                    let r = panel(ctx).show(ctx, |ui| {
+                        show(ui, ToolKind::Pencil, &keymap, &mut commands);
+                    });
+                    let width = r.response.rect.width();
+                    assert_eq!(width, expected, "height {height}");
+                    let central = ctx.available_rect();
+                    assert_eq!(central.left(), r.response.rect.right(), "height {height}");
+                });
+            }
+            let two = ctx
+                .data(|d| d.get_temp::<bool>(columns_id()))
+                .unwrap_or(false);
+            assert_eq!(two, height < 600.0, "columns at height {height}");
+        }
     }
 
     #[test]
