@@ -4,6 +4,57 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.2] Beta — 2026-11-02
+
+Reliability, tests and a tidier tool strip. No new features and no change to the project
+format: 0.4.1 and 0.4.2 open each other's projects.
+
+### Changed
+
+- **Tool strip:** the buttons sit on an exact grid, centered, with even gaps and thin
+  lines between the groups. The strip is thinner: 44 px instead of about 56 px with one
+  column, 78 px with two (before, the panel margin was counted twice).
+- **Logs:** opening, saving and exporting write the file path to `kagero.log`, and a
+  failure writes the path with the reason. Recovery copies that can't be deleted, and
+  a Discord connection that doesn't close in time on exit, are logged instead of being
+  ignored.
+
+### Fixed
+
+- If an export crashed inside its background thread, the Export dialog kept waiting
+  forever. It now shows "the export stopped unexpectedly" and can be used again.
+
+### Tests
+
+- **Long editing sessions:** 40 seeded sessions of 400 random operations each (drawing
+  with every shape tool and symmetry, switching tools mid-stroke, fills, unfinished
+  polygons, layers, layer properties and locks, frames, tags, selections, transforms,
+  canvas size, crop, palette conversion). Every step must undo and redo exactly, saving
+  and reopening must change nothing, and a refused operation must change nothing.
+- **Compatibility projects:** a hand-made `.kgr` file of each format version (1, 2 and 3)
+  in `tests/fixtures/`, written by `scripts/make-test-fixtures.py` from the format
+  description, not by Kagero. Each must open as intended and survive a round trip.
+- **Damaged files:** 1 200 damaged copies of those projects (flipped bytes, cut-off
+  files, inserted or removed bytes). None may crash the reader.
+- These found no new bugs in editing, undo or files. The test suite has 290 tests.
+
+### Developers
+
+- `src/app.rs` (1 850 lines) is split by job: `app/mod.rs` (the app, layout, commands),
+  `files.rs`, `dialog_flow.rs`, `settings_actions.rs` and `background.rs`. The main
+  menu is one function per menu instead of one 600-line function. The code was moved,
+  not rewritten.
+- The developer docs describe the new layout, the error-handling rules, thumbnail
+  caching, the compatibility tests and how to regenerate them. The `.kgr` writer's
+  documentation now says when it writes version 3.
+- Dependencies updated to their latest compatible patch versions; the third-party
+  license list is regenerated. Benchmarks (`cargo run --release --example bench`)
+  measure the same as 0.4.1; nothing in this release was meant to change speed.
+
+### Removed
+
+- Unused code for a "Soon" badge in the Settings menu.
+
 ## [0.4.1] Beta — 2026-11-01
 
 Performance, stability and code quality. This is also the first published release

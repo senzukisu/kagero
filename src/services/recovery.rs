@@ -224,8 +224,8 @@ impl Recovery {
     /// the user saved or deliberately closed that work.
     pub fn discard(&mut self) {
         self.finish();
-        let _ = fs::remove_file(self.meta_path());
-        let _ = fs::remove_file(self.project_path());
+        remove_quietly(&self.meta_path());
+        remove_quietly(&self.project_path());
         self.last_state = None;
         for entry in std::mem::take(&mut self.pending_delete) {
             delete(&entry);
@@ -283,10 +283,20 @@ pub fn delete(entry: &RecoveryEntry) {
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_default();
-    let _ = fs::remove_file(dir.join(format!("{}.json", entry.id)));
-    let _ = fs::remove_file(&entry.project);
+    remove_quietly(&dir.join(format!("{}.json", entry.id)));
+    remove_quietly(&entry.project);
     // A crashed session's lock file is left behind; it is unlocked by now.
-    let _ = fs::remove_file(dir.join(format!("{}.lock", entry.id)));
+    remove_quietly(&dir.join(format!("{}.lock", entry.id)));
+}
+
+/// Deletes a recovery file. A file that is already gone is fine; any other failure
+/// is logged, because the copy would be offered again after a restart.
+fn remove_quietly(path: &Path) {
+    if let Err(e) = fs::remove_file(path) {
+        if e.kind() != std::io::ErrorKind::NotFound {
+            tracing::warn!("could not delete recovery file {}: {e}", path.display());
+        }
+    }
 }
 
 /// Complete copies in `dir` whose session is not running, newest first. Damaged or

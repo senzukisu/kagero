@@ -8,6 +8,18 @@ icon: clock-rotate-left
 The complete, always up-to-date list is in
 [CHANGELOG.md on GitHub](https://github.com/senzukisu/kagero/blob/main/CHANGELOG.md).
 
+## 0.4.2 Beta — reliability and a tidier tool strip (2026-11-02)
+
+* **Tool strip:** tools line up on an exact grid, and the strip is thinner.
+* **Fixed:** a crash inside an export no longer leaves the Export dialog waiting forever.
+* **Better logs:** opening, saving and exporting write the file path, and failures the
+  reason.
+* **Tested harder:** thousands of random edits must undo, redo and save exactly; old
+  projects of every format version and over a thousand damaged files are checked on
+  every build.
+
+[Download 0.4.2](https://github.com/senzukisu/kagero/releases/tag/v0.4.2)
+
 ## 0.4.1 Beta — performance, stability and code quality (2026-11-01)
 
 The first published release with everything from 0.4.0 below.

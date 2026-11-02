@@ -12,7 +12,7 @@ on the layers below it.
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│ UI           app.rs, ui/*      title bar, canvas, timeline, panels, │
+│ UI           app/*, ui/*       title bar, canvas, timeline, panels, │
 │                                dialogs, export dialog, shortcuts   │
 ├───────────────────────────────────────────────────────────────────┤
 │ Application  editor/*          Editor, tools, selection ops, History│
@@ -85,8 +85,9 @@ as runs (`PixelRuns`) when that is smaller. Data moves between the document and 
 
 ## Files — `src/file_io`
 
-* `kgr.rs` — `.kgr` v2 writer, v1 and v2 readers that validate before allocating
-  ([format](project-format.md)).
+* `kgr.rs` — `.kgr` writer (version 2, or 3 when a layer has opacity) and readers for
+  versions 1–3 that validate before allocating ([format](project-format.md)).
+* `parallel_map` — decodes and encodes cel PNGs on several threads, in batches of 64.
 * `png.rs` — PNG import (one frame, one layer) and quick current-frame export.
 * `palette.rs` — GIMP `.gpl` and HEX palette files (1 MiB, 256 colors max).
 * `write_atomic` — temporary file, flush, `fsync`, rename.
@@ -106,11 +107,15 @@ as runs (`PixelRuns`) when that is smaller. Data moves between the document and 
 cancel flag and progress. Every output size is checked against 16 384 px per side and
 512 MiB before allocation. `ExportSettings` is stored in the settings file.
 
-## UI — `src/app.rs`, `src/ui`
+## UI — `src/app`, `src/ui`
 
-* `KageroApp` owns the config, `Editor`, `CanvasView`, `Timeline`, `Player`, the dialogs,
-  `UpdateManager` and `DiscordPresence`. Panels return `ui::Command`s; the app executes
-  them. Shortcuts are collected in `ui/shortcuts.rs` from the user's keymap
+* `KageroApp` (`app/mod.rs`) owns the config, `Editor`, `CanvasView`, `Timeline`,
+  `Player`, the dialogs, `UpdateManager` and `DiscordPresence`, lays out the panels and
+  executes commands. Panels return `ui::Command`s; the app executes them. The rest of
+  the app is split by job: `files.rs` (new, open, save, PNG and palette files),
+  `dialog_flow.rs` (what happens when a dialog is answered), `settings_actions.rs`
+  (settings, themes, updates, Discord status) and `background.rs` (plugin commands,
+  autosave). Shortcuts are collected in `ui/shortcuts.rs` from the user's keymap
   (`ui/keymap.rs`: every `Action`, its default key, and the overrides stored in the
   settings) and never steal keys from text fields.
 * `title_bar.rs` — Kagero's own window frame (the system frame is off): menus, title,
@@ -118,8 +123,10 @@ cancel flag and progress. Every output size is checked against 16 384 px per sid
   first frame, which is reliable on Windows with display scaling.
 * `canvas.rs` — view transform in device pixels, partial texture uploads while
   drawing, a frame-texture cache for onion skin and preview, selection drawing.
-* `timeline.rs` — controls and frame cards with lazily rebuilt thumbnails;
-  Ctrl/Shift+click selects frames for export.
+* `timeline.rs` — controls and frame cards with thumbnails cached by frame id and
+  revision (a few rebuilt per UI frame); Ctrl/Shift+click selects frames for export.
+* `toolbar.rs` — the tool strip: an exact grid of 32 px buttons, one column, or two
+  when the window is too short. `menu.rs` — the main menu, one function per menu.
 * `export_dialog.rs`, `palette.rs`, `layers.rs`, `settings/`, `dialogs.rs`, `home.rs`.
 * `icons.rs` — 16×16 pixel icons drawn as one mesh of whole device pixels.
 * `theme.rs` — colors, square corners, hard shadows, and the classic or Kagero Pixel
@@ -138,7 +145,13 @@ editing continues.
 * Typed errors (`thiserror`) with user-facing messages: dialogs for file and update
   errors, the status bar for editing errors, quiet status lines for network/Discord.
 * No `unwrap()`/`expect()` in user-reachable code; tests use `expect` freely.
-* Logs: `%APPDATA%\OnibiLab\Kagero\kagero.log`.
+* Errors are not dropped silently. A `let _ =` is used only where nothing more can be
+  done, with a comment saying why (best-effort cleanup, the updater helper's own log).
+* Background work never blocks the editor: the export job finishes with an error even
+  if its thread panics, a plugin or autosave thread that stops is reported as an error,
+  and on exit Kagero waits for Discord at most 1.5 s.
+* Logs: `%APPDATA%\OnibiLab\Kagero\kagero.log`. Opening, saving and exporting log the
+  file path, and failures log the path with the reason.
 
 ## Extending
 

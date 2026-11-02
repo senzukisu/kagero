@@ -135,6 +135,21 @@ Projects are written to a temporary file next to the target
 (`.<name>.kgr.<pid>.tmp`), flushed and synced, then renamed over the target. A crash or
 error during saving leaves the previous file intact.
 
+## Compatibility tests
+
+`tests/fixtures/` holds one small project per format version, written by
+`scripts/make-test-fixtures.py` from this description rather than by Kagero:
+
+| File | Version | Checks |
+|------|---------|--------|
+| `v1-layers.kgr` | 1 | layers become one frame; names, visibility, active layer, pixels |
+| `v2-animation.kgr` | 2 | frame ids and durations, layer ids that aren't 1, 2, 3…, defaults for opacity, locks and tags |
+| `v3-opacity-tags.kgr` | 3 | layer opacity in compositing, lock and alpha lock, frame tags |
+
+`tests/fixtures.rs` opens each one, saves and reopens it, and opens 400 damaged copies
+of each (flipped bytes, cut-off files, inserted or removed bytes): every copy is either
+refused with an error or opens as a valid document, and none crashes the reader.
+
 ## Versioning policy
 
 - Additive, optional changes keep the current version.

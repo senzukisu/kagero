@@ -137,7 +137,8 @@ fn cel_file(frame: usize, layer: usize) -> String {
     format!("frames/{frame:04}/{layer:04}.png")
 }
 
-/// Writes a project archive (format v2) to any seekable writer.
+/// Writes a project archive to any seekable writer: format version 2, or 3 when a layer
+/// has opacity (version 2 readers would lose it).
 pub fn write_kgr<W: Write + Seek>(doc: &Document, writer: W) -> Result<W, FileError> {
     let mut zip = ZipWriter::new(writer);
     let json_opts = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);

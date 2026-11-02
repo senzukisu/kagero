@@ -18,6 +18,7 @@ icon: map
 
 | Version | Highlights |
 |---------|------------|
+| **0.4.2** | Tool strip on an exact grid and thinner, a fix for exports that crash, clearer logs, long-session and compatibility tests, app code split by job |
 | **0.4.1** | Auto size for exports, touchpad pan and pinch zoom, faster GIF export, compositing and project files, compact undo history, code cleanup |
 | **0.4.0** | Canvas size and crop, layer opacity/duplicate/merge/locks, autosave and recovery, frame tags, lasso and magic wand, ellipse and polygon, symmetry, dithering, brushes, fill tolerance, convert to palette, animated WebP, packed sheets, themes, Lua plugins, program icon and installer |
 | **0.3.8** | Custom shortcuts, redesigned Settings and New Image, Experimental page (pixel font, pixel-perfect pencil, tiled view), clearer icons, licenses in the program, Discord improvements |

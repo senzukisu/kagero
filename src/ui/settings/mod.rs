@@ -69,10 +69,6 @@ impl SettingsTab {
             SettingsTab::Themes => "Change Kagero's colors, or make your own theme.",
         }
     }
-
-    fn is_soon(self) -> bool {
-        false
-    }
 }
 
 /// The side menu, in groups.
@@ -270,7 +266,7 @@ impl SettingsWindow {
     }
 }
 
-/// One row of the side menu: icon, label and a "Soon" tag for planned pages.
+/// One row of the side menu: icon and label.
 fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Response {
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(166.0, 30.0), Sense::click());
     let painter = ui.painter();
@@ -297,16 +293,6 @@ fn menu_row(ui: &mut egui::Ui, tab: SettingsTab, selected: bool) -> egui::Respon
             theme::text_secondary()
         },
     );
-    if tab.is_soon() {
-        let tag = egui::pos2(rect.right() - 8.0, rect.center().y);
-        painter.text(
-            tag,
-            egui::Align2::RIGHT_CENTER,
-            "SOON",
-            egui::TextStyle::Small.resolve(ui.style()),
-            theme::accent().gamma_multiply(0.8),
-        );
-    }
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 

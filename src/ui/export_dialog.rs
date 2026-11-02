@@ -157,6 +157,8 @@ impl ExportDialog {
         if let Some(result) = job.state().finished {
             if let Ok(summary) = &result {
                 let folder = summary.files.first().and_then(|f| f.parent());
+                let shown = folder.map(|d| d.display().to_string()).unwrap_or_default();
+                tracing::info!("exported {} file(s) to {shown}", summary.files.len());
                 if let (true, Some(folder)) = (open_folder_after, folder) {
                     open_folder(folder);
                 }

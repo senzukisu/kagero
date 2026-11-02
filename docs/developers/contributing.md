@@ -42,10 +42,17 @@ UI pieces (shortcuts, the Export dialog) run against a headless egui context.
 | Files | `tests/file_io.rs`, `tests/palette.rs` | `.kgr` round trips and damaged files, v1 migration, PNG, palette files, settings migration |
 | Export | `tests/export.rs`, `src/export/*` | pixel-exact PNG, JPEG, WebP, GIF timing/colors/transparency, sheet layouts, metadata, size limits, cancel |
 | UI | `src/ui/canvas.rs`, `shortcuts.rs`, `export_dialog.rs`, `src/theme.rs` | pixel mapping, shortcuts vs text fields, dialog requests, font coverage |
-| Services | `tests/updater.rs`, `tests/discord.rs` | version choice, verification, install and rollback; presence privacy and reconnects |
+| Services | `tests/updater.rs`, `tests/discord.rs`, `tests/recovery.rs`, `tests/setup.rs` | version choice, verification, install and rollback; presence privacy and reconnects; autosave and recovery; installer |
+| Long sessions | `tests/stress.rs` | 40 seeded sessions of 400 random operations (tools, layers, frames, tags, selections, canvas size, crop, palettes): every step undoes and redoes exactly, save/open changes nothing, refused operations change nothing |
+| Compatibility | `tests/fixtures.rs`, `tests/fixtures/*.kgr` | a hand-made project of every format version opens as intended and survives a round trip; 1 200 damaged copies are refused without a crash |
 
-Performance benchmark (ignored by default):
+Performance checks (ignored by default):
 `cargo test --release --test performance -- --ignored --nocapture`.
+
+The compatibility projects are written by `scripts/make-test-fixtures.py` (Python with
+Pillow) straight from the [format description](project-format.md), not by Kagero, so
+a reader change that breaks old projects fails the tests. Regenerating them gives
+byte-identical files. When the format gets a new version, add a fixture for it.
 
 Before a release, also try the build by hand: draw, undo, layers, frames and preview,
 save and reopen, every Export tab, selection, palettes, the title bar (drag, double-click,

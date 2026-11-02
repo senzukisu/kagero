@@ -472,6 +472,8 @@ pub fn download_package(
         })
     })();
     if result.is_err() {
+        // Best effort: the download error is what matters, and a leftover `.part`
+        // file is overwritten by the next attempt.
         let _ = std::fs::remove_file(&part_path);
     }
     result

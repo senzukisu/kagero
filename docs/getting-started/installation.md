@@ -125,7 +125,7 @@ Each release has `SHA256SUMS.txt` and a minisign signature (`.minisig`).
 {% tabs %}
 {% tab title="Checksum (PowerShell)" %}
 ```powershell
-Get-FileHash .\kagero-0.4.1-setup.exe -Algorithm SHA256
+Get-FileHash .\kagero-0.4.2-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the line in `SHA256SUMS.txt`.
@@ -133,7 +133,7 @@ Compare the result with the line in `SHA256SUMS.txt`.
 
 {% tab title="Signature (rsign / minisign)" %}
 ```powershell
-rsign verify kagero-0.4.1-setup.exe -P RWSXS+R3BCdmSx47V91P3O9sUYv3G3tdbivI9Dta7p0hSgnJqkRV8wDe
+rsign verify kagero-0.4.2-setup.exe -P RWSXS+R3BCdmSx47V91P3O9sUYv3G3tdbivI9Dta7p0hSgnJqkRV8wDe
 ```
 
 The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blob/main/kagero.pub).

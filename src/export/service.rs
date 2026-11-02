@@ -278,17 +278,24 @@ impl ExportJob {
         let spawned = std::thread::Builder::new()
             .name("kagero-export".into())
             .spawn(move || {
-                let result = run(&request, &c, &mut |done, total| {
-                    let mut st = Self::lock(&s);
-                    st.done = done;
-                    st.total = total;
-                    drop(st);
-                    repaint();
-                });
+                // A panic must still finish the job, or the dialog would wait forever.
+                let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    run(&request, &c, &mut |done, total| {
+                        let mut st = Self::lock(&s);
+                        st.done = done;
+                        st.total = total;
+                        drop(st);
+                        repaint();
+                    })
+                }));
+                let result = match outcome {
+                    Ok(result) => result.map_err(|e| e.to_string()),
+                    Err(_) => Err("the export stopped unexpectedly".to_owned()),
+                };
                 if let Err(e) = &result {
                     tracing::warn!("export failed: {e}");
                 }
-                Self::lock(&s).finished = Some(result.map_err(|e| e.to_string()));
+                Self::lock(&s).finished = Some(result);
                 repaint();
             });
         if let Err(e) = spawned {

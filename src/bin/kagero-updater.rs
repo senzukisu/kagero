@@ -12,6 +12,8 @@ fn main() {
         std::process::exit(2);
     };
     let log_dir = args.target.join(".kagero-backup");
+    // The helper has no window or console: the log file is the only place to report
+    // to, so there is nothing more to do if it can't be written.
     let _ = std::fs::create_dir_all(&log_dir);
     let message = match run_helper(&args) {
         Ok(()) => "update finished successfully".to_owned(),

@@ -568,8 +568,10 @@ impl Drop for DiscordPresence {
             while !handle.is_finished() && Instant::now() < deadline {
                 std::thread::sleep(Duration::from_millis(20));
             }
-            if handle.is_finished() {
-                let _ = handle.join();
+            if !handle.is_finished() {
+                tracing::warn!("Discord status thread did not stop in time; exiting anyway");
+            } else if handle.join().is_err() {
+                tracing::warn!("Discord status thread had crashed");
             }
         }
     }
