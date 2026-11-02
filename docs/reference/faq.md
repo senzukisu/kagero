@@ -38,8 +38,19 @@ layer, or press <kbd>Enter</kbd> to stop the preview. The status bar says which.
 <summary>Where is the Export button?</summary>
 
 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> opens the Export dialog; **Export** is at
-its bottom left. On small screens the options scroll, and the button stays visible
-(0.3.7 and newer).
+its bottom left. On small screens the options scroll, and the button stays visible.
+
+</details>
+
+<details>
+
+<summary>My exported image is tiny.</summary>
+
+Kagero exports images and animations with **Auto size**: small sprites are enlarged
+until their longest side is at least 512 px. If you turned Auto size off, the image is
+exported at the scale you picked, and 100 % keeps the original pixels: a 10×10 sprite
+stays 10×10. Turn Auto size back on, or pick a larger scale, in the Export dialog.
+See [Export](../export/export/README.md#frames-layers-scale).
 
 </details>
 

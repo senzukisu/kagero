@@ -48,8 +48,7 @@ buttons drawn as 10×10 pixel glyphs (close turns red on hover). See
 ## Settings window
 
 A side menu of pages with 16 px icons, grouped under **App**, **Integrations** and
-**Labs**; the open page has an ember fill and a 3 px amber bar, planned pages carry a
-"SOON" tag. Each page starts with a 2× icon, its title and a one-line description;
+**Labs**; the open page has an ember fill and a 3 px amber bar. Each page starts with a 2× icon, its title and a one-line description;
 section titles are small amber capitals.
 
 <figure><img src="../.gitbook/assets/settings-experimental.png" alt="The Settings window on the Experimental page" width="640"><figcaption></figcaption></figure>

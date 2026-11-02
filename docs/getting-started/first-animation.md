@@ -26,7 +26,8 @@ a small ball near the top. Press <kbd>G</kbd> and click inside it to fill it.
 
 {% hint style="info" %}
 The **left** mouse button paints with the primary color, the **right** button with the
-secondary color. <kbd>X</kbd> swaps them. Zoom with the mouse wheel.
+secondary color. <kbd>X</kbd> swaps them. Zoom with the mouse wheel or by pinching on
+a touchpad.
 {% endhint %}
 {% endstep %}
 
@@ -64,8 +65,9 @@ frame makes a snappier bounce.
 
 * <kbd>Ctrl</kbd>+<kbd>S</kbd> saves a `.kgr` project with all frames and layers.
 * <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> opens the **Export** dialog. Choose
-  the **Animation** tab for a GIF, or **Sprite Sheet** for a game engine, pick a scale
-  such as 400 % and click **Export**.
+  the **Animation** tab for a GIF, or **Sprite Sheet** for a game engine, and click
+  **Export**. Small sprites are enlarged automatically (**Auto size**) so the GIF is
+  easy to see; sprite sheets stay at 100 % unless you pick a scale.
 {% endstep %}
 {% endstepper %}
 

@@ -9,13 +9,13 @@ icon: compass
 
 | # | Area | What it does |
 |---|------|--------------|
-| 1 | **Title bar & menus** | The flame, the File · Edit · Image · Tools · View · Layer · Frame · Help menus, the document title and the window buttons. Every menu command lists its shortcut. |
-| 2 | **Tool options** | Settings of the active tool — brush size, eyedropper source, selection actions — and the grid toggle. |
-| 3 | **Toolbar** | The tools. Hover a button for its name and shortcut. See [Tools & canvas](../draw/drawing-tools.md). |
-| 4 | **Canvas** | Your image. Wheel to zoom, <kbd>Space</kbd>+drag or middle-drag to pan, <kbd>Home</kbd> to center. |
+| 1 | **Title bar & menus** | The flame, the File · Edit · Image · Tools · View · Layer · Frame · Plugins · Help menus, the document title and the window buttons. Every menu command lists its shortcut. |
+| 2 | **Tool options** | Settings of the active tool (brush, dither, symmetry, fill or selection options) and the grid toggle. |
+| 3 | **Toolbar** | The tools, in groups. Hover a button for its name and shortcut. When the window is short, the tools use two columns. See [Tools & canvas](../draw/drawing-tools.md). |
+| 4 | **Canvas** | Your image. Wheel or pinch to zoom; <kbd>Space</kbd>+drag, middle-drag or a two-finger swipe to move the view; <kbd>Home</kbd> to center. |
 | 5 | **Colors** | Primary and secondary colors, HEX and RGBA, recent colors and the palette. See [Colors & palettes](../draw/palettes.md). |
-| 6 | **Layers** | The layer stack: visibility, rename, reorder, add, delete. See [Layers](../draw/layers.md). |
-| 7 | **Timeline** | Playback, frame actions, duration, onion skin and the frame cards. See [Animation](../animate/animation.md). |
+| 6 | **Layers** | The layer stack with opacity and locks: add, duplicate, merge, reorder, hide. See [Layers](../draw/layers.md). |
+| 7 | **Timeline** | Playback, frame actions, duration, onion skin, frame tags and the frame cards. See [Animation](../animate/animation.md). |
 | 8 | **Status bar** | Tool, cursor position, image size, zoom, layer, frame, messages and the save state. |
 
 ## The title bar
@@ -46,3 +46,6 @@ amber dot while the animation preview plays, a teal dot while onion skin is on.
 
 With no document open, Kagero shows **Create New**, **Open Project** and your recent
 projects. Missing files are dimmed and can be removed from the list with **×**.
+
+If Kagero closed unexpectedly, it offers the autosaved copies of your unsaved work
+first; see [Autosave and recovery](../reference/settings.md#autosave-and-recovery).
