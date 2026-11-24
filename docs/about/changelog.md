@@ -1,8 +1,3 @@
----
-description: "What changed in each version."
-icon: clock-rotate-left
----
-
 # Changelog
 
 The complete, always up-to-date list is in

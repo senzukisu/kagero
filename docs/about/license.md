@@ -1,8 +1,3 @@
----
-description: "MIT License and third-party components."
-icon: scale-balanced
----
-
 # License
 
 Kagero's source code is released under the **MIT License** —
@@ -20,7 +15,7 @@ list with versions is in
 Both texts are also built into Kagero: **Help → Licenses…** (or **Licenses** in the
 About window).
 
-<figure><img src="../.gitbook/assets/licenses.png" alt="The Licenses window with tabs for Kagero's MIT license and the third-party components" width="640"><figcaption></figcaption></figure>
+<img src="../images/licenses.png" alt="The Licenses window with tabs for Kagero's MIT license and the third-party components" width="640">
 
 * egui bundles the Ubuntu-Light, Hack, Noto Emoji and emoji-icon fonts (Ubuntu Font
   Licence 1.0, MIT, SIL OFL 1.1).

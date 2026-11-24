@@ -1,11 +1,6 @@
----
-description: "Where everything is in the Kagero window."
-icon: compass
----
-
 # The workspace
 
-<figure><img src="../.gitbook/assets/workspace-map.png" alt="The Kagero window with numbered areas: title bar, tool options, toolbar, canvas, colors, layers, timeline and status bar"><figcaption></figcaption></figure>
+<img src="../images/workspace-map.png" alt="The Kagero window with numbered areas: title bar, tool options, toolbar, canvas, colors, layers, timeline and status bar">
 
 | # | Area | What it does |
 |---|------|--------------|
@@ -29,7 +24,7 @@ Kagero draws its own window frame.
 * A restored window can be resized from any edge or corner. Kagero opens maximized and
   remembers if you prefer a window.
 
-<figure><img src="../.gitbook/assets/title-bar.png" alt="The title bar with the flame, menus, title and window buttons, and the tool options bar below"><figcaption></figcaption></figure>
+<img src="../images/title-bar.png" alt="The title bar with the flame, menus, title and window buttons, and the tool options bar below">
 
 ## Panels
 

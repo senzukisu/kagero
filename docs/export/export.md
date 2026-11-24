@@ -1,8 +1,3 @@
----
-description: "The Export dialog: PNG, JPEG and WebP images, frames and tags, scale and file names."
-icon: file-export
----
-
 # Export
 
 Everything leaves Kagero through one **Export** dialog —
@@ -16,7 +11,9 @@ size the Image tab's **Auto size** or scale gives.)
 | **Animation** | An animated GIF or animated WebP | [Animations: GIF and WebP](animated-export.md) |
 | **Sprite Sheet** | One image with all frames, plus optional JSON | [Sprite sheets](sprite-sheets.md) |
 
-<figure><img src="../../.gitbook/assets/export-image.png" alt="The Export dialog on the Image tab: PNG at 400%, all 8 frames, file names, a preview and the folder"><figcaption><p>The Image tab. Every tab has a live preview and shows the output size.</p></figcaption></figure>
+<img src="../images/export-image.png" alt="The Export dialog on the Image tab: PNG at 400%, all 8 frames, file names, a preview and the folder">
+
+*The Image tab. Every tab has a live preview and shows the output size.*
 
 The dialog remembers its settings per tab and per format. Exporting never changes your
 project: Kagero copies the frames first and encodes in the background, so you can keep
@@ -26,7 +23,7 @@ drawing — or press **Cancel Export**.
 
 * **Frames:** *Current*, *Selected* (<kbd>Ctrl</kbd>/<kbd>Shift</kbd>+click cards in the
   timeline), *All*, or a **Tag** (pick it from the list; see
-  [Frame tags](../../animate/animation.md#frame-tags)).
+  [Frame tags](../animate/animation.md#frame-tags)).
 * **Layers:** *Visible layers (as shown)* or *Active layer only*. Hidden layers and the
   onion skin are never exported.
 * **Scale:**
@@ -47,26 +44,23 @@ drawing — or press **Cancel Export**.
 | **JPEG** | None — filled with a background color | Lossy | Previews and sharing |
 | **WebP** | Full alpha | Lossless | The web; usually smaller than PNG |
 
-{% tabs %}
-{% tab title="PNG" %}
-Pixel-exact: every color and alpha value is written as is.
-{% endtab %}
+### PNG
 
-{% tab title="JPEG" %}
+Pixel-exact: every color and alpha value is written as is.
+
+### JPEG
+
 **Quality** 1–100 (default 90) and a **background** — white, black or any color — for
 transparent and semi-transparent pixels.
 
-{% hint style="warning" %}
-JPEG uses lossy compression and may introduce artifacts into pixel art. PNG is
-recommended for lossless game sprites.
-{% endhint %}
-{% endtab %}
+> [!WARNING]
+> JPEG uses lossy compression and may introduce artifacts into pixel art. PNG is
+> recommended for lossless game sprites.
 
-{% tab title="WebP" %}
+### WebP
+
 Lossless with transparency. Lossy WebP isn't available. For animated WebP, use the
 **Animation** tab.
-{% endtab %}
-{% endtabs %}
 
 ## File names
 

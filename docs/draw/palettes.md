@@ -1,11 +1,6 @@
----
-description: "Primary and secondary colors, exact HEX/RGBA entry, palettes, palette files and Convert to Palette."
-icon: palette
----
-
 # Colors & palettes
 
-<figure><img src="../.gitbook/assets/side-panel.png" alt="The colors panel with primary and secondary swatches, the palette picker and swatches, and the layers panel below" width="320"><figcaption></figcaption></figure>
+<img src="../images/side-panel.png" alt="The colors panel with primary and secondary swatches, the palette picker and swatches, and the layers panel below" width="320">
 
 ## Primary and secondary
 

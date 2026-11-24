@@ -1,8 +1,3 @@
----
-description: "Common questions and fixes."
-icon: circle-question
----
-
 # FAQ & troubleshooting
 
 <details>
@@ -50,7 +45,7 @@ Kagero exports images and animations with **Auto size**: small sprites are enlar
 until their longest side is at least 512 px. If you turned Auto size off, the image is
 exported at the scale you picked, and 100 % keeps the original pixels: a 10×10 sprite
 stays 10×10. Turn Auto size back on, or pick a larger scale, in the Export dialog.
-See [Export](../export/export/README.md#frames-layers-scale).
+See [Export](../export/export.md#frames-layers-scale).
 
 </details>
 
@@ -59,7 +54,7 @@ See [Export](../export/export/README.md#frames-layers-scale).
 <summary>My GIF colors or transparency look different.</summary>
 
 GIF has at most 255 colors plus one transparent color, and no semi-transparency. See
-[Animated GIF](../export/export/animated-export.md#colors-and-transparency) for the
+[Animated GIF](../export/animated-export.md#colors-and-transparency) for the
 options that control both.
 
 </details>

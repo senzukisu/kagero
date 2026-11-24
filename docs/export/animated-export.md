@@ -1,13 +1,8 @@
----
-description: "Animated GIF and animated WebP: timing, looping, transparency and colors."
-icon: images
----
-
 # Animations: GIF and WebP
 
 The **Animation** tab of the Export dialog (**File → Export Animation as GIF…**) writes
 `name.gif` or `name.webp`. Choose the format, the frames (all, selected, or a
-[tag](../../animate/animation.md#frame-tags)), a [scale](README.md#frames-layers-scale)
+[tag](../animate/animation.md#frame-tags)), a [scale](export.md#frames-layers-scale)
 and a folder. The preview plays with the real frame durations.
 
 | Format | Colors and transparency | Timing | Plays in |
@@ -23,7 +18,7 @@ Each frame replaces the previous one completely.
 
 ## GIF
 
-<figure><img src="../../.gitbook/assets/export-gif.png" alt="The Export dialog on the Animation tab: GIF options for repeat, transparency, soft edges and dithering, with an animated preview"><figcaption></figcaption></figure>
+<img src="../images/export-gif.png" alt="The Export dialog on the Animation tab: GIF options for repeat, transparency, soft edges and dithering, with an animated preview">
 
 ### Timing
 
@@ -49,7 +44,6 @@ shorter delays far too slowly). The dialog warns when rounding changes your timi
   reduced, and the dialog says so beforehand.
 * Each frame fully replaces the previous one, so transparent areas never show leftovers.
 
-{% hint style="info" %}
-For game engines, a [sprite sheet](sprite-sheets.md) with metadata is usually the best
-choice.
-{% endhint %}
+> [!NOTE]
+> For game engines, a [sprite sheet](sprite-sheets.md) with metadata is usually the best
+> choice.

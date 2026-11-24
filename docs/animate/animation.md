@@ -1,14 +1,9 @@
----
-description: "Frames, frame tags, the timeline, real-time preview and onion skin."
-icon: film
----
-
 # Animation
 
 Kagero animates frame by frame: you draw each frame, and every frame keeps its own
 image on each layer and its own **duration**.
 
-<figure><img src="../.gitbook/assets/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration and onion skin, two frame tags (rise and fall) above eight frame cards"><figcaption></figcaption></figure>
+<img src="../images/timeline.png" alt="The timeline with playback buttons, frame counter, frame actions, duration and onion skin, two frame tags (rise and fall) above eight frame cards">
 
 ## Frames
 
@@ -65,18 +60,18 @@ frame has an amber border.
 <kbd>Enter</kbd> or <kbd>Esc</kbd> stops on the frame that was showing. With a tag set
 to **Loop in Preview**, only that tag's frames play.
 
-<figure><img src="../.gitbook/assets/preview.png" alt="The animation preview playing, with the Previewing badge in the corner of the canvas"><figcaption><p>While the preview plays, a badge shows the frame; drawing is paused.</p></figcaption></figure>
+<img src="../images/preview.png" alt="The animation preview playing, with the Previewing badge in the corner of the canvas">
 
-{% tabs %}
-{% tab title="Frame durations" %}
+*While the preview plays, a badge shows the frame; drawing is paused.*
+
+### Frame durations
+
 Each frame stays on screen for its own duration — give key poses more time.
-{% endtab %}
 
-{% tab title="Fixed FPS" %}
+### Fixed FPS
+
 Every frame lasts the same time (1–60 fps), ignoring stored durations — handy for
 checking an animation at your game's frame rate.
-{% endtab %}
-{% endtabs %}
 
 Timing follows the real clock, so a busy computer never slows the animation down.
 
@@ -86,10 +81,9 @@ Timing follows the real clock, so a busy computer never slows the animation down
 **previous** frame in a **warm** tint and the **next** in a **cool** tint, at 5–90 %
 opacity (default 35 %). The first and last frames show only one side.
 
-{% hint style="success" %}
-Onion skin is purely visual: it never changes your pixels, is never saved and never
-appears in exports. It hides while the preview plays.
-{% endhint %}
+> [!TIP]
+> Onion skin is purely visual: it never changes your pixels, is never saved and never
+> appears in exports. It hides while the preview plays.
 
-To export the animation, see [Animations: GIF and WebP](../export/export/animated-export.md) and
-[Sprite sheets](../export/export/sprite-sheets.md).
+To export the animation, see [Animations: GIF and WebP](../export/animated-export.md) and
+[Sprite sheets](../export/sprite-sheets.md).

@@ -1,17 +1,12 @@
----
-description: "General (with autosave), Shortcuts, Updates, Discord, Experimental, Plugins and Themes."
-icon: gear
----
-
 # Settings
 
 **File → Settings…** or <kbd>Ctrl</kbd>+<kbd>,</kbd>. Pages are grouped in the side menu
 — **App** (General, Shortcuts, Updates), **Integrations** (Discord) and **Labs**
 (Experimental, Plugins, Themes). Changes apply immediately and are saved automatically.
 
-{% tabs %}
-{% tab title="General" %}
-<figure><img src="../.gitbook/assets/settings-general.png" alt="Settings, General page: workspace and onion skin options"><figcaption></figcaption></figure>
+## General
+
+<img src="../images/settings-general.png" alt="Settings, General page: workspace and onion skin options">
 
 * Show the timeline (<kbd>F7</kbd>) and the colors & layers panel (<kbd>F8</kbd>)
 * Pixel grid when zoomed in (<kbd>Ctrl</kbd>+<kbd>G</kbd>)
@@ -19,16 +14,16 @@ icon: gear
 * **Autosave & recovery**: see [Autosave and recovery](#autosave-and-recovery) below.
 * **Onion skin** — show neighbor frames (<kbd>O</kbd>), previous (warm) and/or next
   (cool), opacity 5–90 %
-{% endtab %}
 
-{% tab title="Shortcuts" %}
-<figure><img src="../.gitbook/assets/settings-shortcuts.png" alt="Settings, Shortcuts page: actions grouped by Files, Edit, Tools and more, each with its key, a restore and a remove button"><figcaption></figcaption></figure>
+## Shortcuts
+
+<img src="../images/settings-shortcuts.png" alt="Settings, Shortcuts page: actions grouped by Files, Edit, Tools and more, each with its key, a restore and a remove button">
 
 See [Changing shortcuts](#changing-shortcuts) below.
-{% endtab %}
 
-{% tab title="Updates" %}
-<figure><img src="../.gitbook/assets/settings-updates.png" alt="Settings, Updates page"><figcaption></figcaption></figure>
+## Updates
+
+<img src="../images/settings-updates.png" alt="Settings, Updates page">
 
 * Current version and build type, **Check for Updates**, download with progress,
   **Install and Restart**
@@ -37,20 +32,18 @@ See [Changing shortcuts](#changing-shortcuts) below.
 * **Restore Previous Version** after an update
 
 How updating works: [Install & update](../getting-started/installation.md#update).
-{% endtab %}
 
-{% tab title="Discord" %}
-<figure><img src="../.gitbook/assets/settings-discord.png" alt="Settings, Discord page: Rich Presence connection and privacy options"><figcaption></figcaption></figure>
+## Discord
+
+<img src="../images/settings-discord.png" alt="Settings, Discord page: Rich Presence connection and privacy options">
 
 See [Discord Rich Presence](#discord-rich-presence) below.
-{% endtab %}
 
-{% tab title="Experimental" %}
-<figure><img src="../.gitbook/assets/settings-experimental.png" alt="Settings, Experimental page: pixel font, pixel-perfect pencil and tiled view"><figcaption></figcaption></figure>
+## Experimental
+
+<img src="../images/settings-experimental.png" alt="Settings, Experimental page: pixel font, pixel-perfect pencil and tiled view">
 
 See [Experimental features](#experimental-features) below.
-{% endtab %}
-{% endtabs %}
 
 ## Changing shortcuts
 
@@ -83,7 +76,9 @@ tested and may change in a later version; your projects are never affected.
 | **Pixel-perfect pencil** | 1 px Pencil and Eraser strokes skip the doubled pixel in "L" corners, so freehand lines stay one pixel thin. |
 | **Tiled view** | Shows the image repeated around itself, dimmed, to check seamless tiles and patterns. View only — the copies are never drawn on or exported. |
 
-<figure><img src="../.gitbook/assets/tiled-view.png" alt="Tiled view: the sprite in the middle with dimmed copies repeated around it"><figcaption><p>Tiled view: the image in the middle, dimmed copies around it.</p></figcaption></figure>
+<img src="../images/tiled-view.png" alt="Tiled view: the sprite in the middle with dimmed copies repeated around it">
+
+*Tiled view: the image in the middle, dimmed copies around it.*
 
 ## Autosave and recovery
 
@@ -113,15 +108,13 @@ possible failure, so keep saving your projects.
 * **Themes** change Kagero's colors: four built-in themes, live preview, and your own
   themes as files. See [Themes](themes.md).
 
-{% tabs %}
-{% tab title="Plugins" %}
-<figure><img src="../.gitbook/assets/settings-plugins.png" alt="Settings, Plugins page: the safety note and the installed Example Tools plugin with its switch" width="560"><figcaption></figcaption></figure>
-{% endtab %}
+### Plugins
 
-{% tab title="Themes" %}
-<figure><img src="../.gitbook/assets/settings-themes.png" alt="Settings, Themes page: theme cards with color strips and Preview and Export buttons" width="560"><figcaption></figcaption></figure>
-{% endtab %}
-{% endtabs %}
+<img src="../images/settings-plugins.png" alt="Settings, Plugins page: the safety note and the installed Example Tools plugin with its switch" width="560">
+
+### Themes
+
+<img src="../images/settings-themes.png" alt="Settings, Themes page: theme cards with color strips and Preview and Export buttons" width="560">
 
 ## Discord Rich Presence
 
@@ -139,11 +132,10 @@ doing in your Discord profile — no login, token or password.
 …with the Kagero flame, an activity icon, the elapsed time and a **Get Kagero** button
 that links to the download page.
 
-{% hint style="success" %}
-**Private by default.** Kagero shares only the general activity. The project name is
-shared only if you turn on **Show the project name** — and then only the file name,
-never the folder, your Windows user name or anything from the image.
-{% endhint %}
+> [!TIP]
+> **Private by default.** Kagero shares only the general activity. The project name is
+> shared only if you turn on **Show the project name** — and then only the file name,
+> never the folder, your Windows user name or anything from the image.
 
 Options: enable/disable, show what I'm doing, show the project name, show elapsed time,
 show the "Get Kagero" button, reconnect automatically, clear my status when turned off,

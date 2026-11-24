@@ -1,8 +1,3 @@
----
-description: "How the code is organized: layers, data model, history, export."
-icon: sitemap
----
-
 # Architecture
 
 Kagero is one Rust crate with a library and three binaries: `kagero` (the editor),

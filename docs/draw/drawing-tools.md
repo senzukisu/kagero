@@ -1,11 +1,6 @@
----
-description: "The tools, brushes, symmetry, dithering, fill options and moving around the canvas."
-icon: pencil
----
-
 # Tools & canvas
 
-<figure><img src="../.gitbook/assets/tool-icons.png" alt="Kagero's tool icons"><figcaption></figcaption></figure>
+<img src="../images/tool-icons.png" alt="Kagero's tool icons">
 
 | Tool | Key | What it does |
 |------|-----|--------------|
@@ -28,10 +23,9 @@ icon: pencil
 * Drawing outside the image is ignored; the stroke continues when you come back in.
 * When the window is short, the tool strip uses two columns.
 
-{% hint style="info" %}
-You can't draw on a **hidden** or **locked** layer, or while the animation preview
-plays. The status bar tells you why instead of painting invisibly.
-{% endhint %}
+> [!NOTE]
+> You can't draw on a **hidden** or **locked** layer, or while the animation preview
+> plays. The status bar tells you why instead of painting invisibly.
 
 ## Brush, symmetry and dithering
 

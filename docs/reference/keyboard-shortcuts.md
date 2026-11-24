@@ -1,22 +1,16 @@
----
-description: "Every shortcut in one place."
-icon: keyboard
----
-
 # Keyboard shortcuts
 
 These are the defaults. **Every shortcut can be changed** in Settings → Shortcuts — see
 [Changing shortcuts](settings.md#changing-shortcuts); menus and tooltips then show your
 keys.
 
-{% hint style="info" %}
-While you type in a text field (a layer name, a duration, an export file name),
-letters, arrows, <kbd>Delete</kbd> and <kbd>Ctrl</kbd>+<kbd>A</kbd>/<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd>/<kbd>Z</kbd>
-belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> still work.
-{% endhint %}
+> [!NOTE]
+> While you type in a text field (a layer name, a duration, an export file name),
+> letters, arrows, <kbd>Delete</kbd> and <kbd>Ctrl</kbd>+<kbd>A</kbd>/<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd>/<kbd>Z</kbd>
+> belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> still work.
 
-{% tabs %}
-{% tab title="Tools" %}
+## Tools
+
 | Shortcut | Tool |
 |----------|------|
 | <kbd>B</kbd> | Pencil |
@@ -30,9 +24,9 @@ belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> st
 | <kbd>M</kbd> · <kbd>Q</kbd> · <kbd>W</kbd> | Rectangle Select · Lasso · Magic Wand |
 | <kbd>C</kbd> | Crop (<kbd>Enter</kbd> crops) |
 | <kbd>X</kbd> | Swap primary and secondary colors |
-{% endtab %}
 
-{% tab title="Edit & selection" %}
+## Edit & selection
+
 | Shortcut | Action |
 |----------|--------|
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Undo |
@@ -50,9 +44,9 @@ belong to the text field. File shortcuts such as <kbd>Ctrl</kbd>+<kbd>S</kbd> st
 | <kbd>Ctrl</kbd>+<kbd>R</kbd> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> | Rotate 90° clockwise · counterclockwise |
 
 Flip and rotate work on the selection, or on the whole layer when nothing is selected.
-{% endtab %}
 
-{% tab title="View" %}
+## View
+
 | Shortcut | Action |
 |----------|--------|
 | Mouse wheel · <kbd>+</kbd> / <kbd>−</kbd> | Zoom |
@@ -60,9 +54,9 @@ Flip and rotate work on the selection, or on the whole layer when nothing is sel
 | <kbd>Home</kbd> | Center the canvas |
 | <kbd>Ctrl</kbd>+<kbd>G</kbd> | Pixel grid |
 | <kbd>F7</kbd> · <kbd>F8</kbd> | Timeline · colors & layers panel |
-{% endtab %}
 
-{% tab title="Animation" %}
+## Animation
+
 | Shortcut | Action |
 |----------|--------|
 | <kbd>Enter</kbd> | Play / stop the preview |
@@ -72,18 +66,18 @@ Flip and rotate work on the selection, or on the whole layer when nothing is sel
 | <kbd>Alt</kbd>+<kbd>T</kbd> | New frame tag (from the selected frames) |
 | <kbd>Alt</kbd>+<kbd>,</kbd> · <kbd>Alt</kbd>+<kbd>.</kbd> | Previous · next tag |
 | <kbd>O</kbd> | Onion skin |
-{% endtab %}
 
-{% tab title="Layers" %}
+## Layers
+
 | Shortcut | Action |
 |----------|--------|
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> | New layer |
 | <kbd>F2</kbd> | Rename layer |
 | <kbd>Ctrl</kbd>+<kbd>]</kbd> · <kbd>Ctrl</kbd>+<kbd>[</kbd> | Move layer up · down |
 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> | Duplicate layer · merge down |
-{% endtab %}
 
-{% tab title="Files" %}
+## Files
+
 | Shortcut | Action |
 |----------|--------|
 | <kbd>Ctrl</kbd>+<kbd>N</kbd> · <kbd>Ctrl</kbd>+<kbd>O</kbd> | New image · open |
@@ -92,5 +86,3 @@ Flip and rotate work on the selection, or on the whole layer when nothing is sel
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> | Export dialog |
 | <kbd>Ctrl</kbd>+<kbd>W</kbd> | Close the document |
 | <kbd>Ctrl</kbd>+<kbd>,</kbd> | Settings |
-{% endtab %}
-{% endtabs %}

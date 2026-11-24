@@ -1,8 +1,3 @@
----
-description: "The .kgr file format, versions, migration and validation."
-icon: file-zipper
----
-
 # The `.kgr` Project Format
 
 Format id `kagero-project`. Kagero 0.4 writes **version 2**, or **version 3** when a
@@ -15,11 +10,10 @@ version 2. The format version is independent of the application version.
 | 2 | 0.2+ | Frames, durations, ids |
 | 3 | 0.4+, only when needed | Layer opacity (a project that older Kagero would show wrongly is refused by them instead) |
 
-{% hint style="info" %}
-The selection, the clipboard, palettes and export settings are not part of a project:
-palettes and export settings live in the user settings file (`config.json`), the
-selection and clipboard only in memory.
-{% endhint %}
+> [!NOTE]
+> The selection, the clipboard, palettes and export settings are not part of a project:
+> palettes and export settings live in the user settings file (`config.json`), the
+> selection and clipboard only in memory.
 
 A `.kgr` file is a standard ZIP archive.
 

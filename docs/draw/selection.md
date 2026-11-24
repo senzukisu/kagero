@@ -1,14 +1,11 @@
----
-description: "Rectangle, lasso and magic-wand selections; add, subtract and invert; move, copy, flip and rotate."
-icon: vector-square
----
-
 # Selection & transforms
 
 A selection is any set of pixels on the active layer. Marching ants follow its exact
 outline. The tool options bar shows its size and has buttons for every action.
 
-<figure><img src="../.gitbook/assets/selection.png" alt="A selection around the flame sprite, with the selection actions in the tool options bar"><figcaption><p>Flip, rotate, cut, copy, paste and deselect are in the tool options bar.</p></figcaption></figure>
+<img src="../images/selection.png" alt="A selection around the flame sprite, with the selection actions in the tool options bar">
+
+*Flip, rotate, cut, copy, paste and deselect are in the tool options bar.*
 
 ## Selection tools
 
@@ -64,7 +61,6 @@ overrides the button.
 * Every action is **one undo step**, and undo restores the selection too.
 * Fill stays inside the selection. Pencil and the shape tools don't (yet).
 
-{% hint style="info" %}
-The selection is never saved in the project. The clipboard lives inside Kagero: it
-keeps transparency and the selection's shape, and survives opening another document.
-{% endhint %}
+> [!NOTE]
+> The selection is never saved in the project. The clipboard lives inside Kagero: it
+> keeps transparency and the selection's shape, and survives opening another document.

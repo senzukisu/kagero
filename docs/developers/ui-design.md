@@ -1,15 +1,12 @@
----
-description: "The Kagero Ember visual system: palette, pixel style, icons, fonts and layout."
-icon: palette
----
-
 # UI design: Kagero Ember
 
 **Mood:** a dark Japanese workshop at night, lit by warm amber — calm, precise,
 functional, and drawn in pixels like the art made in it. Kagero (陽炎) means "heat
 haze"; the flame mark is the shimmer above an ember.
 
-<figure><img src="../.gitbook/assets/about.png" alt="The About Kagero window: dark banner with the flame and a version badge, links and shortcut keycaps" width="560"><figcaption><p>The About window shows the style in one place: banner, ember rule, badge, keycaps.</p></figcaption></figure>
+<img src="../images/about.png" alt="The About Kagero window: dark banner with the flame and a version badge, links and shortcut keycaps" width="560">
+
+*The About window shows the style in one place: banner, ember rule, badge, keycaps.*
 
 ## Palette
 
@@ -51,7 +48,7 @@ A side menu of pages with 16 px icons, grouped under **App**, **Integrations** a
 **Labs**; the open page has an ember fill and a 3 px amber bar. Each page starts with a 2× icon, its title and a one-line description;
 section titles are small amber capitals.
 
-<figure><img src="../.gitbook/assets/settings-experimental.png" alt="The Settings window on the Experimental page" width="640"><figcaption></figcaption></figure>
+<img src="../images/settings-experimental.png" alt="The Settings window on the Experimental page" width="640">
 
 ## Icons
 
@@ -63,7 +60,7 @@ arrow for Move Frame, a keyboard, download tray, chat bubble, flask, plug and pa
 for the settings pages. They are drawn as one mesh of whole device pixels, so they
 stay crisp at any display scale. The window icon is the 16×16 flame scaled ×4.
 
-<figure><img src="../.gitbook/assets/tool-icons.png" alt="The tool icons"><figcaption></figcaption></figure>
+<img src="../images/tool-icons.png" alt="The tool icons">
 
 ## Fonts
 

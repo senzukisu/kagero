@@ -1,8 +1,3 @@
----
-description: "Build Kagero, run the tests, follow the rules, and publish a release."
-icon: code-pull-request
----
-
 # Contributing
 
 Issues and pull requests are welcome at
@@ -109,16 +104,12 @@ ever lost or leaked, generate a new pair and ship it in a release users install 
 
 </details>
 
-{% stepper %}
-{% step %}
-### Version and changelog
+### 1. Version and changelog
 
 Update `version` in `Cargo.toml` (always `X.Y.Z` — the updater compares semantic
 versions), `APP_CHANNEL` in `src/lib.rs` if needed, and `CHANGELOG.md`. Run the checks.
-{% endstep %}
 
-{% step %}
-### Package and sign
+### 2. Package and sign
 
 ```
 powershell -ExecutionPolicy Bypass -File scripts\package-release.ps1
@@ -128,10 +119,8 @@ Builds with `KAGERO_OFFICIAL_BUILD=1` and creates
 `dist\kagero-X.Y.Z-windows-x64.zip` (the two executables and their `SHA256SUMS.txt`).
 It then builds the installer `dist\kagero-X.Y.Z-setup.exe` from that zip, signs and
 verifies both, and writes the release's own `SHA256SUMS.txt` for the four files.
-{% endstep %}
 
-{% step %}
-### Tag and publish
+### 3. Tag and publish
 
 ```
 git tag -a vX.Y.Z -m "Kagero X.Y.Z"
@@ -141,10 +130,8 @@ git push origin main --tags
 Create the GitHub release `Kagero X.Y.Z <Channel>` with highlights, the changelog
 section, known limitations and install steps, and attach the five files from `dist\`.
 Mark it **pre-release** only for versions with a suffix such as `0.4.0-beta.1`.
-{% endstep %}
 
-{% step %}
-### Verify
+### 4. Verify
 
 ```
 cargo test --test updater live_github -- --ignored --nocapture
@@ -152,10 +139,7 @@ cargo test --test updater live_github -- --ignored --nocapture
 
 Then download the release, check `rsign verify -p kagero.pub -x <zip>.minisig <zip>`,
 and update an older copy through Settings → Updates.
-{% endstep %}
-{% endstepper %}
 
-{% hint style="danger" %}
-Never put tokens, passwords or the secret key into the repository, scripts or release
-notes.
-{% endhint %}
+> [!CAUTION]
+> Never put tokens, passwords or the secret key into the repository, scripts or release
+> notes.

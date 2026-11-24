@@ -4,6 +4,24 @@ All notable changes to Kagero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **Documentation lives on GitHub now.** The GitBook site is gone: the `docs/` folder is
+  plain Markdown that reads directly on GitHub, with a full table of contents on the
+  [documentation home](docs/README.md). Notes and tips use GitHub's callouts, tabbed
+  sections became ordinary headings, and all images are in `docs/images`. The
+  **Documentation** link in Help → About opens the GitHub docs.
+- **New roadmap:** the plan up to 1.0, one theme per version (0.5 precise drawing, 0.6
+  animation, 0.7 layers and color, 0.8 plugins v2, 0.9 polish), the promises every
+  version keeps, and when each known limitation is planned to be fixed.
+
+### Removed
+
+- GitBook configuration (`.gitbook.yaml`, `gitbook-docs.yaml`, `docs/SUMMARY.md`) and the
+  empty GitBook changelog space.
+
 ## [0.4.3] Beta — 2026-11-02
 
 A bug fix for 0.4.2, and two ready-made plugins.

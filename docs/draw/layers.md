@@ -1,8 +1,3 @@
----
-description: "Layers with opacity and locks, duplicate and merge, canvas size and crop."
-icon: layer-group
----
-
 # Layers
 
 Layers are listed **top layer first** below the colors. The active layer has an amber
@@ -47,10 +42,9 @@ on each layer.
   opacity affects every frame.
 * Drawing changes only the current frame.
 
-{% hint style="info" %}
-A typical setup: a **Ground** layer that is the same in every frame (duplicating
-frames copies it) and a **Character** layer that changes from frame to frame.
-{% endhint %}
+> [!NOTE]
+> A typical setup: a **Ground** layer that is the same in every frame (duplicating
+> frames copies it) and a **Character** layer that changes from frame to frame.
 
 ## Canvas size and crop
 

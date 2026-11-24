@@ -1,8 +1,3 @@
----
-description: "New images, .kgr projects, PNG import and safe saving."
-icon: floppy-disk
----
-
 # Projects & import
 
 ## New image
@@ -18,7 +13,7 @@ icon: floppy-disk
 
 <kbd>Enter</kbd> creates, <kbd>Esc</kbd> cancels. Kagero remembers the last size.
 
-<figure><img src="../.gitbook/assets/new-image.png" alt="The New Image dialog: preset cards, width and height with a swap button, background swatches and a preview"><figcaption></figcaption></figure>
+<img src="../images/new-image.png" alt="The New Image dialog: preset cards, width and height with a swap button, background swatches and a preview">
 
 ## Projects (`.kgr`)
 
@@ -35,10 +30,9 @@ names and visibility, and every pixel including transparency.
 You can also open a file by passing it to `kagero.exe` — for example with
 *Open with → Kagero* in Explorer.
 
-{% hint style="success" %}
-**Saving is safe.** Kagero writes to a temporary file and only then replaces the old
-project, so a crash or a full disk never leaves a half-written file.
-{% endhint %}
+> [!TIP]
+> **Saving is safe.** Kagero writes to a temporary file and only then replaces the old
+> project, so a crash or a full disk never leaves a half-written file.
 
 * The title shows **•** and the status bar **Unsaved changes** when there is something
   to save; undoing back to the saved state clears it.
@@ -63,4 +57,4 @@ PNG is never overwritten.
 Damaged or unsupported files show a clear error and never crash Kagero. The file layout
 is described in [The .kgr project format](../developers/project-format.md).
 
-To get images out of Kagero, see [Export](export/README.md).
+To get images out of Kagero, see [Export](export.md).

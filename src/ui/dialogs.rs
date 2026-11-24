@@ -1083,7 +1083,7 @@ pub fn about(ctx: &egui::Context) -> AboutChoice {
                             fact(ui, "Links", |ui| {
                                 ui.hyperlink_to(
                                     "Documentation",
-                                    "https://kagero.gitbook.io/kagero-docs",
+                                    format!("{repo}/blob/main/docs/README.md"),
                                 );
                                 ui.label(RichText::new("·").color(theme::text_secondary()));
                                 ui.hyperlink_to(

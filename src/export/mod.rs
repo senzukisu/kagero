@@ -11,7 +11,7 @@
 //!    metadata ([`metadata`]), driven by [`service`], usually on a background thread
 //!    with progress and cancellation.
 //!
-//! See `docs/export/export/README.md` and `docs/developers/architecture.md` (Export).
+//! See `docs/export/export.md` and `docs/developers/architecture.md` (Export).
 
 pub mod gif;
 pub mod metadata;

@@ -1,8 +1,3 @@
----
-description: "Install Kagero with the installer or as a portable zip — and keep it up to date."
-icon: download
----
-
 # Install & update
 
 ## Requirements
@@ -15,16 +10,12 @@ No runtime or account is needed, and installing doesn't need administrator right
 
 ## Install with the installer (recommended)
 
-{% stepper %}
-{% step %}
-### Download
+### 1. Download
 
 Open the [latest release](https://github.com/senzukisu/kagero/releases/latest) and
 download `kagero-<version>-setup.exe`.
-{% endstep %}
 
-{% step %}
-### Run it
+### 2. Run it
 
 Choose whether you want a **desktop shortcut** (a **Start menu** shortcut is added
 unless you turn it off), then click **Install**. Kagero is installed for your user
@@ -37,39 +28,29 @@ just like an update. Updates later install into the same folder automatically.
 Windows SmartScreen may say the app is unrecognized, because the executable isn't
 signed with a paid certificate. Choose **More info → Run anyway**. The installer
 itself is signed — see [Verify the download](#verify-the-download).
-{% endstep %}
-{% endstepper %}
 
-{% hint style="info" %}
-For scripted installs: `kagero-<version>-setup.exe --silent [--dir <folder>]
-[--desktop-shortcut] [--no-start-menu] [--no-register]`.
-{% endhint %}
+> [!NOTE]
+> For scripted installs: `kagero-<version>-setup.exe --silent [--dir <folder>]
+> [--desktop-shortcut] [--no-start-menu] [--no-register]`.
 
 ## Portable (zip)
 
-{% stepper %}
-{% step %}
-### Download
+### 1. Download
 
 Open the [latest release](https://github.com/senzukisu/kagero/releases/latest) and
 download `kagero-<version>-windows-x64.zip`.
-{% endstep %}
 
-{% step %}
-### Unpack to a folder you own
+### 2. Unpack to a folder you own
 
 Extract the zip, for example to `%LOCALAPPDATA%\Programs\Kagero`. It contains just
 `kagero.exe`, `kagero-updater.exe` (used for updates) and `SHA256SUMS.txt` with the
 checksums of both. The license texts are inside the program: **Help → Licenses…**.
 
-{% hint style="warning" %}
-Avoid `C:\Program Files`: Kagero updates itself in place, which needs a folder your
-user account can write to.
-{% endhint %}
-{% endstep %}
+> [!WARNING]
+> Avoid `C:\Program Files`: Kagero updates itself in place, which needs a folder your
+> user account can write to.
 
-{% step %}
-### Run
+### 3. Run
 
 Start `kagero.exe` and pin it to the taskbar if you like. Kagero opens maximized on the
 start screen.
@@ -77,10 +58,10 @@ start screen.
 Windows SmartScreen may say the app is unrecognized, because the executable isn't
 signed with a paid certificate. Choose **More info → Run anyway**. The package itself
 is signed — see [Verify the download](#verify-the-download).
-{% endstep %}
-{% endstepper %}
 
-<figure><img src="../.gitbook/assets/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project"><figcaption><p>The start screen: create an image, open a project, or pick a recent one.</p></figcaption></figure>
+<img src="../images/start-screen.png" alt="The Kagero start screen with Create New, Open Project and a recent project">
+
+*The start screen: create an image, open a project, or pick a recent one.*
 
 ## Update
 
@@ -97,13 +78,14 @@ Kagero updates itself from the official
   files (keeping a backup of the previous version) and starts it again — usually within
   a few seconds.
 
-<figure><img src="../.gitbook/assets/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options"><figcaption><p>Settings → Updates.</p></figcaption></figure>
+<img src="../images/settings-updates.png" alt="Settings, Updates page: version, status and automatic check options">
 
-{% hint style="info" %}
-**Install and Restart** needs an official build in a folder you can write to. Builds
-made from source, or copies in `C:\Program Files`, can still check and download —
-install those updates by hand from the release page.
-{% endhint %}
+*Settings → Updates.*
+
+> [!NOTE]
+> **Install and Restart** needs an official build in a folder you can write to. Builds
+> made from source, or copies in `C:\Program Files`, can still check and download —
+> install those updates by hand from the release page.
 
 ### If an update goes wrong
 
@@ -122,23 +104,21 @@ install those updates by hand from the release page.
 
 Each release has `SHA256SUMS.txt` and a minisign signature (`.minisig`).
 
-{% tabs %}
-{% tab title="Checksum (PowerShell)" %}
+### Checksum (PowerShell)
+
 ```powershell
 Get-FileHash .\kagero-0.4.3-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the line in `SHA256SUMS.txt`.
-{% endtab %}
 
-{% tab title="Signature (rsign / minisign)" %}
+### Signature (rsign / minisign)
+
 ```powershell
 rsign verify kagero-0.4.3-setup.exe -P RWSXS+R3BCdmSx47V91P3O9sUYv3G3tdbivI9Dta7p0hSgnJqkRV8wDe
 ```
 
 The public key is also in [`kagero.pub`](https://github.com/senzukisu/kagero/blob/main/kagero.pub).
-{% endtab %}
-{% endtabs %}
 
 ## Where Kagero keeps its files
 

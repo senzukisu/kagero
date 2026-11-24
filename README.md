@@ -11,7 +11,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-75c7b5)](LICENSE)
 
 [**Download**](https://github.com/senzukisu/kagero/releases/latest) ·
-[Documentation](https://kagero.gitbook.io/kagero-docs) ·
+[Documentation](docs/README.md) ·
 [What's new](CHANGELOG.md) ·
 [Report a bug](https://github.com/senzukisu/kagero/issues)
 
@@ -71,15 +71,15 @@ certificate; the release files are signed with [minisign](kagero.pub) instead.
 
 ## Documentation
 
-**[kagero.gitbook.io/kagero-docs](https://kagero.gitbook.io/kagero-docs)**, built from the
-[`docs/`](docs/README.md) folder:
+Everything is in the [`docs/`](docs/README.md) folder and reads right here on GitHub.
+Start with the **[documentation home](docs/README.md)**, or jump in:
 
 - **Start:** [Install & update](docs/getting-started/installation.md) ·
   [Quick start](docs/getting-started/first-animation.md) ·
   [The workspace](docs/getting-started/interface-tour.md)
 - **Use:** [Tools](docs/draw/drawing-tools.md) · [Selection](docs/draw/selection.md) ·
   [Colors](docs/draw/palettes.md) · [Layers](docs/draw/layers.md) ·
-  [Animation](docs/animate/animation.md) · [Export](docs/export/export/README.md)
+  [Animation](docs/animate/animation.md) · [Export](docs/export/export.md)
 - **Reference:** [Shortcuts](docs/reference/keyboard-shortcuts.md) ·
   [Settings](docs/reference/settings.md) · [Themes](docs/reference/themes.md) ·
   [Plugins](docs/plugins/README.md) · [FAQ](docs/reference/faq.md)

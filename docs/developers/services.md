@@ -1,8 +1,3 @@
----
-description: "The updater, the install helper and Discord Rich Presence: how they work and stay safe."
-icon: shield-halved
----
-
 # Services: updater, installer, autosave & Discord
 
 Both services are optional. Offline, with GitHub unreachable, with Discord closed or in

@@ -1,8 +1,3 @@
----
-description: "An honest note on how Kagero is developed."
-icon: robot
----
-
 # How Kagero is made (AI assistance)
 
 Kagero is developed by **Onibi Lab**. We want to be open about our tools:
